@@ -58,3 +58,75 @@ Nach erfolgreicher Validierung Hand-off an `selection-skills-L3-apply-improvemen
 - `personaSlug` — unveraendert (`<basePersona>--<lens>`)
 
 `apply-improvement` entscheidet, ob eine naechste Iteration laeuft (`iteration < maxIterations`, Default 3, Kap 12) oder ob die finale Grading-Datei geschrieben wird. **User-Caveat REV-04:** Selection-Skills sind komplexer — Mini-Praxis-Test (Phase 6) verifiziert Token-/Zeit-Verbrauch.
+
+## Recursive-Feedback-Loop (Mikro-Loop, Kap 12)
+
+Nach dem ersten Evaluator-Call laeuft die Schleife:
+
+1. **Parse JSON-Response** des Evaluator-Skills strikt gegen
+   `prompts/output-schemas/selection-skills-L3.schema.json`. Bei Parse-Fehler ODER
+   gesetztem `blocker`-Feld: Loop sofort beenden, finale Antwort
+   speichern (PRD-20), `iteration` auf Wert des letzten Calls setzen.
+2. **Abbruch-Check** (vor jeder neuen Iteration):
+   - `improvementHints` leer? -> Loop fertig.
+   - `iteration >= N`? -> Loop fertig.
+   - sonst: weiter mit Schritt 3.
+3. **Re-Invoke** `evaluate` mit Zusatz-Kontext:
+   - Vorherige Evaluator-Antwort wird in einem `## Previous Response`-Block
+     in den Prompt eingefuegt (Volltext, nicht zusammengefasst).
+   - `improvementHints[]` werden in einem `## Improvement Hints`-Block
+     vorangestellt mit der expliziten Aufforderung „adressiere jeden Hint
+     und verbessere die Antwort entsprechend".
+   - Fragen-Set, Files-to-Read, Persona-Block (falls vorhanden),
+     Output-Schema bleiben **unveraendert** — Partial-Konsistenz
+     (Kap 12.6): pro Call IMMER alle Fragen des Bereichs/Sub-Bereichs.
+4. **Iteration erhoehen** (`iteration += 1`), zurueck zu Schritt 1.
+
+### Iterations-Default
+
+`N = 3` (Default). Begruendung: Kap 12 (Recommended 2-3x). Real-World-
+Kosten (Token/Zeit) werden in Phase 6 (Mini-Praxis-Test) verifiziert —
+**Caveat F15** (Kap 4.4). Override moeglich via Aufruf-Parameter
+`maxIterations` (falls vom Caller gesetzt, sonst Default greift).
+
+### Abbruch-Bedingungen
+
+| Bedingung | Aktion |
+|-----------|--------|
+| `improvementHints[]` leer | Save finale Antwort, Loop fertig |
+| `iteration >= N` | Save aktuelle Antwort, Loop fertig |
+| `blocker`-Feld gesetzt | Save Blocker-Antwort, Loop fertig |
+| Parse-Fehler | Save Roh-Antwort, Loop fertig |
+
+## Partial vs. Full (Kap 12.6)
+
+Pro Sub-Agent-Call werden IMMER alle Fragen eines Bereichs (oder bei
+Bereich 7 alle Fragen eines Sub-Bereichs L1/L2/L3) beantwortet. Partial-
+Grading ist eine Teilmenge der **Bereiche** auf Aufruf-Ebene, niemals
+eine Teilmenge der Fragen innerhalb eines Bereichs. Der Loop aendert
+diese Invariante nicht — jede Iteration beantwortet erneut alle Fragen
+des Bereichs.
+
+## Save (Hinweis auf PRD-20 + PRD-21)
+
+Die finale Antwort wird via `src/Grading.mjs#createEntry({...})` persistiert. Pflichtfelder fuer Phase-2h-Eintraege:
+
+- `iteration` (integer, 0-basiert beim ersten Call, erhoeht pro Loop-Durchgang)
+- `improvementHints` (string[], aus der letzten Evaluator-Antwort)
+- `persona` (string, `<basePersona>--<lens>` oder `'neutral'`)
+
+Filename folgt der Konvention aus PRD-21:
+`<schemaHash>--<timestamp>--<persona-slug>.json` — gebildet via
+`Grading.formatGradingFilename({ hash, ts, persona })`, NIE per
+String-Concat.
+
+Speicherort (gitignored, Kap 4.6):
+`grading-data/selection/<sel>/gradings/...`
+
+## Cross-Refs
+
+- **PRD-14** — Generator-Skill-Familie (Basis-Struktur)
+- **PRD-15** — Evaluator-Skill (`selection-skills-L3-evaluate`), wird hier orchestriert
+- **PRD-20** — `gradings/*.json` Eintrags-Schema (`iteration`, `improvementHints`, `persona`)
+- **PRD-21** — Persona-Slug-Filename-Konvention (`Grading.formatGradingFilename`)
+- **Caveat F15** — Token/Zeit-Verbrauch wird in Phase 6 (Mini-Praxis-Test) verifiziert

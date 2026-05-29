@@ -95,3 +95,20 @@ Komponenten:
 ```
 grading-data/single/etherscan--getContractEthereum/gradings/a1b2c3d4--2026-05-30T15-34-12Z--neutral.json
 ```
+
+## Filename-Helper (PRD-21)
+
+Filename-Bildung darf nur via `Grading.formatGradingFilename({ hash, ts, persona })` aus `src/Grading.mjs` laufen — **kein** String-Concat im Save-Step.
+
+```javascript
+import { Grading } from 'flowmcp-grading'
+
+const { filename } = Grading.formatGradingFilename( {
+    hash: schemaHash,             // 8-Zeichen sha256-Truncate ODER PLACEHOLDER\d{3}
+    ts: isoTs,                    // '2026-05-30T15-34-12Z' (Bindestrich statt Doppelpunkt)
+    persona: personaSlug          // 'neutral' (Bereich 1)
+} )
+const targetPath = `grading-data/single/${namespace}--${tool}/gradings/${filename}`
+```
+
+Validierung im Helper (GRD-040/041/042) faengt fehlerhafte Slugs, Hashes und Timestamps ab. Vollstaendige Konvention: `docs/grading-filename-convention.md`.

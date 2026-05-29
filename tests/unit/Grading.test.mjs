@@ -186,3 +186,330 @@ describe( 'Grading.checkAging', () => {
         expect( hasWarn ).toBe( true )
     } )
 } )
+
+
+// PRD-20 Memo 082 Phase 2h — loop fields on createEntry
+describe( 'Grading.createEntry: iteration (Memo 082 PRD-20)', () => {
+    const baseInput = {
+        schemaId: 'demo',
+        selectionId: null,
+        gradingTier: 'autonomous',
+        grader: { kind: 'script', name: 'unit', version: '0.0.1' },
+        options: {}
+    }
+
+    test( 'iteration: 0 akzeptiert', () => {
+        const result = Grading.createEntry( Object.assign( {}, baseInput, { iteration: 0 } ) )
+        expect( result.errors ).toEqual( [] )
+        expect( result.entry.iteration ).toBe( 0 )
+    } )
+
+    test( 'iteration: 3 akzeptiert', () => {
+        const result = Grading.createEntry( Object.assign( {}, baseInput, { iteration: 3 } ) )
+        expect( result.errors ).toEqual( [] )
+        expect( result.entry.iteration ).toBe( 3 )
+    } )
+
+    test( 'iteration: -1 wirft GRD-030', () => {
+        const result = Grading.createEntry( Object.assign( {}, baseInput, { iteration: -1 } ) )
+        const hasErr = result.errors.some( ( e ) => e.includes( 'GRD-030' ) )
+        expect( hasErr ).toBe( true )
+    } )
+
+    test( 'iteration: \'a\' (non-integer) wirft GRD-030', () => {
+        const result = Grading.createEntry( Object.assign( {}, baseInput, { iteration: 'a' } ) )
+        const hasErr = result.errors.some( ( e ) => e.includes( 'GRD-030' ) )
+        expect( hasErr ).toBe( true )
+    } )
+
+    test( 'iteration: 11 (above max) wirft GRD-030', () => {
+        const result = Grading.createEntry( Object.assign( {}, baseInput, { iteration: 11 } ) )
+        const hasErr = result.errors.some( ( e ) => e.includes( 'GRD-030' ) )
+        expect( hasErr ).toBe( true )
+    } )
+
+    test( 'iteration omitted → entry has no iteration field (no silent default)', () => {
+        const result = Grading.createEntry( Object.assign( {}, baseInput ) )
+        expect( result.errors ).toEqual( [] )
+        expect( 'iteration' in result.entry ).toBe( false )
+    } )
+} )
+
+
+describe( 'Grading.createEntry: improvementHints (Memo 082 PRD-20)', () => {
+    const baseInput = {
+        schemaId: 'demo',
+        selectionId: null,
+        gradingTier: 'autonomous',
+        grader: { kind: 'script', name: 'unit', version: '0.0.1' },
+        options: {}
+    }
+
+    test( 'empty array akzeptiert', () => {
+        const result = Grading.createEntry( Object.assign( {}, baseInput, { improvementHints: [] } ) )
+        expect( result.errors ).toEqual( [] )
+        expect( result.entry.improvementHints ).toEqual( [] )
+    } )
+
+    test( 'array of strings akzeptiert', () => {
+        const result = Grading.createEntry( Object.assign( {}, baseInput, { improvementHints: [ 'hint1', 'hint2' ] } ) )
+        expect( result.errors ).toEqual( [] )
+        expect( result.entry.improvementHints ).toEqual( [ 'hint1', 'hint2' ] )
+    } )
+
+    test( 'array with empty string wirft GRD-031', () => {
+        const result = Grading.createEntry( Object.assign( {}, baseInput, { improvementHints: [ 'hint1', '' ] } ) )
+        const hasErr = result.errors.some( ( e ) => e.includes( 'GRD-031' ) && e.includes( '[1]' ) )
+        expect( hasErr ).toBe( true )
+    } )
+
+    test( 'non-array (string) wirft GRD-031', () => {
+        const result = Grading.createEntry( Object.assign( {}, baseInput, { improvementHints: 'string-not-array' } ) )
+        const hasErr = result.errors.some( ( e ) => e.includes( 'GRD-031' ) )
+        expect( hasErr ).toBe( true )
+    } )
+
+    test( 'array with non-string element wirft GRD-031', () => {
+        const result = Grading.createEntry( Object.assign( {}, baseInput, { improvementHints: [ 'hint1', 42 ] } ) )
+        const hasErr = result.errors.some( ( e ) => e.includes( 'GRD-031' ) && e.includes( '[1]' ) )
+        expect( hasErr ).toBe( true )
+    } )
+} )
+
+
+describe( 'Grading.createEntry: persona (Memo 082 PRD-20)', () => {
+    const baseInput = {
+        schemaId: 'demo',
+        selectionId: null,
+        gradingTier: 'autonomous',
+        grader: { kind: 'script', name: 'unit', version: '0.0.1' },
+        options: {}
+    }
+
+    test( 'persona: \'neutral\' akzeptiert', () => {
+        const result = Grading.createEntry( Object.assign( {}, baseInput, { persona: 'neutral' } ) )
+        expect( result.errors ).toEqual( [] )
+        expect( result.entry.persona ).toBe( 'neutral' )
+    } )
+
+    test( 'persona: \'decision-maker--crypto-trader\' akzeptiert', () => {
+        const result = Grading.createEntry( Object.assign( {}, baseInput, { persona: 'decision-maker--crypto-trader' } ) )
+        expect( result.errors ).toEqual( [] )
+        expect( result.entry.persona ).toBe( 'decision-maker--crypto-trader' )
+    } )
+
+    test( 'persona: \'\' (empty string) wirft GRD-032', () => {
+        const result = Grading.createEntry( Object.assign( {}, baseInput, { persona: '' } ) )
+        const hasErr = result.errors.some( ( e ) => e.includes( 'GRD-032' ) )
+        expect( hasErr ).toBe( true )
+    } )
+
+    test( 'persona: \'crypto-trader\' (single segment) wirft GRD-032', () => {
+        const result = Grading.createEntry( Object.assign( {}, baseInput, { persona: 'crypto-trader' } ) )
+        const hasErr = result.errors.some( ( e ) => e.includes( 'GRD-032' ) )
+        expect( hasErr ).toBe( true )
+    } )
+
+    test( 'persona: \'Decision-Maker--Crypto\' (uppercase) wirft GRD-032', () => {
+        const result = Grading.createEntry( Object.assign( {}, baseInput, { persona: 'Decision-Maker--Crypto' } ) )
+        const hasErr = result.errors.some( ( e ) => e.includes( 'GRD-032' ) )
+        expect( hasErr ).toBe( true )
+    } )
+} )
+
+
+describe( 'Grading.readEntry: backward-compat (Memo 082 PRD-20)', () => {
+    test( 'legacy file without loop fields gets defaults', () => {
+        const legacyJson = JSON.stringify( {
+            gradingId: 'PLACEHOLDER001--2026-05-29T03-00-00Z',
+            schemaId: 'brightsky.bright-sky',
+            schemaHash: 'PLACEHOLDER001',
+            gradingTier: 'autonomous',
+            grader: { kind: 'script', name: 'pilot', version: '0.0.1' },
+            gradings: [],
+            categoricalVeto: null,
+            aggregateGrade: null,
+            maxAttainableGrade: 'B'
+        } )
+        const result = Grading.readEntry( { json: legacyJson } )
+        expect( result.errors ).toEqual( [] )
+        expect( result.entry.iteration ).toBe( 0 )
+        expect( result.entry.improvementHints ).toEqual( [] )
+        expect( result.entry.persona ).toBe( 'neutral' )
+    } )
+
+    test( 'new file with loop fields preserved (no mutation)', () => {
+        const newJson = JSON.stringify( {
+            gradingId: 'a1b2c3d4--2026-05-30T10-15-00Z',
+            schemaId: 'etherscan.getContractEthereum',
+            schemaHash: 'a1b2c3d4',
+            gradingTier: 'autonomous',
+            grader: { kind: 'llm', name: 'claude-opus', version: '1m', llmModel: 'claude-opus' },
+            gradings: [],
+            categoricalVeto: null,
+            aggregateGrade: 'B',
+            maxAttainableGrade: 'B',
+            iteration: 2,
+            improvementHints: [ 'Add reference to use case.' ],
+            persona: 'decision-maker--crypto-trader'
+        } )
+        const result = Grading.readEntry( { json: newJson } )
+        expect( result.errors ).toEqual( [] )
+        expect( result.entry.iteration ).toBe( 2 )
+        expect( result.entry.improvementHints ).toEqual( [ 'Add reference to use case.' ] )
+        expect( result.entry.persona ).toBe( 'decision-maker--crypto-trader' )
+    } )
+
+    test( 'invalid JSON → GRD-020', () => {
+        const result = Grading.readEntry( { json: '{not valid json' } )
+        const hasErr = result.errors.some( ( e ) => e.includes( 'GRD-020' ) )
+        expect( hasErr ).toBe( true )
+    } )
+
+    test( 'missing json param → GRD-001', () => {
+        const result = Grading.readEntry( { json: null } )
+        const hasErr = result.errors.some( ( e ) => e.includes( 'GRD-001' ) )
+        expect( hasErr ).toBe( true )
+    } )
+} )
+
+
+// PRD-21 Memo 082 Phase 2h — filename helper
+describe( 'Grading.formatGradingFilename: hash (Memo 082 PRD-21)', () => {
+    test( 'hash: 8-hex akzeptiert', () => {
+        const { filename } = Grading.formatGradingFilename( {
+            hash: 'a1b2c3d4',
+            ts: '2026-05-30T10-15-00Z',
+            persona: 'neutral'
+        } )
+        expect( filename ).toBe( 'a1b2c3d4--2026-05-30T10-15-00Z--neutral.json' )
+    } )
+
+    test( 'hash: PLACEHOLDER001 akzeptiert (legacy pilot files)', () => {
+        const { filename } = Grading.formatGradingFilename( {
+            hash: 'PLACEHOLDER001',
+            ts: '2026-05-29T03-00-00Z',
+            persona: 'neutral'
+        } )
+        expect( filename ).toBe( 'PLACEHOLDER001--2026-05-29T03-00-00Z--neutral.json' )
+    } )
+
+    test( 'hash: \'abc\' (zu kurz) wirft GRD-040', () => {
+        expect( () => Grading.formatGradingFilename( {
+            hash: 'abc',
+            ts: '2026-05-30T10-15-00Z',
+            persona: 'neutral'
+        } ) ).toThrow( /GRD-040/ )
+    } )
+
+    test( 'hash: \'XYZ123\' (kein hex) wirft GRD-040', () => {
+        expect( () => Grading.formatGradingFilename( {
+            hash: 'XYZ123',
+            ts: '2026-05-30T10-15-00Z',
+            persona: 'neutral'
+        } ) ).toThrow( /GRD-040/ )
+    } )
+} )
+
+
+describe( 'Grading.formatGradingFilename: ts (Memo 082 PRD-21)', () => {
+    test( 'ts: \'2026-05-30T10-15-00Z\' akzeptiert', () => {
+        const { filename } = Grading.formatGradingFilename( {
+            hash: 'a1b2c3d4',
+            ts: '2026-05-30T10-15-00Z',
+            persona: 'neutral'
+        } )
+        expect( filename ).toContain( '2026-05-30T10-15-00Z' )
+    } )
+
+    test( 'ts: \'2026-05-30T10:15:00Z\' (Doppelpunkte) wirft GRD-041', () => {
+        expect( () => Grading.formatGradingFilename( {
+            hash: 'a1b2c3d4',
+            ts: '2026-05-30T10:15:00Z',
+            persona: 'neutral'
+        } ) ).toThrow( /GRD-041/ )
+    } )
+
+    test( 'ts: \'2026-05-30\' (kein Zeit-Anteil) wirft GRD-041', () => {
+        expect( () => Grading.formatGradingFilename( {
+            hash: 'a1b2c3d4',
+            ts: '2026-05-30',
+            persona: 'neutral'
+        } ) ).toThrow( /GRD-041/ )
+    } )
+} )
+
+
+describe( 'Grading.formatGradingFilename: persona (Memo 082 PRD-21)', () => {
+    test( 'persona: \'neutral\' akzeptiert', () => {
+        const { filename } = Grading.formatGradingFilename( {
+            hash: 'a1b2c3d4',
+            ts: '2026-05-30T10-15-00Z',
+            persona: 'neutral'
+        } )
+        expect( filename ).toContain( '--neutral.json' )
+    } )
+
+    test( 'persona: \'decision-maker--crypto-trader\' akzeptiert', () => {
+        const { filename } = Grading.formatGradingFilename( {
+            hash: 'a1b2c3d4',
+            ts: '2026-05-30T10-15-00Z',
+            persona: 'decision-maker--crypto-trader'
+        } )
+        expect( filename ).toBe( 'a1b2c3d4--2026-05-30T10-15-00Z--decision-maker--crypto-trader.json' )
+    } )
+
+    test( 'persona: \'\' (empty) wirft GRD-001', () => {
+        expect( () => Grading.formatGradingFilename( {
+            hash: 'a1b2c3d4',
+            ts: '2026-05-30T10-15-00Z',
+            persona: ''
+        } ) ).toThrow( /GRD-042/ )
+    } )
+
+    test( 'persona: \'crypto-trader\' (single segment) wirft GRD-042', () => {
+        expect( () => Grading.formatGradingFilename( {
+            hash: 'a1b2c3d4',
+            ts: '2026-05-30T10-15-00Z',
+            persona: 'crypto-trader'
+        } ) ).toThrow( /GRD-042/ )
+    } )
+
+    test( 'persona: \'Decision-Maker--Crypto\' (uppercase) wirft GRD-042', () => {
+        expect( () => Grading.formatGradingFilename( {
+            hash: 'a1b2c3d4',
+            ts: '2026-05-30T10-15-00Z',
+            persona: 'Decision-Maker--Crypto'
+        } ) ).toThrow( /GRD-042/ )
+    } )
+} )
+
+
+describe( 'Grading.formatGradingFilename: output snapshots (PRD-21 §4.3)', () => {
+    test( 'snapshot row 1 — full persona', () => {
+        const { filename } = Grading.formatGradingFilename( {
+            hash: 'a1b2c3d4',
+            ts: '2026-05-30T10-15-00Z',
+            persona: 'decision-maker--crypto-trader'
+        } )
+        expect( filename ).toBe( 'a1b2c3d4--2026-05-30T10-15-00Z--decision-maker--crypto-trader.json' )
+    } )
+
+    test( 'snapshot row 2 — neutral', () => {
+        const { filename } = Grading.formatGradingFilename( {
+            hash: 'abc123',
+            ts: '2026-05-29T03-00-00Z',
+            persona: 'neutral'
+        } )
+        expect( filename ).toBe( 'abc123--2026-05-29T03-00-00Z--neutral.json' )
+    } )
+
+    test( 'snapshot row 3 — PLACEHOLDER hash', () => {
+        const { filename } = Grading.formatGradingFilename( {
+            hash: 'PLACEHOLDER001',
+            ts: '2026-05-29T03-00-00Z',
+            persona: 'neutral'
+        } )
+        expect( filename ).toBe( 'PLACEHOLDER001--2026-05-29T03-00-00Z--neutral.json' )
+    } )
+} )

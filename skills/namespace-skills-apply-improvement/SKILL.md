@@ -86,3 +86,20 @@ Mit `<personaSlug> = <basePersona>--<lens>` (Bereich 8 Persona-Default Recommend
 ```
 grading-data/namespace/etherscan/gradings/a1b2c3d4--2026-05-30T15-34-12Z--decision-maker--crypto-trader.json
 ```
+
+## Filename-Helper (PRD-21)
+
+Filename-Bildung darf nur via `Grading.formatGradingFilename({ hash, ts, persona })` aus `src/Grading.mjs` laufen — **kein** String-Concat im Save-Step.
+
+```javascript
+import { Grading } from 'flowmcp-grading'
+
+const { filename } = Grading.formatGradingFilename( {
+    hash: schemaHash,
+    ts: isoTs,
+    persona: personaSlug          // '<basePersona>--<lens>' (Bereich 8 Persona-Default Recommended)
+} )
+const targetPath = `grading-data/namespace/${namespace}/gradings/${filename}`
+```
+
+Validierung im Helper (GRD-040/041/042) faengt fehlerhafte Slugs, Hashes und Timestamps ab. Vollstaendige Konvention: `docs/grading-filename-convention.md`.

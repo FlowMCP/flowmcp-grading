@@ -18,6 +18,20 @@
  *   Z. 307 — Re-grading preserves old via previousGradingId
  *   Z. 309 — n/a pragma: ignored, not zero
  *   Z. 311 — personaIds required when determinism=non-deterministic
+ *
+ * Memo 082 Phase 2h additions (PRD-20, PRD-21):
+ *   Kap 12 — Recursive Feedback Loop fields: iteration, improvementHints[]
+ *   Kap 13 — persona slug: 'neutral' | '<basePersona>--<lens>'
+ *   Kap 4.3 — Save-Step filename pattern via formatGradingFilename helper
+ *
+ * Loop-field policy (PRD-20):
+ *   - createEntry: iteration/improvementHints/persona are OPTIONAL params.
+ *     When passed they are validated strictly (no silent defaults).
+ *     When omitted, the resulting entry simply lacks the field — caller
+ *     stays explicit.
+ *   - readEntry: backward-compat for legacy pilot files. Missing loop
+ *     fields are filled in with documented defaults (iteration: 0,
+ *     improvementHints: [], persona: 'neutral') — read-only, never write.
  */
 
 import { Scoring } from './Scoring.mjs'
@@ -49,8 +63,11 @@ class Grading {
     }
 
 
-    static createEntry( { schemaId, selectionId, gradingTier, grader, options } ) {
-        const { status, messages } = Grading.#validationCreateEntry( { schemaId, selectionId, gradingTier, grader } )
+    static createEntry( { schemaId, selectionId, gradingTier, grader, options, iteration, improvementHints, persona } ) {
+        const { status, messages } = Grading.#validationCreateEntry( {
+            schemaId, selectionId, gradingTier, grader,
+            iteration, improvementHints, persona
+        } )
         if( !status ) { return { entry: null, errors: messages } }
 
         const now = new Date().toISOString()
@@ -69,7 +86,54 @@ class Grading {
             options: options === undefined || options === null ? {} : options
         }
 
+        // PRD-20: loop fields only present when caller passes them — no silent defaults.
+        if( iteration !== undefined && iteration !== null ) {
+            entry.iteration = iteration
+        }
+        if( improvementHints !== undefined && improvementHints !== null ) {
+            entry.improvementHints = improvementHints
+        }
+        if( persona !== undefined && persona !== null ) {
+            entry.persona = persona
+        }
+
         return { entry, errors: [] }
+    }
+
+
+    static readEntry( { json } ) {
+        const { status, messages } = Grading.#validationReadEntry( { json } )
+        if( !status ) { return { entry: null, errors: messages } }
+
+        let parsed
+        try {
+            parsed = JSON.parse( json )
+        } catch( err ) {
+            return {
+                entry: null,
+                errors: [ `GRD-020: readEntry: invalid JSON, parse-error: ${err.message}` ]
+            }
+        }
+
+        // PRD-20 §3.3 — backward-compat for legacy pilot files (Memo 080).
+        // Defaults are applied ONLY on read, never on write (createEntry).
+        const entry = Object.assign( {}, parsed )
+        if( !( 'iteration' in entry ) )         { entry.iteration         = 0          }
+        if( !( 'improvementHints' in entry ) )  { entry.improvementHints  = []         }
+        if( !( 'persona' in entry ) )           { entry.persona           = 'neutral'  }
+
+        return { entry, errors: [] }
+    }
+
+
+    static formatGradingFilename( { hash, ts, persona } ) {
+        const { status, messages } = Grading.#validationFormatGradingFilename( {
+            hash, ts, persona
+        } )
+        if( !status ) { throw new Error( messages.join( '; ' ) ) }
+
+        const filename = `${hash}--${ts}--${persona}.json`
+        return { filename }
     }
 
 
@@ -203,7 +267,7 @@ class Grading {
     }
 
 
-    static #validationCreateEntry( { schemaId, selectionId, gradingTier, grader } ) {
+    static #validationCreateEntry( { schemaId, selectionId, gradingTier, grader, iteration, improvementHints, persona } ) {
         const messages = []
         const struct = { status: false, messages }
 
@@ -256,6 +320,118 @@ class Grading {
                 messages.push( 'GRD-007: llmModel required when graderIdentity.kind=llm' )
                 return struct
             }
+        }
+
+        // PRD-20 — optional loop fields. When passed, validate strictly.
+        if( iteration !== undefined && iteration !== null ) {
+            if( typeof iteration !== 'number' || !Number.isInteger( iteration ) ) {
+                messages.push( `GRD-030: createEntry: iteration muss integer >= 0 sein, war: ${iteration}` )
+                return struct
+            }
+            if( iteration < 0 || iteration > 10 ) {
+                messages.push( `GRD-030: createEntry: iteration muss integer >= 0 sein, war: ${iteration}` )
+                return struct
+            }
+        }
+
+        if( improvementHints !== undefined && improvementHints !== null ) {
+            if( !Array.isArray( improvementHints ) ) {
+                messages.push( `GRD-031: createEntry: improvementHints muss Array of string sein, war: ${typeof improvementHints}` )
+                return struct
+            }
+            const invalidHint = improvementHints
+                .map( ( hint, index ) => {
+                    if( typeof hint !== 'string' ) {
+                        return `GRD-031: createEntry: improvementHints[${index}] muss nicht-leerer string sein, war: ${typeof hint}`
+                    }
+                    if( hint.length === 0 ) {
+                        return `GRD-031: createEntry: improvementHints[${index}] muss nicht-leerer string sein, war: ''`
+                    }
+                    return null
+                } )
+                .filter( ( m ) => m !== null )
+            if( invalidHint.length > 0 ) {
+                invalidHint.forEach( ( m ) => messages.push( m ) )
+                return struct
+            }
+        }
+
+        if( persona !== undefined && persona !== null ) {
+            if( typeof persona !== 'string' ) {
+                messages.push( `GRD-032: createEntry: persona muss 'neutral' oder '<base>--<lens>' sein, war: '${persona}'` )
+                return struct
+            }
+            const isNeutral = persona === 'neutral'
+            const personaPattern = /^[a-z][a-z0-9-]*--[a-z][a-z0-9-]*$/
+            if( !isNeutral && !personaPattern.test( persona ) ) {
+                messages.push( `GRD-032: createEntry: persona muss 'neutral' oder '<base>--<lens>' sein, war: '${persona}'` )
+                return struct
+            }
+        }
+
+        struct.status = true
+        return struct
+    }
+
+
+    static #validationReadEntry( { json } ) {
+        const messages = []
+        const struct = { status: false, messages }
+
+        if( json === undefined || json === null ) {
+            messages.push( 'GRD-001: Required field missing: json' )
+            return struct
+        }
+        if( typeof json !== 'string' ) {
+            messages.push( `GRD-002: Type mismatch for field json: expected string, got ${typeof json}` )
+            return struct
+        }
+
+        struct.status = true
+        return struct
+    }
+
+
+    static #validationFormatGradingFilename( { hash, ts, persona } ) {
+        const messages = []
+        const struct = { status: false, messages }
+
+        const pairs = [
+            [ 'hash', hash ],
+            [ 'ts', ts ],
+            [ 'persona', persona ]
+        ]
+        pairs
+            .forEach( ( [ key, value ] ) => {
+                if( value === undefined || value === null ) {
+                    messages.push( `GRD-001: Required field missing: ${key}` )
+                    return
+                }
+                if( typeof value !== 'string' ) {
+                    messages.push( `GRD-002: Type mismatch for field ${key}: expected string, got ${typeof value}` )
+                }
+            } )
+
+        if( messages.length > 0 ) { return struct }
+
+        const hashHexPattern = /^[a-f0-9]{6,16}$/
+        const hashPlaceholderPattern = /^PLACEHOLDER[0-9]{3}$/
+        if( !hashHexPattern.test( hash ) && !hashPlaceholderPattern.test( hash ) ) {
+            messages.push( `GRD-040: formatGradingFilename: hash muss 6-16 hex Zeichen sein, war: '${hash}'` )
+            return struct
+        }
+
+        const tsPattern = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z$/
+        if( !tsPattern.test( ts ) ) {
+            messages.push( `GRD-041: formatGradingFilename: ts muss ISO 8601 mit '-' statt ':' sein (z.B. 2026-05-30T10-15-00Z), war: '${ts}'` )
+            return struct
+        }
+
+        const isNeutral = persona === 'neutral'
+        const personaPattern = /^[a-z][a-z0-9-]*--[a-z][a-z0-9-]*$/
+        if( !isNeutral && !personaPattern.test( persona ) ) {
+            messages.push( `GRD-042: formatGradingFilename: persona muss 'neutral' oder '<base>--<lens>' sein, war: '${persona}'` )
+            return struct
         }
 
         struct.status = true

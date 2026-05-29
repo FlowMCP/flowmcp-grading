@@ -328,3 +328,70 @@ Transaktions-Block.
 - Spec `13-skills.md` §3 (namespaceSkillValidity), §4 (selectionSkillL1/L2/L3)
 - Spec `19-folder-layout.md` §17 (Naming-Konvention `<gradingId>.json`)
 - PRD-08 (Phase 2e, Schema-Layout) — Vorbedingung
+
+---
+
+## Annex: Modul-spezifische Felder (Memo 082, Phase 2h, PRD-20)
+
+Folgende Felder sind **NICHT** in `gradingSpec/1.1.0` definiert, sondern auf
+Modul-Ebene (Memo 082, Phase 2h) pflichtig fuer alle Eintraege ab Phase 2h.
+Sie werden vom Generator (`src/Grading.mjs#createEntry`) entgegengenommen,
+validiert und in die persistierte JSON aufgenommen.
+
+| Feld | Typ | Quelle | Pflicht ab | Validation-Code |
+|------|-----|--------|------------|-----------------|
+| `iteration` | integer (`0..10`) | Memo 082 Kap 12 (Recursive Feedback Loop) | Phase 2h | `GRD-030` |
+| `improvementHints` | string[] | Memo 082 Kap 12 (Loop-Mechanik) | Phase 2h | `GRD-031` |
+| `persona` | string (`'neutral'` ODER `<base>--<lens>`) | Memo 082 Kap 13 (Parallele Personas) | Phase 2h | `GRD-032` |
+
+### Spec-Erweiterung — out-of-scope
+
+Spec-Erweiterungs-Vorschlag fuer Iterations-Counter ist explizit
+out-of-scope dieses Memos (Kap 14.2). Wenn Spec `1.2.0` diese Felder
+aufnimmt, wird das Mapping hier auf „Spec-konform ab 1.2.0" aktualisiert.
+
+### Backward-Compat (Read-Pfad)
+
+Legacy-Eintraege (Pilot-Files aus Memo 076/080) ohne diese Felder werden mit
+Defaults gelesen — `Grading.readEntry({ json })`:
+
+| Feld | Default beim Read |
+|------|-------------------|
+| `iteration` | `0` |
+| `improvementHints` | `[]` |
+| `persona` | `'neutral'` |
+
+**Wichtig:** Diese Defaults gelten **ausschliesslich** beim Lesen von
+Legacy-Files. `createEntry()` weist fehlende Felder als undefined zurueck
+(keine Silent Defaults) — wer das Feld setzen will, MUSS es explizit
+uebergeben.
+
+### Filename-Konvention (Cross-Ref PRD-21)
+
+Das `persona`-Feld im JSON-Body ist konsistent mit dem `persona`-Segment im
+Dateinamen (siehe `docs/grading-filename-convention.md`). Filename-Bildung
+darf nur via `Grading.formatGradingFilename({ hash, ts, persona })` laufen.
+
+### Beispiel-Eintrag (neu, Phase 2h)
+
+```json
+{
+    "gradingId": "a1b2c3d4--2026-05-30T10-15Z",
+    "schemaId": "etherscan.getContractEthereum",
+    "schemaHash": "a1b2c3d4",
+    "gradingTier": "autonomous",
+    "iteration": 2,
+    "improvementHints": [],
+    "persona": "decision-maker--crypto-trader",
+    "gradings": [],
+    "categoricalVeto": null,
+    "aggregateGrade": "B",
+    "maxAttainableGrade": "B"
+}
+```
+
+### Cross-References
+
+- PRD-19 — Recursive-Loop-Logik in `*-start-grade`-Skills (Skill-Bodies)
+- PRD-20 — Dieses Annex (Modul-Eintrags-Schema)
+- PRD-21 — Persona-Slug-Filename-Konvention (`docs/grading-filename-convention.md`)

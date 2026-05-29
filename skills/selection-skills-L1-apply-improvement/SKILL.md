@@ -86,3 +86,22 @@ Mit `<personaSlug> = <basePersona>--<lens>` (Bereich 7a Persona-Pflicht, Spec 13
 ```
 grading-data/selection/crypto-mini/gradings/f9e8d7c6--2026-05-30T16-02-44Z--decision-maker--crypto-trader--L1.json
 ```
+
+## Filename-Helper (PRD-21)
+
+Filename-Bildung darf nur via `Grading.formatGradingFilename({ hash, ts, persona })` aus `src/Grading.mjs` laufen — **kein** String-Concat im Save-Step. Der `--L1`-Tier-Suffix wird im Aufrufer nach dem Helper-Ergebnis angehaengt (Helper liefert das Basis-Filename, Tier ist L-spezifischer Suffix).
+
+```javascript
+import { Grading } from 'flowmcp-grading'
+
+const { filename } = Grading.formatGradingFilename( {
+    hash: schemaHash,
+    ts: isoTs,
+    persona: personaSlug          // '<basePersona>--<lens>' (Bereich 7a Persona-Pflicht)
+} )
+// Tier-Suffix `--L1` nachtraeglich angehaengt fuer Selection-Skills-Tier (Spec 13 §4.2):
+const tieredFilename = filename.replace( /\.json$/, '--L1.json' )
+const targetPath = `grading-data/selection/${selectionId}/gradings/${tieredFilename}`
+```
+
+Validierung im Helper (GRD-040/041/042) faengt fehlerhafte Slugs, Hashes und Timestamps ab. Vollstaendige Konvention: `docs/grading-filename-convention.md`.
