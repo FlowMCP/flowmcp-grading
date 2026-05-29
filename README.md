@@ -289,4 +289,4 @@ Contributions are welcome! Please open an issue first to discuss what you would 
 
 ## License
 
-[Apache-2.0](LICENSE)
+[MIT](LICENSE)
