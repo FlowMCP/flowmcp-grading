@@ -1,14 +1,19 @@
 {
     "name": "flowmcp-grading",
     "version": "1.0.0",
-    "description": "FlowMCP Grading-Spec and reference implementation (gradingSpec/1.0.0, scoringSystem/1.0.0, gradingSystem/1.0.0). Public API filled in Phase 6.",
+    "description": "FlowMCP Grading-Spec and reference implementation (gradingSpec/1.0.0, scoringSystem/1.0.0, gradingSystem/1.0.0).",
     "type": "module",
     "main": "src/index.mjs",
+    "exports": {
+        ".": "./src/index.mjs",
+        "./package.json": "./package.json"
+    },
     "engines": {
         "node": ">=22"
     },
     "scripts": {
-        "test": "echo \"Tests are added in Phase 6\" && exit 0"
+        "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+        "test:coverage:src": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
     },
     "repository": {
         "type": "git",
@@ -16,5 +21,21 @@
     },
     "license": "Apache-2.0",
     "dependencies": {},
-    "devDependencies": {}
+    "devDependencies": {
+        "jest": "^29.7.0"
+    },
+    "jest": {
+        "testEnvironment": "node",
+        "transform": {},
+        "testMatch": [
+            "<rootDir>/tests/**/*.test.mjs"
+        ],
+        "moduleFileExtensions": [
+            "mjs",
+            "js"
+        ],
+        "collectCoverageFrom": [
+            "src/**/*.mjs"
+        ]
+    }
 }
