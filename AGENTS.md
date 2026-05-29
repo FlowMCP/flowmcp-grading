@@ -6,9 +6,9 @@ This document defines the **mandatory red line** for any AI tool (Claude Code, o
 
 ## Red line — no data under `~/.flowmcp/`
 
-> **Verboten:** Ablage von Grading-Daten unter `~/.flowmcp/` oder irgendwo unterhalb des User-Home, das nicht durch eine bestehende dokumentierte Konvention abgedeckt ist. Der User-Home enthaelt sehr wichtige Dateien (`.env`-Keys), und Claude-Tools haben dort in der Vergangenheit mehrfach Schaden angerichtet — emotional + faktisch belegte rote Linie.
+> **Forbidden:** Storing grading data under `~/.flowmcp/` or anywhere below the user-home that is not covered by an existing documented convention. The user-home contains very important files (`.env` keys), and Claude tools have repeatedly caused damage there in the past — an emotionally and factually substantiated red line.
 >
-> — Memo 076, Kap 14, Zeile 580
+> — Memo 076, Chapter 14, line 580
 
 Grading results, intermediate states, evaluation scratch files, and any other artifact produced by grading runs **MUST NEVER** be written under `~/.flowmcp/` or to any other location inside the user-home directory. The user-home contains critical files (e.g. `~/.flowmcp/.env` with API keys) and has been the source of real, repeated damage caused by AI tooling.
 
@@ -22,7 +22,7 @@ Grading results **MUST** be written to `./grading-data/` inside this repository,
 grading-data/<schemaId>/<timestamp>.json
 ```
 
-The folder `grading-data/` is `.gitignore`-d and **MUST NEVER** be pushed to the remote (see `README.md` and `.gitignore` for the NICHT-PUSH-Konvention).
+The folder `grading-data/` is `.gitignore`-d and **MUST NEVER** be pushed to the remote (see `README.md` and `.gitignore` for the NICHT-PUSH Convention).
 
 The triple documentation (README, AGENTS.md, commented `.gitignore`) is the deliberate safeguard that allows us to keep grading results inside the repo while preventing accidental push.
 
@@ -43,5 +43,5 @@ The triple documentation (README, AGENTS.md, commented `.gitignore`) is the deli
 
 - Memo 076 (this repo's source-of-truth memo) — `projects/flowmcp/.memo/076-schema-quality-grading-spec/`
 - Memo 032 (env-file rules) — `projects/flowmcp/.memo/032-env-konfiguration-und-key-management/`
-- Global `~/.claude/CLAUDE.md` — Env-Variablen (`.env`) Regeln
-- This repository's `README.md` — NICHT-PUSH-Konvention for `grading-data/`
+- Global `~/.claude/CLAUDE.md` — environment variable (`.env`) rules
+- This repository's `README.md` — NICHT-PUSH Convention for `grading-data/`

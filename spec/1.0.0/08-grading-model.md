@@ -32,9 +32,9 @@ The architecture decision (Memo 076 finding F13, lines 256–258) is binding. Im
 
 ## 3. Data Model — Top-Level Fields
 
-The grading entry is a JSON object with the following top-level fields. The column **Pflicht** indicates MUST / SHOULD / OPTIONAL. The column **Conditional** captures the version-conditional rules.
+The grading entry is a JSON object with the following top-level fields. The column **Required** indicates MUST / SHOULD / OPTIONAL. The column **Conditional** captures the version-conditional rules.
 
-| Field | Type | Pflicht | Conditional | Description |
+| Field | Type | Required | Conditional | Description |
 |-------|------|---------|-------------|-------------|
 | `schemaId` | `string` | MUST | — | Identifier of the schema under grading. |
 | `selectionId` | `string` | MUST when `gradingTier=group-bound` | If `group-bound`, REQUIRED; if `autonomous`, OPTIONAL | Identifier of the Selection under grading (when group-bound). |
@@ -55,7 +55,7 @@ A grading entry MUST contain all MUST fields, conditional fields when their cond
 
 Each element of the `gradings[]` array is a JSON object describing **one dimension** scored by **one grader** at **one timestamp**. The element fields are:
 
-| Field | Type | Pflicht | Conditional | Description |
+| Field | Type | Required | Conditional | Description |
 |-------|------|---------|-------------|-------------|
 | `dimension` | enum (see §5) | MUST | — | The dimension name. |
 | `score` | `number` `1.0`–`5.0` OR enum `pass` \| `fail` \| `stale` \| `n/a` | MUST | See §5 | The score value. |
@@ -111,7 +111,7 @@ Mixing the two domains (e.g. `score = "3.0"`) is INVALID. The `pass` / `fail` en
 
 The `categoricalVeto` field is either `null` (no veto) or an object describing a veto that was raised by a grader. The Veto is a **closed list** at this spec version; the four allowed triggers are enumerated below.
 
-| Field | Type | Pflicht | Description |
+| Field | Type | Required | Description |
 |-------|------|---------|-------------|
 | `triggeredBy` | enum (see below) | MUST | The veto trigger name. |
 | `graderIdentity` | `object` (`kind`, `name`, `version`) | MUST | Identity of the grader who raised the veto. |
@@ -192,7 +192,7 @@ A user, an aging job, or a version bump CAN trigger a re-grading. The `regrading
 
 The `regradingTrigger` object has these fields:
 
-| Field | Type | Pflicht | Conditional | Description |
+| Field | Type | Required | Conditional | Description |
 |-------|------|---------|-------------|-------------|
 | `triggeredBy` | enum (see below) | MUST | — | The re-grading trigger name. |
 | `reportedIssue` | `string` | MUST when `triggeredBy=user-report` | — | The free-text issue description supplied by the user. |

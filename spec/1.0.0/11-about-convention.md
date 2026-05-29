@@ -53,7 +53,7 @@ A consumer that wants the Moralis About Resource asks for `Moralis.Resource.Abou
 
 The content of an About Resource is governed by the following MUST / SHOULD / MAY contract.
 
-| Element | Pflicht | Description |
+| Element | Required | Description |
 |---------|---------|-------------|
 | Capability summary — *what the namespace can do* | MUST | A short tool inventory in human-readable form: which tools are exposed, what each tool does at a glance. |
 | Limitations — *what the namespace cannot do* | MUST | Explicit limitations. The user MUST be able to learn from the About Resource what they should NOT expect. |

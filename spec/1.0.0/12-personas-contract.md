@@ -40,7 +40,7 @@ Implementers MUST read the personas in `repos/flowmcp-spec/personas/` before pro
 
 A grading entry's `selectionContext.personaIds[]` field (see [`08-grading-model.md`](./08-grading-model.md) §4) carries one or more persona references. The contract for each reference is defined by the following four fields. Implementers MAY model them as a single string (the slug) when the other three can be resolved by lookup against the personas folder + the relevant Domain-Knowledge document.
 
-| Field | Type | Pflicht | Description |
+| Field | Type | Required | Description |
 |-------|------|---------|-------------|
 | `personaId` | `string` | MUST | Slug as listed in §1 (`ai-engineer`, `decision-maker`, `hackathon-builder`, `schema-maintainer`). The slug MUST be one of the four — new generalised slugs require a spec version bump. |
 | `goals` | `string[]` | MUST | The goals the persona pursues under the current Selection. Resolved either inline or via the Domain-Knowledge document's Personas Reference section (see [`10-domain-knowledge.md`](./10-domain-knowledge.md) §3 sec. 6). |

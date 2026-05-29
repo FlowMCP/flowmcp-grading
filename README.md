@@ -4,7 +4,7 @@
 
 Reference implementation of the FlowMCP Grading-Spec (`gradingSpec/1.0.0`) — a normative, RFC 2119-aligned specification for evaluating the quality of FlowMCP schemas and selections. The repository hosts the spec documents (`spec/1.0.0/`), the source modules that implement Scoring, Grading, and Veto logic, LLM grader prompts, and the unit test suite. The spec is a **living document** and evolves with the FlowMCP schema corpus.
 
-## NICHT-PUSH-Konvention für `grading-data/`
+## NICHT-PUSH Convention for `grading-data/`
 
 > **WARNING — DO NOT PUSH `grading-data/`.**
 >
@@ -68,7 +68,7 @@ Results are written to `grading-data/<schemaId>/<timestamp>.json` — never push
 ## Table of Contents
 
 - [flowmcp-grading](#flowmcp-grading)
-  - [NICHT-PUSH-Konvention für grading-data/](#nicht-push-konvention-für-grading-data)
+  - [NICHT-PUSH Convention for grading-data/](#nicht-push-convention-for-grading-data)
   - [Architecture](#architecture)
   - [Quickstart](#quickstart)
   - [Features](#features)
