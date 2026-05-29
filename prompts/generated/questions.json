@@ -1,0 +1,1181 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-05-29T22:46:35.857Z",
+  "count": 60,
+  "questions": [
+    {
+      "id": "Q-single-test-01",
+      "area": "single-test",
+      "dimension": "docsUrlReachable",
+      "question": "Ist die docs-URL des Tools per HTTP 200 erreichbar?",
+      "scoreType": "boolean",
+      "weight": 0.34,
+      "determinism": "deterministic",
+      "tier": "P1",
+      "filesToRead": [
+        "{{schemaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/single-test.md",
+      "evaluatorTask": "Lies docs-URL aus schema.routes[0].docs und pruefe per HTTP-HEAD-Request.",
+      "outputSchemaRef": "output-schemas/single-test.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "deterministic/01-docs-url-reachable.md"
+    },
+    {
+      "id": "Q-single-test-02",
+      "area": "single-test",
+      "dimension": "outputSchemaMatch",
+      "question": "Matched das Output-Schema die echte Test-Response des Tools?",
+      "scoreType": "boolean",
+      "weight": 0.33,
+      "determinism": "deterministic",
+      "tier": "P1",
+      "filesToRead": [
+        "{{schemaPath}}",
+        "{{responseFixturePath}}"
+      ],
+      "preInstructionRef": "pre-instructions/single-test.md",
+      "evaluatorTask": "Validiere das schema.routes[0].response gegen eine echte Live-Antwort des Endpoints.",
+      "outputSchemaRef": "output-schemas/single-test.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "deterministic/02-output-schema-matches-response.md"
+    },
+    {
+      "id": "Q-single-test-03",
+      "area": "single-test",
+      "dimension": "apiKeyDomainMatch",
+      "question": "Matched die API-Key-Domain mit der Provider-Domain im Schema?",
+      "scoreType": "boolean",
+      "weight": 0.33,
+      "determinism": "deterministic",
+      "tier": "P1",
+      "filesToRead": [
+        "{{schemaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/single-test.md",
+      "evaluatorTask": "Vergleiche requiredServerParams Key-Namen mit der Base-URL Domain im Schema.",
+      "outputSchemaRef": "output-schemas/single-test.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "deterministic/03-api-key-domain-match.md"
+    },
+    {
+      "id": "Q-tools-aggregate-schema-01",
+      "area": "tools-aggregate-schema",
+      "dimension": "routesUniqueNames",
+      "question": "Sind alle Route-Namen innerhalb des Schemas eindeutig?",
+      "scoreType": "boolean",
+      "weight": 0.25,
+      "determinism": "deterministic",
+      "tier": "P4",
+      "filesToRead": [
+        "{{schemaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/tools-aggregate-schema.md",
+      "evaluatorTask": "Sammle alle route.name-Werte und pruefe auf Duplikate.",
+      "outputSchemaRef": "output-schemas/tools-aggregate-schema.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "deterministic/04-routes-unique-names.md"
+    },
+    {
+      "id": "Q-tools-aggregate-namespace-01",
+      "area": "tools-aggregate-namespace",
+      "dimension": "domainCoverage",
+      "question": "Erreicht die Anzahl Tools im Namespace den Hard-Threshold aus Spec 10 §2?",
+      "scoreType": "boolean",
+      "weight": 0.2,
+      "determinism": "deterministic",
+      "tier": "P4",
+      "filesToRead": [
+        "{{namespacePath}}"
+      ],
+      "preInstructionRef": "pre-instructions/tools-aggregate-namespace.md",
+      "evaluatorTask": "Zaehle Tools im Namespace und vergleiche mit Hard-Threshold (siehe Spec 10 §2).",
+      "outputSchemaRef": "output-schemas/tools-aggregate-namespace.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "deterministic/05-namespace-tools-count-threshold.md"
+    },
+    {
+      "id": "Q-about-namespace-01",
+      "area": "about-namespace",
+      "dimension": "aboutRouteExists",
+      "question": "Existiert eine About-Route im Namespace und ist sie technisch erreichbar?",
+      "scoreType": "boolean",
+      "weight": 0.34,
+      "determinism": "deterministic",
+      "tier": "P6",
+      "filesToRead": [
+        "{{aboutPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/about-namespace.md",
+      "evaluatorTask": "Pruefe das Vorhandensein einer About-Route und ob sie HTTP 200 zurueckgibt.",
+      "outputSchemaRef": "output-schemas/about-namespace.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "deterministic/06-about-namespace-route-exists.md"
+    },
+    {
+      "id": "Q-about-selection-01",
+      "area": "about-selection",
+      "dimension": "aboutRouteExists",
+      "question": "Existiert eine About-Route fuer die Selection?",
+      "scoreType": "boolean",
+      "weight": 0.34,
+      "determinism": "deterministic",
+      "tier": "P6",
+      "filesToRead": [
+        "{{aboutPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/about-selection.md",
+      "evaluatorTask": "Pruefe das Vorhandensein einer About-Page fuer die Selection.",
+      "outputSchemaRef": "output-schemas/about-selection.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "deterministic/07-about-selection-route-exists.md"
+    },
+    {
+      "id": "Q-single-test-04",
+      "area": "single-test",
+      "dimension": "descriptionClarity",
+      "question": "Ist die Tool-Description ohne Marketing-Begriffe?",
+      "scoreType": "scale-1-5",
+      "weight": 0.34,
+      "determinism": "non-deterministic",
+      "tier": "P2",
+      "filesToRead": [
+        "{{schemaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/single-test.md",
+      "evaluatorTask": "Bewerte die Description-Klarheit. Anti-Pattern: Buzzwords, Adjektive ohne Substanz, Superlative.",
+      "outputSchemaRef": "output-schemas/single-test.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/01-description-clarity.md"
+    },
+    {
+      "id": "Q-single-test-05",
+      "area": "single-test",
+      "dimension": "descriptionSpecConformance",
+      "question": "Folgt die Description den Spec-06-§4-Konventionen (3rd-Person, kein Werbespruch)?",
+      "scoreType": "scale-1-5",
+      "weight": 0.33,
+      "determinism": "non-deterministic",
+      "tier": "P2",
+      "filesToRead": [
+        "{{schemaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/single-test.md",
+      "evaluatorTask": "Pruefe Spec-06-§4-Konformitaet der Description: 3rd-Person, deskriptiv, ohne Buzzwords.",
+      "outputSchemaRef": "output-schemas/single-test.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/02-description-spec-conformance.md"
+    },
+    {
+      "id": "Q-single-test-06",
+      "area": "single-test",
+      "dimension": "paramConsistency",
+      "question": "Sind die Parameter-Namen konsistent (snake_case vs camelCase)?",
+      "scoreType": "scale-1-5",
+      "weight": 0.33,
+      "determinism": "non-deterministic",
+      "tier": "P2",
+      "filesToRead": [
+        "{{schemaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/single-test.md",
+      "evaluatorTask": "Pruefe Naming-Konsistenz aller Parameter innerhalb einer Route.",
+      "outputSchemaRef": "output-schemas/single-test.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/03-param-consistency.md"
+    },
+    {
+      "id": "Q-single-test-07",
+      "area": "single-test",
+      "dimension": "exampleQuality",
+      "question": "Sind die Beispiel-Inputs realistisch und nutzbar?",
+      "scoreType": "scale-1-5",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P3",
+      "filesToRead": [
+        "{{schemaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/single-test.md",
+      "evaluatorTask": "Pruefe ob examples-Felder echte, sinnvolle Werte enthalten (kein 'foo', 'bar', 'test').",
+      "outputSchemaRef": "output-schemas/single-test.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/04-example-inputs-realistic.md"
+    },
+    {
+      "id": "Q-single-test-08",
+      "area": "single-test",
+      "dimension": "toolNameSemantic",
+      "question": "Ist der Tool-Name semantisch klar (kein Kuerzel ohne Erklaerung)?",
+      "scoreType": "scale-1-5",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P3",
+      "filesToRead": [
+        "{{schemaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/single-test.md",
+      "evaluatorTask": "Bewerte den Tool-Namen: vollstaendig, deskriptiv, ohne Insider-Kuerzel.",
+      "outputSchemaRef": "output-schemas/single-test.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/05-tool-name-semantic.md"
+    },
+    {
+      "id": "Q-single-test-09",
+      "area": "single-test",
+      "dimension": "errorCasesDocumented",
+      "question": "Sind die Error-Cases (4xx/5xx) im Schema dokumentiert?",
+      "scoreType": "scale-1-5",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P3",
+      "filesToRead": [
+        "{{schemaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/single-test.md",
+      "evaluatorTask": "Pruefe ob bekannte API-Fehler (Rate-Limit, Auth-Fail, Not-Found) dokumentiert sind.",
+      "outputSchemaRef": "output-schemas/single-test.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/06-error-cases-documented.md"
+    },
+    {
+      "id": "Q-single-test-10",
+      "area": "single-test",
+      "dimension": "verbPrefixConsistent",
+      "question": "Ist der Verb-Praefix des Tool-Namens konsistent (get/list/search)?",
+      "scoreType": "scale-1-5",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P3",
+      "filesToRead": [
+        "{{schemaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/single-test.md",
+      "evaluatorTask": "Pruefe Verb-Praefix-Konvention: get/list/search/post/put/delete passend zum Verhalten.",
+      "outputSchemaRef": "output-schemas/single-test.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/07-verb-prefix-consistent.md"
+    },
+    {
+      "id": "Q-tools-aggregate-schema-02",
+      "area": "tools-aggregate-schema",
+      "dimension": "namingConsistency",
+      "question": "Ist das Route-Naming konsistent ueber alle Routes im Schema?",
+      "scoreType": "scale-1-5",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P4",
+      "filesToRead": [
+        "{{schemaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/tools-aggregate-schema.md",
+      "evaluatorTask": "Pruefe ob alle Route-Namen demselben Naming-Pattern folgen (Praefix, Casing, Wortwahl).",
+      "outputSchemaRef": "output-schemas/tools-aggregate-schema.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/08-route-naming-consistent.md"
+    },
+    {
+      "id": "Q-tools-aggregate-schema-03",
+      "area": "tools-aggregate-schema",
+      "dimension": "tagCoherence",
+      "question": "Sind die Tags ueber die Routes kohaerent und sinnvoll vergeben?",
+      "scoreType": "scale-1-5",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P4",
+      "filesToRead": [
+        "{{schemaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/tools-aggregate-schema.md",
+      "evaluatorTask": "Bewerte die Tag-Vergabe: konsistent ueber Routes, kein Tag-Chaos.",
+      "outputSchemaRef": "output-schemas/tools-aggregate-schema.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/09-tag-coherence.md"
+    },
+    {
+      "id": "Q-tools-aggregate-schema-04",
+      "area": "tools-aggregate-schema",
+      "dimension": "requiredServerParamsConsistent",
+      "question": "Sind die requiredServerParams ueber alle Routes konsistent identisch?",
+      "scoreType": "scale-1-5",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P4",
+      "filesToRead": [
+        "{{schemaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/tools-aggregate-schema.md",
+      "evaluatorTask": "Pruefe ob alle Routes denselben Satz requiredServerParams nutzen.",
+      "outputSchemaRef": "output-schemas/tools-aggregate-schema.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/10-required-server-params-consistent.md"
+    },
+    {
+      "id": "Q-tools-aggregate-schema-05",
+      "area": "tools-aggregate-schema",
+      "dimension": "routesCoherence",
+      "question": "Decken die Tools die wichtigsten API-Endpunkte des Providers ab?",
+      "scoreType": "scale-1-5",
+      "weight": 0.5,
+      "determinism": "non-deterministic",
+      "tier": "P5",
+      "filesToRead": [
+        "{{schemaPath}}",
+        "{{providerDocsPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/tools-aggregate-schema.md",
+      "evaluatorTask": "Vergleiche Schema-Routes mit Provider-API: Sind kritische Endpunkte abgedeckt?",
+      "outputSchemaRef": "output-schemas/tools-aggregate-schema.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/11-tool-vs-api-coverage.md"
+    },
+    {
+      "id": "Q-tools-aggregate-schema-06",
+      "area": "tools-aggregate-schema",
+      "dimension": "descriptionVoice",
+      "question": "Ist die Description-Voice ueber alle Routes konsistent (3rd-Person vs. Imperativ)?",
+      "scoreType": "scale-1-5",
+      "weight": 0.5,
+      "determinism": "non-deterministic",
+      "tier": "P5",
+      "filesToRead": [
+        "{{schemaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/tools-aggregate-schema.md",
+      "evaluatorTask": "Pruefe die Description-Voice ueber alle Routes. Spec 06 §4 gibt 3rd-Person vor.",
+      "outputSchemaRef": "output-schemas/tools-aggregate-schema.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/12-description-voice-consistent.md"
+    },
+    {
+      "id": "Q-namespace-description-01",
+      "area": "namespace-description",
+      "dimension": "namespaceDescriptionClarity",
+      "question": "Ist die Namespace-Identitaet in 1-2 Saetzen klar formuliert?",
+      "scoreType": "scale-1-5",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P4",
+      "filesToRead": [
+        "{{namespacePath}}"
+      ],
+      "preInstructionRef": "pre-instructions/namespace-description.md",
+      "evaluatorTask": "Bewerte die Klarheit der Namespace-Identitaet im Header-Text.",
+      "outputSchemaRef": "output-schemas/namespace-description.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/13-namespace-identity-clear.md"
+    },
+    {
+      "id": "Q-namespace-description-02",
+      "area": "namespace-description",
+      "dimension": "namespaceDescriptionClarity",
+      "question": "Matched die Namespace-Identitaet die Provider-Identity-Konvention?",
+      "scoreType": "scale-1-5",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P4",
+      "filesToRead": [
+        "{{namespacePath}}"
+      ],
+      "preInstructionRef": "pre-instructions/namespace-description.md",
+      "evaluatorTask": "Pruefe ob die Namespace-Identitaet dem Provider entspricht (z.B. solana statt sol).",
+      "outputSchemaRef": "output-schemas/namespace-description.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/14-namespace-identity-convention.md"
+    },
+    {
+      "id": "Q-namespace-description-03",
+      "area": "namespace-description",
+      "dimension": "namespaceDescriptionClarity",
+      "question": "Ist die Abgrenzung zu anderen Namespaces explizit benannt?",
+      "scoreType": "scale-1-5",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P4",
+      "filesToRead": [
+        "{{namespacePath}}"
+      ],
+      "preInstructionRef": "pre-instructions/namespace-description.md",
+      "evaluatorTask": "Pruefe ob der Namespace seine Grenzen erklaert (Was ist drin, was nicht).",
+      "outputSchemaRef": "output-schemas/namespace-description.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/15-namespace-boundary-explicit.md"
+    },
+    {
+      "id": "Q-namespace-description-04",
+      "area": "namespace-description",
+      "dimension": "namespaceDescriptionClarity",
+      "question": "Vermeidet die Identitaets-Aussage das CoinGecko-Anti-Pattern (Abkuerzung statt Klartext)?",
+      "scoreType": "boolean",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P4",
+      "filesToRead": [
+        "{{namespacePath}}"
+      ],
+      "preInstructionRef": "pre-instructions/namespace-description.md",
+      "evaluatorTask": "Pruefe ob keine Kuerzel wie sol/eth/btc als Identitaet statt solana/ethereum/bitcoin auftreten.",
+      "outputSchemaRef": "output-schemas/namespace-description.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/16-namespace-no-coingecko-antipattern.md"
+    },
+    {
+      "id": "Q-tools-aggregate-namespace-02",
+      "area": "tools-aggregate-namespace",
+      "dimension": "domainCoverage",
+      "question": "Decken die Tools die wichtigsten Domain-Use-Cases ab?",
+      "scoreType": "scale-1-5",
+      "weight": 0.2,
+      "determinism": "non-deterministic",
+      "tier": "P4",
+      "filesToRead": [
+        "{{namespacePath}}",
+        "{{domainKnowledgePath}}"
+      ],
+      "preInstructionRef": "pre-instructions/tools-aggregate-namespace.md",
+      "evaluatorTask": "Vergleiche Tools im Namespace mit den Use-Cases der Domain-Knowledge-Doc.",
+      "outputSchemaRef": "output-schemas/tools-aggregate-namespace.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/17-namespace-domain-usecase-coverage.md"
+    },
+    {
+      "id": "Q-tools-aggregate-namespace-03",
+      "area": "tools-aggregate-namespace",
+      "dimension": "domainCoverage",
+      "question": "Sind die Tools im Namespace funktional nicht-doppelt?",
+      "scoreType": "scale-1-5",
+      "weight": 0.2,
+      "determinism": "non-deterministic",
+      "tier": "P4",
+      "filesToRead": [
+        "{{namespacePath}}"
+      ],
+      "preInstructionRef": "pre-instructions/tools-aggregate-namespace.md",
+      "evaluatorTask": "Pruefe ob Tools redundante Funktionen abbilden (z.B. zwei Tools fuer Price).",
+      "outputSchemaRef": "output-schemas/tools-aggregate-namespace.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/18-namespace-no-tool-duplication.md"
+    },
+    {
+      "id": "Q-tools-aggregate-namespace-04",
+      "area": "tools-aggregate-namespace",
+      "dimension": "domainCoverage",
+      "question": "Enthalten die Tools sowohl Read-Cases als auch Aggregate-Cases?",
+      "scoreType": "scale-1-5",
+      "weight": 0.2,
+      "determinism": "non-deterministic",
+      "tier": "P4",
+      "filesToRead": [
+        "{{namespacePath}}"
+      ],
+      "preInstructionRef": "pre-instructions/tools-aggregate-namespace.md",
+      "evaluatorTask": "Pruefe ob ein gesunder Mix aus Single-Item-Reads und Aggregations vorliegt.",
+      "outputSchemaRef": "output-schemas/tools-aggregate-namespace.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/19-namespace-read-and-aggregate-mix.md"
+    },
+    {
+      "id": "Q-tools-aggregate-namespace-05",
+      "area": "tools-aggregate-namespace",
+      "dimension": "domainCoverage",
+      "question": "Sind Coverage-Gaps explizit dokumentiert (oder bewusst absent)?",
+      "scoreType": "boolean",
+      "weight": 0.2,
+      "determinism": "non-deterministic",
+      "tier": "P4",
+      "filesToRead": [
+        "{{namespacePath}}",
+        "{{domainKnowledgePath}}"
+      ],
+      "preInstructionRef": "pre-instructions/tools-aggregate-namespace.md",
+      "evaluatorTask": "Pruefe ob fehlende Funktionen dokumentiert sind oder bewusst draussen bleiben.",
+      "outputSchemaRef": "output-schemas/tools-aggregate-namespace.schema.json",
+      "personaRequired": false,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/20-namespace-coverage-gaps-documented.md"
+    },
+    {
+      "id": "Q-about-namespace-02",
+      "area": "about-namespace",
+      "dimension": "personaReference",
+      "question": "Ist die Persona-Reference im About-Content vorhanden und matched die uebergebene Persona?",
+      "scoreType": "scale-1-5",
+      "weight": 0.33,
+      "determinism": "non-deterministic",
+      "tier": "P6",
+      "filesToRead": [
+        "{{aboutPath}}",
+        "{{personaPath}}",
+        "{{lensPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/about-namespace.md",
+      "evaluatorTask": "Pruefe ob About-Content explizit auf die Persona referenziert (Spec 11 §4). Bewerte Fit gegen Persona + Lens.",
+      "outputSchemaRef": "output-schemas/about-namespace.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/21-about-namespace-persona-reference.md"
+    },
+    {
+      "id": "Q-about-namespace-03",
+      "area": "about-namespace",
+      "dimension": "valueProposition",
+      "question": "Ist die Value-Proposition fuer die Persona klar formuliert?",
+      "scoreType": "scale-1-5",
+      "weight": 0.33,
+      "determinism": "non-deterministic",
+      "tier": "P6",
+      "filesToRead": [
+        "{{aboutPath}}",
+        "{{personaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/about-namespace.md",
+      "evaluatorTask": "Bewerte ob die About-Page erklaert WAS die Persona davon hat (konkret, kein Marketing).",
+      "outputSchemaRef": "output-schemas/about-namespace.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/22-about-namespace-value-proposition.md"
+    },
+    {
+      "id": "Q-about-namespace-04",
+      "area": "about-namespace",
+      "dimension": "useCaseClarity",
+      "question": "Sind die Use-Case-Beispiele Persona-relevant?",
+      "scoreType": "scale-1-5",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P7",
+      "filesToRead": [
+        "{{aboutPath}}",
+        "{{personaPath}}",
+        "{{lensPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/about-namespace.md",
+      "evaluatorTask": "Pruefe ob Use-Case-Beispiele auf der About-Page zur Persona passen.",
+      "outputSchemaRef": "output-schemas/about-namespace.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/23-about-namespace-usecase-examples.md"
+    },
+    {
+      "id": "Q-about-namespace-05",
+      "area": "about-namespace",
+      "dimension": "useCaseClarity",
+      "question": "Ist die About-Page frei von Marketing-Sprache?",
+      "scoreType": "scale-1-5",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P7",
+      "filesToRead": [
+        "{{aboutPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/about-namespace.md",
+      "evaluatorTask": "Bewerte die Sprache der About-Page: deskriptiv vs. werblich.",
+      "outputSchemaRef": "output-schemas/about-namespace.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/24-about-namespace-no-marketing.md"
+    },
+    {
+      "id": "Q-about-namespace-06",
+      "area": "about-namespace",
+      "dimension": "useCaseClarity",
+      "question": "Ist ein ToS- oder Pricing-Verweis vorhanden?",
+      "scoreType": "boolean",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P7",
+      "filesToRead": [
+        "{{aboutPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/about-namespace.md",
+      "evaluatorTask": "Pruefe ob die About-Page auf ToS und/oder Pricing verlinkt.",
+      "outputSchemaRef": "output-schemas/about-namespace.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/25-about-namespace-tos-pricing-link.md"
+    },
+    {
+      "id": "Q-about-namespace-07",
+      "area": "about-namespace",
+      "dimension": "useCaseClarity",
+      "question": "Ist die About-Page anschlussfaehig fuer die Decision-Maker-Persona?",
+      "scoreType": "scale-1-5",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P7",
+      "filesToRead": [
+        "{{aboutPath}}",
+        "{{personaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/about-namespace.md",
+      "evaluatorTask": "Bewerte die Decision-Maker-Anschlussfaehigkeit (Pricing, ToS, Reliability).",
+      "outputSchemaRef": "output-schemas/about-namespace.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/26-about-namespace-decision-maker-fit.md"
+    },
+    {
+      "id": "Q-about-selection-02",
+      "area": "about-selection",
+      "dimension": "personaReference",
+      "question": "Ist das Selection-Theme klar erkennbar?",
+      "scoreType": "scale-1-5",
+      "weight": 0.33,
+      "determinism": "non-deterministic",
+      "tier": "P6",
+      "filesToRead": [
+        "{{aboutPath}}",
+        "{{personaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/about-selection.md",
+      "evaluatorTask": "Bewerte ob das Selection-Theme aus dem About-Text klar wird.",
+      "outputSchemaRef": "output-schemas/about-selection.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/27-about-selection-theme-clear.md"
+    },
+    {
+      "id": "Q-about-selection-03",
+      "area": "about-selection",
+      "dimension": "personaReference",
+      "question": "Ist der Use-Case fuer die Persona konkret beschrieben?",
+      "scoreType": "scale-1-5",
+      "weight": 0.33,
+      "determinism": "non-deterministic",
+      "tier": "P6",
+      "filesToRead": [
+        "{{aboutPath}}",
+        "{{personaPath}}",
+        "{{lensPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/about-selection.md",
+      "evaluatorTask": "Pruefe ob ein konkreter Persona-Use-Case beschrieben ist (nicht generisch).",
+      "outputSchemaRef": "output-schemas/about-selection.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/28-about-selection-usecase-for-persona.md"
+    },
+    {
+      "id": "Q-about-selection-04",
+      "area": "about-selection",
+      "dimension": "useCaseClarity",
+      "question": "Erklaert die About-Page warum welche Namespaces enthalten sind?",
+      "scoreType": "scale-1-5",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P7",
+      "filesToRead": [
+        "{{aboutPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/about-selection.md",
+      "evaluatorTask": "Pruefe ob die About-Page die Auswahl der Namespaces begruendet.",
+      "outputSchemaRef": "output-schemas/about-selection.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/29-about-selection-namespace-rationale.md"
+    },
+    {
+      "id": "Q-about-selection-05",
+      "area": "about-selection",
+      "dimension": "useCaseClarity",
+      "question": "Wird die Skill-Komposition (L1/L2/L3) auf der About-Page erklaert?",
+      "scoreType": "scale-1-5",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P7",
+      "filesToRead": [
+        "{{aboutPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/about-selection.md",
+      "evaluatorTask": "Pruefe ob die About-Page die Skill-Levels und ihren Zusammenhang erklaert.",
+      "outputSchemaRef": "output-schemas/about-selection.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/30-about-selection-skill-composition.md"
+    },
+    {
+      "id": "Q-about-selection-06",
+      "area": "about-selection",
+      "dimension": "useCaseClarity",
+      "question": "Ist die About-Page frei von Marketing-Sprache?",
+      "scoreType": "scale-1-5",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P7",
+      "filesToRead": [
+        "{{aboutPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/about-selection.md",
+      "evaluatorTask": "Bewerte die Sprache der Selection-About: deskriptiv vs. werblich.",
+      "outputSchemaRef": "output-schemas/about-selection.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/31-about-selection-no-marketing.md"
+    },
+    {
+      "id": "Q-about-selection-07",
+      "area": "about-selection",
+      "dimension": "useCaseClarity",
+      "question": "Ist die About-Page anschlussfaehig fuer die Decision-Maker-Persona-Lens?",
+      "scoreType": "scale-1-5",
+      "weight": 0.25,
+      "determinism": "non-deterministic",
+      "tier": "P7",
+      "filesToRead": [
+        "{{aboutPath}}",
+        "{{personaPath}}",
+        "{{lensPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/about-selection.md",
+      "evaluatorTask": "Bewerte die Decision-Maker-Anschlussfaehigkeit der Selection-About.",
+      "outputSchemaRef": "output-schemas/about-selection.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/32-about-selection-decision-maker-lens.md"
+    },
+    {
+      "id": "Q-selection-skills-L1-01",
+      "area": "selection-skills-L1",
+      "dimension": "coverage",
+      "question": "Ist der L1-Skill atomar (genau 1 Tool-Call)?",
+      "scoreType": "boolean",
+      "weight": 0.5,
+      "determinism": "non-deterministic",
+      "tier": "S1",
+      "filesToRead": [
+        "{{skillPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/selection-skills-L1.md",
+      "evaluatorTask": "Pruefe ob der L1-Skill genau 1 Tool aufruft (Atomic-Skill-Definition).",
+      "outputSchemaRef": "output-schemas/selection-skills-L1.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/33-skills-l1-atomic.md"
+    },
+    {
+      "id": "Q-selection-skills-L1-02",
+      "area": "selection-skills-L1",
+      "dimension": "coverage",
+      "question": "Passt die L1-Description sprachlich zur Persona?",
+      "scoreType": "scale-1-5",
+      "weight": 0.5,
+      "determinism": "non-deterministic",
+      "tier": "S1",
+      "filesToRead": [
+        "{{skillPath}}",
+        "{{personaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/selection-skills-L1.md",
+      "evaluatorTask": "Bewerte ob die L1-Description in der Sprache der Persona formuliert ist.",
+      "outputSchemaRef": "output-schemas/selection-skills-L1.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/34-skills-l1-description-persona-fit.md"
+    },
+    {
+      "id": "Q-selection-skills-L1-03",
+      "area": "selection-skills-L1",
+      "dimension": "personaFit",
+      "question": "Ist das L1-Input-Schema minimal (nur Pflicht-Parameter)?",
+      "scoreType": "scale-1-5",
+      "weight": 0.5,
+      "determinism": "non-deterministic",
+      "tier": "S2",
+      "filesToRead": [
+        "{{skillPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/selection-skills-L1.md",
+      "evaluatorTask": "Pruefe ob das L1-Input-Schema nur die wirklich benoetigten Parameter zeigt.",
+      "outputSchemaRef": "output-schemas/selection-skills-L1.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/35-skills-l1-input-minimal.md"
+    },
+    {
+      "id": "Q-selection-skills-L1-04",
+      "area": "selection-skills-L1",
+      "dimension": "personaFit",
+      "question": "Ist der L1-Use-Case fuer die Persona relevant?",
+      "scoreType": "scale-1-5",
+      "weight": 0.5,
+      "determinism": "non-deterministic",
+      "tier": "S2",
+      "filesToRead": [
+        "{{skillPath}}",
+        "{{personaPath}}",
+        "{{lensPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/selection-skills-L1.md",
+      "evaluatorTask": "Pruefe Persona-Relevanz des L1-Use-Cases.",
+      "outputSchemaRef": "output-schemas/selection-skills-L1.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/36-skills-l1-usecase-relevance.md"
+    },
+    {
+      "id": "Q-selection-skills-L2-01",
+      "area": "selection-skills-L2",
+      "dimension": "personaFit",
+      "question": "Ist die L2-Composition aus L1-Skills logisch?",
+      "scoreType": "scale-1-5",
+      "weight": 0.5,
+      "determinism": "non-deterministic",
+      "tier": "S2",
+      "filesToRead": [
+        "{{skillPath}}",
+        "{{l1SkillsPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/selection-skills-L2.md",
+      "evaluatorTask": "Pruefe ob die L2-Composition aus L1-Skills sinnvoll fuer die Persona zusammengesetzt ist.",
+      "outputSchemaRef": "output-schemas/selection-skills-L2.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/37-skills-l2-composition-logical.md"
+    },
+    {
+      "id": "Q-selection-skills-L2-02",
+      "area": "selection-skills-L2",
+      "dimension": "personaFit",
+      "question": "Erklaert die L2-Description den Persona-Mehrwert ueber L1 hinaus?",
+      "scoreType": "scale-1-5",
+      "weight": 0.5,
+      "determinism": "non-deterministic",
+      "tier": "S2",
+      "filesToRead": [
+        "{{skillPath}}",
+        "{{personaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/selection-skills-L2.md",
+      "evaluatorTask": "Bewerte ob die L2-Description den Persona-Mehrwert vs. L1 klar macht.",
+      "outputSchemaRef": "output-schemas/selection-skills-L2.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/38-skills-l2-description-mehrwert.md"
+    },
+    {
+      "id": "Q-selection-skills-L2-03",
+      "area": "selection-skills-L2",
+      "dimension": "skillAdequacy",
+      "question": "Vermeidet L2 Redundanz zu L1-Skills?",
+      "scoreType": "scale-1-5",
+      "weight": 0.34,
+      "determinism": "non-deterministic",
+      "tier": "S3",
+      "filesToRead": [
+        "{{skillPath}}",
+        "{{l1SkillsPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/selection-skills-L2.md",
+      "evaluatorTask": "Pruefe ob L2 nicht 1:1 einen L1-Skill wiederholt.",
+      "outputSchemaRef": "output-schemas/selection-skills-L2.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/39-skills-l2-no-l1-redundancy.md"
+    },
+    {
+      "id": "Q-selection-skills-L2-04",
+      "area": "selection-skills-L2",
+      "dimension": "skillAdequacy",
+      "question": "Ist der L2-Output sinnvoll zusammengefasst (nicht roh)?",
+      "scoreType": "scale-1-5",
+      "weight": 0.33,
+      "determinism": "non-deterministic",
+      "tier": "S3",
+      "filesToRead": [
+        "{{skillPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/selection-skills-L2.md",
+      "evaluatorTask": "Bewerte ob der L2-Output verdichtet ist und nicht nur die L1-Outputs durchreicht.",
+      "outputSchemaRef": "output-schemas/selection-skills-L2.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/40-skills-l2-output-summary.md"
+    },
+    {
+      "id": "Q-selection-skills-L2-05",
+      "area": "selection-skills-L2",
+      "dimension": "skillAdequacy",
+      "question": "Bildet der L2-Use-Case einen echten Persona-Workflow ab?",
+      "scoreType": "scale-1-5",
+      "weight": 0.33,
+      "determinism": "non-deterministic",
+      "tier": "S3",
+      "filesToRead": [
+        "{{skillPath}}",
+        "{{personaPath}}",
+        "{{lensPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/selection-skills-L2.md",
+      "evaluatorTask": "Pruefe ob der L2-Use-Case einem typischen Persona-Workflow entspricht.",
+      "outputSchemaRef": "output-schemas/selection-skills-L2.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/41-skills-l2-persona-workflow.md"
+    },
+    {
+      "id": "Q-selection-skills-L3-01",
+      "area": "selection-skills-L3",
+      "dimension": "skillAdequacy",
+      "question": "Bildet der L3-Skill eine Daily-Use-Routine fuer die Persona ab?",
+      "scoreType": "scale-1-5",
+      "weight": 0.34,
+      "determinism": "non-deterministic",
+      "tier": "S3",
+      "filesToRead": [
+        "{{skillPath}}",
+        "{{personaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/selection-skills-L3.md",
+      "evaluatorTask": "Bewerte ob der L3-Skill einer tatsaechlichen Daily-Routine entspricht.",
+      "outputSchemaRef": "output-schemas/selection-skills-L3.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/42-skills-l3-daily-routine.md"
+    },
+    {
+      "id": "Q-selection-skills-L3-02",
+      "area": "selection-skills-L3",
+      "dimension": "skillAdequacy",
+      "question": "Ist die L3-Composition aus L2-Skills logisch aufgebaut?",
+      "scoreType": "scale-1-5",
+      "weight": 0.33,
+      "determinism": "non-deterministic",
+      "tier": "S3",
+      "filesToRead": [
+        "{{skillPath}}",
+        "{{l2SkillsPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/selection-skills-L3.md",
+      "evaluatorTask": "Pruefe ob L3 sinnvoll auf L2-Skills aufbaut (nicht direkt L1).",
+      "outputSchemaRef": "output-schemas/selection-skills-L3.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/43-skills-l3-composition-from-l2.md"
+    },
+    {
+      "id": "Q-selection-skills-L3-03",
+      "area": "selection-skills-L3",
+      "dimension": "skillAdequacy",
+      "question": "Ist der L3-Trigger natuerlich in der Persona-Sprache formuliert?",
+      "scoreType": "scale-1-5",
+      "weight": 0.33,
+      "determinism": "non-deterministic",
+      "tier": "S3",
+      "filesToRead": [
+        "{{skillPath}}",
+        "{{personaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/selection-skills-L3.md",
+      "evaluatorTask": "Pruefe ob der L3-Trigger einer natuerlichen Persona-Anfrage entspricht.",
+      "outputSchemaRef": "output-schemas/selection-skills-L3.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/44-skills-l3-natural-trigger.md"
+    },
+    {
+      "id": "Q-selection-skills-L3-04",
+      "area": "selection-skills-L3",
+      "dimension": "domainAlignment",
+      "question": "Ist der L3-Output Persona-Action-Ready?",
+      "scoreType": "scale-1-5",
+      "weight": 0.34,
+      "determinism": "non-deterministic",
+      "tier": "S4",
+      "filesToRead": [
+        "{{skillPath}}",
+        "{{personaPath}}",
+        "{{lensPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/selection-skills-L3.md",
+      "evaluatorTask": "Bewerte ob die Persona aus dem L3-Output direkt handeln kann.",
+      "outputSchemaRef": "output-schemas/selection-skills-L3.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/45-skills-l3-action-ready-output.md"
+    },
+    {
+      "id": "Q-selection-skills-L3-05",
+      "area": "selection-skills-L3",
+      "dimension": "domainAlignment",
+      "question": "Vermeidet L3 die Wiederholung der Domain-Doku?",
+      "scoreType": "scale-1-5",
+      "weight": 0.33,
+      "determinism": "non-deterministic",
+      "tier": "S4",
+      "filesToRead": [
+        "{{skillPath}}",
+        "{{domainKnowledgePath}}"
+      ],
+      "preInstructionRef": "pre-instructions/selection-skills-L3.md",
+      "evaluatorTask": "Pruefe ob L3 die Domain-Doku ergaenzt, nicht 1:1 wiederholt.",
+      "outputSchemaRef": "output-schemas/selection-skills-L3.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/46-skills-l3-no-domain-doc-repetition.md"
+    },
+    {
+      "id": "Q-selection-skills-L3-06",
+      "area": "selection-skills-L3",
+      "dimension": "domainAlignment",
+      "question": "Deckt der L3-Skill Cross-Namespace-Use-Cases ab?",
+      "scoreType": "scale-1-5",
+      "weight": 0.33,
+      "determinism": "non-deterministic",
+      "tier": "S4",
+      "filesToRead": [
+        "{{skillPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/selection-skills-L3.md",
+      "evaluatorTask": "Pruefe ob L3 Tools aus mehreren Namespaces sinnvoll kombiniert.",
+      "outputSchemaRef": "output-schemas/selection-skills-L3.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/47-skills-l3-cross-namespace-coverage.md"
+    },
+    {
+      "id": "Q-namespace-skills-01",
+      "area": "namespace-skills",
+      "dimension": "skillAdequacy",
+      "question": "Matched der Namespace-Skill das Namespace-Theme?",
+      "scoreType": "scale-1-5",
+      "weight": 0.34,
+      "determinism": "non-deterministic",
+      "tier": "S3",
+      "filesToRead": [
+        "{{skillPath}}",
+        "{{namespacePath}}"
+      ],
+      "preInstructionRef": "pre-instructions/namespace-skills.md",
+      "evaluatorTask": "Bewerte ob der Namespace-Skill thematisch zum Namespace passt.",
+      "outputSchemaRef": "output-schemas/namespace-skills.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/48-namespace-skills-theme-match.md"
+    },
+    {
+      "id": "Q-namespace-skills-02",
+      "area": "namespace-skills",
+      "dimension": "skillAdequacy",
+      "question": "Bildet der Namespace-Skill einen Persona-Workflow ab?",
+      "scoreType": "scale-1-5",
+      "weight": 0.33,
+      "determinism": "non-deterministic",
+      "tier": "S3",
+      "filesToRead": [
+        "{{skillPath}}",
+        "{{personaPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/namespace-skills.md",
+      "evaluatorTask": "Pruefe ob der Namespace-Skill einen typischen Persona-Workflow innerhalb des Namespace abdeckt.",
+      "outputSchemaRef": "output-schemas/namespace-skills.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/49-namespace-skills-persona-workflow.md"
+    },
+    {
+      "id": "Q-namespace-skills-03",
+      "area": "namespace-skills",
+      "dimension": "skillAdequacy",
+      "question": "Ist die Composition aus Namespace-Tools logisch?",
+      "scoreType": "scale-1-5",
+      "weight": 0.33,
+      "determinism": "non-deterministic",
+      "tier": "S3",
+      "filesToRead": [
+        "{{skillPath}}",
+        "{{namespacePath}}"
+      ],
+      "preInstructionRef": "pre-instructions/namespace-skills.md",
+      "evaluatorTask": "Bewerte die Tool-Composition des Namespace-Skills auf Logik und Reihenfolge.",
+      "outputSchemaRef": "output-schemas/namespace-skills.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/50-namespace-skills-composition-logical.md"
+    },
+    {
+      "id": "Q-namespace-skills-04",
+      "area": "namespace-skills",
+      "dimension": "domainAlignment",
+      "question": "Ist die Skill-Description frei von Marketing-Sprache?",
+      "scoreType": "scale-1-5",
+      "weight": 0.34,
+      "determinism": "non-deterministic",
+      "tier": "S4",
+      "filesToRead": [
+        "{{skillPath}}"
+      ],
+      "preInstructionRef": "pre-instructions/namespace-skills.md",
+      "evaluatorTask": "Pruefe die Skill-Description auf Marketing-Begriffe.",
+      "outputSchemaRef": "output-schemas/namespace-skills.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/51-namespace-skills-no-marketing.md"
+    },
+    {
+      "id": "Q-namespace-skills-05",
+      "area": "namespace-skills",
+      "dimension": "domainAlignment",
+      "question": "Ist der Bezug zur Domain-Knowledge-Doc klar?",
+      "scoreType": "scale-1-5",
+      "weight": 0.33,
+      "determinism": "non-deterministic",
+      "tier": "S4",
+      "filesToRead": [
+        "{{skillPath}}",
+        "{{domainKnowledgePath}}"
+      ],
+      "preInstructionRef": "pre-instructions/namespace-skills.md",
+      "evaluatorTask": "Pruefe ob der Skill auf die Domain-Knowledge-Doc referenziert.",
+      "outputSchemaRef": "output-schemas/namespace-skills.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/52-namespace-skills-domain-doc-bezug.md"
+    },
+    {
+      "id": "Q-namespace-skills-06",
+      "area": "namespace-skills",
+      "dimension": "domainAlignment",
+      "question": "Bleibt der Namespace-Skill innerhalb des eigenen Namespace?",
+      "scoreType": "boolean",
+      "weight": 0.33,
+      "determinism": "non-deterministic",
+      "tier": "S4",
+      "filesToRead": [
+        "{{skillPath}}",
+        "{{namespacePath}}"
+      ],
+      "preInstructionRef": "pre-instructions/namespace-skills.md",
+      "evaluatorTask": "Pruefe ob der Skill keine Tools aus anderen Namespaces aufruft.",
+      "outputSchemaRef": "output-schemas/namespace-skills.schema.json",
+      "personaRequired": true,
+      "version": "1.0.0",
+      "_sourcePath": "non-deterministic/53-namespace-skills-no-cross-namespace.md"
+    }
+  ]
+}

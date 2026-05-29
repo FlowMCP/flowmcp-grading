@@ -1,0 +1,427 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-05-29T22:46:36.156Z",
+  "count": 60,
+  "mapping": [
+    {
+      "id": "Q-single-test-01",
+      "area": "single-test",
+      "dimension": "docsUrlReachable",
+      "determinism": "deterministic",
+      "codeTestBucket": "tests/unit/v1/validation.test.mjs (route-level)"
+    },
+    {
+      "id": "Q-single-test-02",
+      "area": "single-test",
+      "dimension": "outputSchemaMatch",
+      "determinism": "deterministic",
+      "codeTestBucket": "tests/unit/v1/validation.test.mjs (route-level)"
+    },
+    {
+      "id": "Q-single-test-03",
+      "area": "single-test",
+      "dimension": "apiKeyDomainMatch",
+      "determinism": "deterministic",
+      "codeTestBucket": "tests/unit/v1/validation.test.mjs (route-level)"
+    },
+    {
+      "id": "Q-tools-aggregate-schema-01",
+      "area": "tools-aggregate-schema",
+      "dimension": "routesUniqueNames",
+      "determinism": "deterministic",
+      "codeTestBucket": "tests/unit/v1/schemaValidator.test.mjs"
+    },
+    {
+      "id": "Q-tools-aggregate-namespace-01",
+      "area": "tools-aggregate-namespace",
+      "dimension": "domainCoverage",
+      "determinism": "deterministic",
+      "codeTestBucket": "tests/integration/namespace.test.mjs"
+    },
+    {
+      "id": "Q-about-namespace-01",
+      "area": "about-namespace",
+      "dimension": "aboutRouteExists",
+      "determinism": "deterministic",
+      "codeTestBucket": "tests/integration/aboutConsistency.test.mjs"
+    },
+    {
+      "id": "Q-about-selection-01",
+      "area": "about-selection",
+      "dimension": "aboutRouteExists",
+      "determinism": "deterministic",
+      "codeTestBucket": "tests/integration/aboutConsistency.test.mjs"
+    },
+    {
+      "id": "Q-single-test-04",
+      "area": "single-test",
+      "dimension": "descriptionClarity",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-single-test-05",
+      "area": "single-test",
+      "dimension": "descriptionSpecConformance",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-single-test-06",
+      "area": "single-test",
+      "dimension": "paramConsistency",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-single-test-07",
+      "area": "single-test",
+      "dimension": "exampleQuality",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-single-test-08",
+      "area": "single-test",
+      "dimension": "toolNameSemantic",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-single-test-09",
+      "area": "single-test",
+      "dimension": "errorCasesDocumented",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-single-test-10",
+      "area": "single-test",
+      "dimension": "verbPrefixConsistent",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-tools-aggregate-schema-02",
+      "area": "tools-aggregate-schema",
+      "dimension": "namingConsistency",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-tools-aggregate-schema-03",
+      "area": "tools-aggregate-schema",
+      "dimension": "tagCoherence",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-tools-aggregate-schema-04",
+      "area": "tools-aggregate-schema",
+      "dimension": "requiredServerParamsConsistent",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-tools-aggregate-schema-05",
+      "area": "tools-aggregate-schema",
+      "dimension": "routesCoherence",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-tools-aggregate-schema-06",
+      "area": "tools-aggregate-schema",
+      "dimension": "descriptionVoice",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-namespace-description-01",
+      "area": "namespace-description",
+      "dimension": "namespaceDescriptionClarity",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-namespace-description-02",
+      "area": "namespace-description",
+      "dimension": "namespaceDescriptionClarity",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-namespace-description-03",
+      "area": "namespace-description",
+      "dimension": "namespaceDescriptionClarity",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-namespace-description-04",
+      "area": "namespace-description",
+      "dimension": "namespaceDescriptionClarity",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-tools-aggregate-namespace-02",
+      "area": "tools-aggregate-namespace",
+      "dimension": "domainCoverage",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-tools-aggregate-namespace-03",
+      "area": "tools-aggregate-namespace",
+      "dimension": "domainCoverage",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-tools-aggregate-namespace-04",
+      "area": "tools-aggregate-namespace",
+      "dimension": "domainCoverage",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-tools-aggregate-namespace-05",
+      "area": "tools-aggregate-namespace",
+      "dimension": "domainCoverage",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-about-namespace-02",
+      "area": "about-namespace",
+      "dimension": "personaReference",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-about-namespace-03",
+      "area": "about-namespace",
+      "dimension": "valueProposition",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-about-namespace-04",
+      "area": "about-namespace",
+      "dimension": "useCaseClarity",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-about-namespace-05",
+      "area": "about-namespace",
+      "dimension": "useCaseClarity",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-about-namespace-06",
+      "area": "about-namespace",
+      "dimension": "useCaseClarity",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-about-namespace-07",
+      "area": "about-namespace",
+      "dimension": "useCaseClarity",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-about-selection-02",
+      "area": "about-selection",
+      "dimension": "personaReference",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-about-selection-03",
+      "area": "about-selection",
+      "dimension": "personaReference",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-about-selection-04",
+      "area": "about-selection",
+      "dimension": "useCaseClarity",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-about-selection-05",
+      "area": "about-selection",
+      "dimension": "useCaseClarity",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-about-selection-06",
+      "area": "about-selection",
+      "dimension": "useCaseClarity",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-about-selection-07",
+      "area": "about-selection",
+      "dimension": "useCaseClarity",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-selection-skills-L1-01",
+      "area": "selection-skills-L1",
+      "dimension": "coverage",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-selection-skills-L1-02",
+      "area": "selection-skills-L1",
+      "dimension": "coverage",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-selection-skills-L1-03",
+      "area": "selection-skills-L1",
+      "dimension": "personaFit",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-selection-skills-L1-04",
+      "area": "selection-skills-L1",
+      "dimension": "personaFit",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-selection-skills-L2-01",
+      "area": "selection-skills-L2",
+      "dimension": "personaFit",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-selection-skills-L2-02",
+      "area": "selection-skills-L2",
+      "dimension": "personaFit",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-selection-skills-L2-03",
+      "area": "selection-skills-L2",
+      "dimension": "skillAdequacy",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-selection-skills-L2-04",
+      "area": "selection-skills-L2",
+      "dimension": "skillAdequacy",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-selection-skills-L2-05",
+      "area": "selection-skills-L2",
+      "dimension": "skillAdequacy",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-selection-skills-L3-01",
+      "area": "selection-skills-L3",
+      "dimension": "skillAdequacy",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-selection-skills-L3-02",
+      "area": "selection-skills-L3",
+      "dimension": "skillAdequacy",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-selection-skills-L3-03",
+      "area": "selection-skills-L3",
+      "dimension": "skillAdequacy",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-selection-skills-L3-04",
+      "area": "selection-skills-L3",
+      "dimension": "domainAlignment",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-selection-skills-L3-05",
+      "area": "selection-skills-L3",
+      "dimension": "domainAlignment",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-selection-skills-L3-06",
+      "area": "selection-skills-L3",
+      "dimension": "domainAlignment",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-namespace-skills-01",
+      "area": "namespace-skills",
+      "dimension": "skillAdequacy",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-namespace-skills-02",
+      "area": "namespace-skills",
+      "dimension": "skillAdequacy",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-namespace-skills-03",
+      "area": "namespace-skills",
+      "dimension": "skillAdequacy",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-namespace-skills-04",
+      "area": "namespace-skills",
+      "dimension": "domainAlignment",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-namespace-skills-05",
+      "area": "namespace-skills",
+      "dimension": "domainAlignment",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    },
+    {
+      "id": "Q-namespace-skills-06",
+      "area": "namespace-skills",
+      "dimension": "domainAlignment",
+      "determinism": "non-deterministic",
+      "codeTestBucket": "no-code-test (eval-question, LLM-only)"
+    }
+  ]
+}

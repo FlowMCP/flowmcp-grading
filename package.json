@@ -13,14 +13,19 @@
     },
     "scripts": {
         "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
-        "test:coverage:src": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage"
+        "test:coverage:src": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
+        "build:questions": "node scripts/build-questions.mjs",
+        "build:test-catalog": "node scripts/build-test-catalog.mjs",
+        "build:all": "npm run build:questions && npm run build:test-catalog"
     },
     "repository": {
         "type": "git",
         "url": "https://github.com/FlowMCP/flowmcp-grading.git"
     },
     "license": "MIT",
-    "dependencies": {},
+    "dependencies": {
+        "js-yaml": "^3.14.2"
+    },
     "devDependencies": {
         "jest": "^29.7.0"
     },
