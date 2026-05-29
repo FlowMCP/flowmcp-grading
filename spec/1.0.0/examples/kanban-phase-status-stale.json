@@ -1,0 +1,9 @@
+{
+    "phaseId": "P1",
+    "status": "stale",
+    "dimensionsConsidered": [
+        "tosMatch",
+        "legalAssessment"
+    ],
+    "stalestDimensionAge": 42
+}

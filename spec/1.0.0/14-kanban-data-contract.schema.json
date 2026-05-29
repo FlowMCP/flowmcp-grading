@@ -1,0 +1,56 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://flowmcp.org/spec/grading/1.0.0/kanban-data-contract.schema.json",
+    "title": "FlowMCP Kanban Phase-Status Response",
+    "description": "JSON-Schema for the phase-status response of the minimal Kanban data contract (Memo 076 Kap 15.3 / PRD-24). Implementation lives in the follow-up Memo Kanban v2.",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "phaseId",
+        "status",
+        "dimensionsConsidered"
+    ],
+    "properties": {
+        "phaseId": {
+            "type": "string",
+            "enum": [
+                "P1",
+                "P2",
+                "P3",
+                "P4",
+                "P5",
+                "P6",
+                "P7",
+                "S1",
+                "S2",
+                "S3",
+                "S4"
+            ],
+            "description": "Phase identifier (P1-P7 single-schema, S1-S4 selection)."
+        },
+        "status": {
+            "type": "string",
+            "enum": [
+                "passed",
+                "failed",
+                "pending",
+                "stale"
+            ],
+            "description": "Phase status. Aging produces 'stale', not 'failed'."
+        },
+        "dimensionsConsidered": {
+            "type": "array",
+            "minItems": 0,
+            "items": {
+                "type": "string",
+                "minLength": 1
+            },
+            "description": "Dimension names considered when deriving the phase status. Empty array allowed for phases driven by a pipeline result."
+        },
+        "stalestDimensionAge": {
+            "type": "number",
+            "minimum": 0,
+            "description": "Optional. Age (in days) of the oldest stale dimension when status='stale'."
+        }
+    }
+}
