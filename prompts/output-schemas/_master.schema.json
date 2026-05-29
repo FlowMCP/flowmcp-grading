@@ -1,0 +1,199 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://flowmcp.org/grading/output-schemas/_master.schema.json",
+    "title": "Evaluator-Response Master Envelope",
+    "description": "Master schema for Memo 082 Generator-Evaluator-Loop. Defines $defs only — per-area schemas extend via $ref. See Memo 082 Kap 9 + Spec 08 §3/§4/§5.3.",
+    "$defs": {
+        "envelope": {
+            "type": "object",
+            "description": "Universal envelope fields. Carried by every evaluator response.",
+            "properties": {
+                "gradingId": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{8}--\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}Z$",
+                    "description": "<schemaHash>--<ISO timestamp> per Spec 08 §3.X + Spec 19 §17."
+                },
+                "schemaHash": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{8}$",
+                    "description": "8-hex sha256 prefix of the canonical schema JSON (Spec 08 §3.X)."
+                },
+                "area": {
+                    "type": "string",
+                    "enum": [
+                        "single-test",
+                        "tools-aggregate-schema",
+                        "namespace-description",
+                        "tools-aggregate-namespace",
+                        "about-namespace",
+                        "about-selection",
+                        "selection-skills-L1",
+                        "selection-skills-L2",
+                        "selection-skills-L3",
+                        "namespace-skills"
+                    ],
+                    "description": "Routing key — selects the per-area schema. Per-area schemas pin this to a const value."
+                },
+                "iteration": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5,
+                    "description": "Loop iteration counter (Memo 082 Kap 12). Out-of-scope for Spec 08 — persisted via sidecar."
+                },
+                "timestamp": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO-8601 timestamp of the evaluator response."
+                },
+                "persona": {
+                    "oneOf": [
+                        { "type": "null" },
+                        { "$ref": "#/$defs/persona" }
+                    ],
+                    "description": "null for neutral areas (1-4 per Kap 7.4); persona object for persona areas (5-8)."
+                }
+            },
+            "required": [
+                "gradingId",
+                "schemaHash",
+                "area",
+                "iteration",
+                "timestamp",
+                "persona"
+            ],
+            "additionalProperties": false
+        },
+        "persona": {
+            "type": "object",
+            "description": "Persona reference: 4 base personas (Spec 12 §1) + lens slug (Spec 12 §4).",
+            "properties": {
+                "basePersonaId": {
+                    "type": "string",
+                    "enum": [
+                        "ai-engineer",
+                        "decision-maker",
+                        "hackathon-builder",
+                        "schema-maintainer"
+                    ]
+                },
+                "lensId": {
+                    "type": "string",
+                    "minLength": 1
+                }
+            },
+            "required": [ "basePersonaId", "lensId" ],
+            "additionalProperties": false
+        },
+        "answer": {
+            "type": "object",
+            "description": "One answer element. Maps 1:1 to Spec 08 §4 gradings[i].",
+            "properties": {
+                "questionId": {
+                    "type": "string",
+                    "pattern": "^Q-[a-zA-Z0-9-]+$",
+                    "description": "Question identifier from prompts/generated/questions.json."
+                },
+                "score": {
+                    "oneOf": [
+                        {
+                            "type": "number",
+                            "minimum": 1.0,
+                            "maximum": 5.0
+                        },
+                        {
+                            "type": "string",
+                            "enum": [ "pass", "fail", "stale", "n/a" ]
+                        }
+                    ],
+                    "description": "Numeric score 1.0–5.0 or categorical pass/fail/stale/n/a per Spec 08 §5.2."
+                },
+                "reasoning": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "evidence": {
+                    "oneOf": [
+                        { "type": "string" },
+                        { "type": "object" }
+                    ],
+                    "description": "Optional evidence — citation, snippet, or structured object."
+                },
+                "naReason": {
+                    "type": "string",
+                    "enum": [
+                        "not-applicable-to-tool-type",
+                        "requires-private-data",
+                        "blocked-by-precondition",
+                        "out-of-scope-resource",
+                        "out-of-scope-prompt",
+                        "out-of-scope-procedure"
+                    ],
+                    "description": "Closed reason set per Spec 08 §5.3. REQUIRED when score = 'n/a'."
+                }
+            },
+            "required": [ "questionId", "score", "reasoning" ],
+            "additionalProperties": false,
+            "allOf": [
+                {
+                    "if": {
+                        "properties": { "score": { "const": "n/a" } },
+                        "required": [ "score" ]
+                    },
+                    "then": {
+                        "properties": {
+                            "naReason": {
+                                "type": "string",
+                                "enum": [
+                                    "not-applicable-to-tool-type",
+                                    "requires-private-data",
+                                    "blocked-by-precondition",
+                                    "out-of-scope-resource",
+                                    "out-of-scope-prompt",
+                                    "out-of-scope-procedure"
+                                ]
+                            }
+                        },
+                        "required": [ "naReason" ]
+                    }
+                }
+            ]
+        },
+        "improvementHint": {
+            "type": "object",
+            "description": "Loop-internal improvement hint. Persisted via sidecar — NOT in Spec 08 today.",
+            "properties": {
+                "targetField": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "suggestion": {
+                    "type": "string",
+                    "minLength": 1
+                },
+                "priority": {
+                    "type": "string",
+                    "enum": [ "low", "medium", "high" ]
+                }
+            },
+            "required": [ "targetField", "suggestion", "priority" ],
+            "additionalProperties": false
+        },
+        "blocker": {
+            "type": "object",
+            "description": "Blocker shortcut per Memo 082 Kap 8. Evaluator may abort with this object if Pre-Instructions cannot be satisfied.",
+            "properties": {
+                "blocker": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "Path or resource that is missing."
+                },
+                "reason": {
+                    "type": "string",
+                    "minLength": 1
+                }
+            },
+            "required": [ "blocker", "reason" ],
+            "additionalProperties": false
+        }
+    }
+}

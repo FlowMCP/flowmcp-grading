@@ -1,0 +1,82 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://flowmcp.org/grading/output-schemas/tools-aggregate-namespace.schema.json",
+    "title": "Evaluator-Response — tools-aggregate-namespace",
+    "description": "Area 4 (Memo 082 Kap 7.1) — Coverage der Namespace-Tools. Persona = null (neutral, Kap 7.4).",
+    "oneOf": [
+        {
+            "$ref": "_master.schema.json#/$defs/blocker"
+        },
+        {
+            "type": "object",
+            "properties": {
+                "gradingId": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{8}--\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}Z$"
+                },
+                "schemaHash": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{8}$"
+                },
+                "area": {
+                    "const": "tools-aggregate-namespace"
+                },
+                "iteration": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                },
+                "timestamp": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "persona": {
+                    "type": "null"
+                },
+                "answers": {
+                    "type": "array",
+                    "minItems": 5,
+                    "maxItems": 5,
+                    "items": {
+                        "allOf": [
+                            {
+                                "$ref": "_master.schema.json#/$defs/answer"
+                            },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "questionId": {
+                                        "enum": [
+                                            "Q-tools-aggregate-namespace-01",
+                                            "Q-tools-aggregate-namespace-02",
+                                            "Q-tools-aggregate-namespace-03",
+                                            "Q-tools-aggregate-namespace-04",
+                                            "Q-tools-aggregate-namespace-05"
+                                        ]
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "improvementHints": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "_master.schema.json#/$defs/improvementHint"
+                    }
+                }
+            },
+            "required": [
+                "gradingId",
+                "schemaHash",
+                "area",
+                "iteration",
+                "timestamp",
+                "persona",
+                "answers",
+                "improvementHints"
+            ],
+            "additionalProperties": false
+        }
+    ]
+}

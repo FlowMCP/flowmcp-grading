@@ -1,0 +1,81 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://flowmcp.org/grading/output-schemas/selection-skills-L1.schema.json",
+    "title": "Evaluator-Response — selection-skills-L1",
+    "description": "Area 7a (Memo 082 Kap 7.1, Spec 13 §4) — Selection-Skill Level 1 (Basis-Kombination zweier Tools). Persona Pflicht.",
+    "oneOf": [
+        {
+            "$ref": "_master.schema.json#/$defs/blocker"
+        },
+        {
+            "type": "object",
+            "properties": {
+                "gradingId": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{8}--\\d{4}-\\d{2}-\\d{2}T\\d{2}-\\d{2}-\\d{2}Z$"
+                },
+                "schemaHash": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{8}$"
+                },
+                "area": {
+                    "const": "selection-skills-L1"
+                },
+                "iteration": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                },
+                "timestamp": {
+                    "type": "string",
+                    "format": "date-time"
+                },
+                "persona": {
+                    "$ref": "_master.schema.json#/$defs/persona"
+                },
+                "answers": {
+                    "type": "array",
+                    "minItems": 4,
+                    "maxItems": 4,
+                    "items": {
+                        "allOf": [
+                            {
+                                "$ref": "_master.schema.json#/$defs/answer"
+                            },
+                            {
+                                "type": "object",
+                                "properties": {
+                                    "questionId": {
+                                        "enum": [
+                                            "Q-selection-skills-L1-01",
+                                            "Q-selection-skills-L1-02",
+                                            "Q-selection-skills-L1-03",
+                                            "Q-selection-skills-L1-04"
+                                        ]
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "improvementHints": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "_master.schema.json#/$defs/improvementHint"
+                    }
+                }
+            },
+            "required": [
+                "gradingId",
+                "schemaHash",
+                "area",
+                "iteration",
+                "timestamp",
+                "persona",
+                "answers",
+                "improvementHints"
+            ],
+            "additionalProperties": false
+        }
+    ]
+}
