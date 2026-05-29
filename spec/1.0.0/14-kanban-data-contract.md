@@ -162,7 +162,7 @@ Das Folge-Memo wird durch Memo 076 PRD-26 eroeffnet. Inhalte des Folge-Memos (ve
 
 ## Memo-Anker
 
-- Quelle: `/Users/andreasbanholzer/WORKBENCH/ressources/projects/flowmcp/.memo/076-schema-quality-grading-spec/revisions/REV-05.md`
+- Quelle: Memo 076 `schema-quality-grading-spec` REV-05 (FlowMCP `.memo/076-schema-quality-grading-spec/revisions/REV-05.md`)
 - Kap 15.3 „Kanban-Vertrag in 076 (minimal)", Zeilen 660–676
 - Kap 15.2 „Folge-Memos benannt (NICHT in 076)", Zeilen 653–658
 - Quer-Verweis Grading-Modell: [`08-grading-model.md`](./08-grading-model.md) (Top-Level-Felder `schemaId`, `categoricalVeto`, `gradingTier`, `regradingTrigger`)
