@@ -1,0 +1,16 @@
+grading-data/  # Grading-Ergebnisse — siehe README, niemals pushen (Memo 076, Kap 14)
+
+# Node.js
+node_modules/
+npm-debug.log*
+.npm/
+
+# OS / Editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local environment overrides (no .env should live in this repo — see AGENTS.md)
+.env
+.env.local
