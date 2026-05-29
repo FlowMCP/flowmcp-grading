@@ -1,0 +1,71 @@
+{
+    "gradingId": "a1b2c3d4--2026-05-30T12-00-00Z",
+    "schemaHash": "a1b2c3d4",
+    "area": "single-test",
+    "iteration": 1,
+    "timestamp": "2026-05-30T12:00:00.000Z",
+    "persona": null,
+    "answers": [
+        {
+            "questionId": "Q-single-test-01",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for single-test question 1.",
+            "evidence": "/tmp/single-test/source.md:1"
+        },
+        {
+            "questionId": "Q-single-test-02",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for single-test question 2.",
+            "evidence": "/tmp/single-test/source.md:1"
+        },
+        {
+            "questionId": "Q-single-test-03",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for single-test question 3.",
+            "evidence": "/tmp/single-test/source.md:1"
+        },
+        {
+            "questionId": "Q-single-test-04",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for single-test question 4.",
+            "evidence": "/tmp/single-test/source.md:1"
+        },
+        {
+            "questionId": "Q-single-test-05",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for single-test question 5.",
+            "evidence": "/tmp/single-test/source.md:1"
+        },
+        {
+            "questionId": "Q-single-test-06",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for single-test question 6.",
+            "evidence": "/tmp/single-test/source.md:1"
+        },
+        {
+            "questionId": "Q-single-test-07",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for single-test question 7.",
+            "evidence": "/tmp/single-test/source.md:1"
+        },
+        {
+            "questionId": "Q-single-test-08",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for single-test question 8.",
+            "evidence": "/tmp/single-test/source.md:1"
+        },
+        {
+            "questionId": "Q-single-test-09",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for single-test question 9.",
+            "evidence": "/tmp/single-test/source.md:1"
+        },
+        {
+            "questionId": "Q-single-test-10",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for single-test question 10.",
+            "evidence": "/tmp/single-test/source.md:1"
+        }
+    ],
+    "improvementHints": []
+}

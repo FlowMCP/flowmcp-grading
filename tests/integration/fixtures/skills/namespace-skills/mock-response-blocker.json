@@ -1,0 +1,4 @@
+{
+    "blocker": "/tmp/namespace-skills/missing.md",
+    "reason": "ENOENT — file does not exist"
+}

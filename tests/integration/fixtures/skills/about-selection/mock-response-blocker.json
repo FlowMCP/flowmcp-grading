@@ -1,0 +1,4 @@
+{
+    "blocker": "/tmp/about-selection/missing.md",
+    "reason": "ENOENT — file does not exist"
+}

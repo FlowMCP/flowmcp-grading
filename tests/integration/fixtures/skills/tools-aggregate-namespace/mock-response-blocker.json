@@ -1,0 +1,4 @@
+{
+    "blocker": "/tmp/tools-aggregate-namespace/missing.md",
+    "reason": "ENOENT — file does not exist"
+}

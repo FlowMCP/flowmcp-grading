@@ -1,0 +1,102 @@
+{
+    "gradingId": "a1b2c3d4--2026-05-30T12-00-00Z",
+    "schemaHash": "a1b2c3d4",
+    "area": "single-test",
+    "iteration": 1,
+    "timestamp": "2026-05-30T12:00:00.000Z",
+    "persona": null,
+    "answers": [
+        {
+            "questionId": "Q-single-test-01",
+            "score": "fail",
+            "reasoning": "HTTP 401 — endpoint returned client error. Never PASS per feedback_http_400_is_not_pass.",
+            "evidence": {
+                "httpStatus": 401,
+                "body": "redacted"
+            }
+        },
+        {
+            "questionId": "Q-single-test-02",
+            "score": 1.5,
+            "reasoning": "HTTP 401 observed — sub-2.0 score per HTTP-4xx-rule.",
+            "evidence": {
+                "httpStatus": 401
+            }
+        },
+        {
+            "questionId": "Q-single-test-03",
+            "score": "fail",
+            "reasoning": "HTTP 401 — endpoint returned client error. Never PASS per feedback_http_400_is_not_pass.",
+            "evidence": {
+                "httpStatus": 401,
+                "body": "redacted"
+            }
+        },
+        {
+            "questionId": "Q-single-test-04",
+            "score": 1.5,
+            "reasoning": "HTTP 401 observed — sub-2.0 score per HTTP-4xx-rule.",
+            "evidence": {
+                "httpStatus": 401
+            }
+        },
+        {
+            "questionId": "Q-single-test-05",
+            "score": "fail",
+            "reasoning": "HTTP 401 — endpoint returned client error. Never PASS per feedback_http_400_is_not_pass.",
+            "evidence": {
+                "httpStatus": 401,
+                "body": "redacted"
+            }
+        },
+        {
+            "questionId": "Q-single-test-06",
+            "score": 1.5,
+            "reasoning": "HTTP 401 observed — sub-2.0 score per HTTP-4xx-rule.",
+            "evidence": {
+                "httpStatus": 401
+            }
+        },
+        {
+            "questionId": "Q-single-test-07",
+            "score": "fail",
+            "reasoning": "HTTP 401 — endpoint returned client error. Never PASS per feedback_http_400_is_not_pass.",
+            "evidence": {
+                "httpStatus": 401,
+                "body": "redacted"
+            }
+        },
+        {
+            "questionId": "Q-single-test-08",
+            "score": 1.5,
+            "reasoning": "HTTP 401 observed — sub-2.0 score per HTTP-4xx-rule.",
+            "evidence": {
+                "httpStatus": 401
+            }
+        },
+        {
+            "questionId": "Q-single-test-09",
+            "score": "fail",
+            "reasoning": "HTTP 401 — endpoint returned client error. Never PASS per feedback_http_400_is_not_pass.",
+            "evidence": {
+                "httpStatus": 401,
+                "body": "redacted"
+            }
+        },
+        {
+            "questionId": "Q-single-test-10",
+            "score": 1.5,
+            "reasoning": "HTTP 401 observed — sub-2.0 score per HTTP-4xx-rule.",
+            "evidence": {
+                "httpStatus": 401
+            }
+        }
+    ],
+    "improvementHints": [
+        {
+            "targetField": "auth.apiKey",
+            "suggestion": "HTTP 401 indicates missing/invalid credentials — Generator must surface required key.",
+            "priority": "high"
+        }
+    ]
+}

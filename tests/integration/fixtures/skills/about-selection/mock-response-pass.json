@@ -1,0 +1,56 @@
+{
+    "gradingId": "a1b2c3d4--2026-05-30T12-00-00Z",
+    "schemaHash": "a1b2c3d4",
+    "area": "about-selection",
+    "iteration": 1,
+    "timestamp": "2026-05-30T12:00:00.000Z",
+    "persona": {
+        "basePersonaId": "decision-maker",
+        "lensId": "crypto-trader"
+    },
+    "answers": [
+        {
+            "questionId": "Q-about-selection-01",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for about-selection question 1.",
+            "evidence": "/tmp/about-selection/source.md:1"
+        },
+        {
+            "questionId": "Q-about-selection-02",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for about-selection question 2.",
+            "evidence": "/tmp/about-selection/source.md:1"
+        },
+        {
+            "questionId": "Q-about-selection-03",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for about-selection question 3.",
+            "evidence": "/tmp/about-selection/source.md:1"
+        },
+        {
+            "questionId": "Q-about-selection-04",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for about-selection question 4.",
+            "evidence": "/tmp/about-selection/source.md:1"
+        },
+        {
+            "questionId": "Q-about-selection-05",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for about-selection question 5.",
+            "evidence": "/tmp/about-selection/source.md:1"
+        },
+        {
+            "questionId": "Q-about-selection-06",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for about-selection question 6.",
+            "evidence": "/tmp/about-selection/source.md:1"
+        },
+        {
+            "questionId": "Q-about-selection-07",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for about-selection question 7.",
+            "evidence": "/tmp/about-selection/source.md:1"
+        }
+    ],
+    "improvementHints": []
+}

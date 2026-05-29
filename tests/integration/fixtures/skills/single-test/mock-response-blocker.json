@@ -1,0 +1,4 @@
+{
+    "blocker": "/tmp/single-test/missing.md",
+    "reason": "ENOENT — file does not exist"
+}

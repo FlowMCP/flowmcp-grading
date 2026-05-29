@@ -1,0 +1,47 @@
+{
+    "gradingId": "a1b2c3d4--2026-05-30T12-00-00Z",
+    "schemaHash": "a1b2c3d4",
+    "area": "tools-aggregate-schema",
+    "iteration": 1,
+    "timestamp": "2026-05-30T12:00:00.000Z",
+    "persona": null,
+    "answers": [
+        {
+            "questionId": "Q-tools-aggregate-schema-01",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for tools-aggregate-schema question 1.",
+            "evidence": "/tmp/tools-aggregate-schema/source.md:1"
+        },
+        {
+            "questionId": "Q-tools-aggregate-schema-02",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for tools-aggregate-schema question 2.",
+            "evidence": "/tmp/tools-aggregate-schema/source.md:1"
+        },
+        {
+            "questionId": "Q-tools-aggregate-schema-03",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for tools-aggregate-schema question 3.",
+            "evidence": "/tmp/tools-aggregate-schema/source.md:1"
+        },
+        {
+            "questionId": "Q-tools-aggregate-schema-04",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for tools-aggregate-schema question 4.",
+            "evidence": "/tmp/tools-aggregate-schema/source.md:1"
+        },
+        {
+            "questionId": "Q-tools-aggregate-schema-05",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for tools-aggregate-schema question 5.",
+            "evidence": "/tmp/tools-aggregate-schema/source.md:1"
+        },
+        {
+            "questionId": "Q-tools-aggregate-schema-06",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for tools-aggregate-schema question 6.",
+            "evidence": "/tmp/tools-aggregate-schema/source.md:1"
+        }
+    ],
+    "improvementHints": []
+}

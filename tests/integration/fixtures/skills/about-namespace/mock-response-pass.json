@@ -1,0 +1,56 @@
+{
+    "gradingId": "a1b2c3d4--2026-05-30T12-00-00Z",
+    "schemaHash": "a1b2c3d4",
+    "area": "about-namespace",
+    "iteration": 1,
+    "timestamp": "2026-05-30T12:00:00.000Z",
+    "persona": {
+        "basePersonaId": "decision-maker",
+        "lensId": "crypto-trader"
+    },
+    "answers": [
+        {
+            "questionId": "Q-about-namespace-01",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for about-namespace question 1.",
+            "evidence": "/tmp/about-namespace/source.md:1"
+        },
+        {
+            "questionId": "Q-about-namespace-02",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for about-namespace question 2.",
+            "evidence": "/tmp/about-namespace/source.md:1"
+        },
+        {
+            "questionId": "Q-about-namespace-03",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for about-namespace question 3.",
+            "evidence": "/tmp/about-namespace/source.md:1"
+        },
+        {
+            "questionId": "Q-about-namespace-04",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for about-namespace question 4.",
+            "evidence": "/tmp/about-namespace/source.md:1"
+        },
+        {
+            "questionId": "Q-about-namespace-05",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for about-namespace question 5.",
+            "evidence": "/tmp/about-namespace/source.md:1"
+        },
+        {
+            "questionId": "Q-about-namespace-06",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for about-namespace question 6.",
+            "evidence": "/tmp/about-namespace/source.md:1"
+        },
+        {
+            "questionId": "Q-about-namespace-07",
+            "score": 4.5,
+            "reasoning": "Mock pass answer for about-namespace question 7.",
+            "evidence": "/tmp/about-namespace/source.md:1"
+        }
+    ],
+    "improvementHints": []
+}

@@ -1,0 +1,17 @@
+## Datei-Vorbereitung (Pflicht — strikte Reihenfolge)
+
+Lies die folgenden Dateien in dieser Reihenfolge BEVOR du eine Frage beantwortest.
+Falls eine Datei nicht existiert oder nicht lesbar ist, antworte ausschliesslich
+mit { "blocker": "<dateipfad>", "reason": "<grund>" } und brich ab.
+
+1. /tmp/about-namespace/source.md  — Source-Artefakt fuer about-namespace
+
+## PERSONA: decision-maker--crypto-trader
+[Lens: crypto-trader, Base: decision-maker]
+
+## Fragen (Area: about-namespace)
+
+1. Erste Eval-Frage des Bereichs.
+2. Zweite Eval-Frage des Bereichs.
+
+## Output-Schema: prompts/output-schemas/about-namespace.schema.json
