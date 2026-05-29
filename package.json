@@ -16,7 +16,8 @@
         "test:coverage:src": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",
         "build:questions": "node scripts/build-questions.mjs",
         "build:test-catalog": "node scripts/build-test-catalog.mjs",
-        "build:all": "npm run build:questions && npm run build:test-catalog",
+        "build:question-catalog-doc": "node scripts/build-question-catalog-doc.mjs",
+        "build:all": "npm run build:questions && npm run build:test-catalog && npm run build:question-catalog-doc",
         "validate:output-schemas": "node scripts/validate-output-schemas.mjs"
     },
     "repository": {
