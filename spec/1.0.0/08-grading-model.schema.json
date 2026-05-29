@@ -1,0 +1,269 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://flowmcp.org/spec/grading/1.0.0/grading-model.schema.json",
+    "title": "FlowMCP Grading Entry",
+    "description": "JSON-Schema for one grading entry as defined in flowmcp-grading spec 08-grading-model.md (Memo 076).",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "schemaId",
+        "gradingTier",
+        "scoringSystem",
+        "gradingSystem",
+        "gradings",
+        "categoricalVeto",
+        "aggregateGrade",
+        "maxAttainableGrade"
+    ],
+    "properties": {
+        "schemaId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Identifier of the schema under grading."
+        },
+        "selectionId": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Identifier of the Selection under grading. Conditional on gradingTier=group-bound."
+        },
+        "gradingTier": {
+            "type": "string",
+            "enum": ["autonomous", "group-bound"],
+            "description": "Tier classification per 06-determinism-and-tier.md."
+        },
+        "scoringSystem": {
+            "type": "string",
+            "pattern": "^scoringSystem/\\d+\\.\\d+\\.\\d+$",
+            "description": "Scoring System version (e.g. scoringSystem/1.0.0)."
+        },
+        "gradingSystem": {
+            "type": "string",
+            "pattern": "^gradingSystem/\\d+\\.\\d+\\.\\d+$",
+            "description": "Grading System version (e.g. gradingSystem/1.0.0)."
+        },
+        "gradings": {
+            "type": "array",
+            "minItems": 1,
+            "description": "Per-dimension grading entries.",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                    "dimension",
+                    "score",
+                    "weight",
+                    "determinism",
+                    "graderIdentity",
+                    "timestamp"
+                ],
+                "properties": {
+                    "dimension": {
+                        "type": "string",
+                        "enum": [
+                            "whenToUse",
+                            "parameters",
+                            "apiAvailability",
+                            "personaUseCaseFit",
+                            "domainConformance",
+                            "tosMatch",
+                            "legalAssessment",
+                            "securityScore",
+                            "formattingCompliance",
+                            "outputSchemaConformance",
+                            "descriptionNeutrality",
+                            "completeness",
+                            "aboutConventionCompliance",
+                            "namespaceSkillValidity",
+                            "selectionSkillL1",
+                            "selectionSkillL2",
+                            "selectionSkillL3"
+                        ]
+                    },
+                    "score": {
+                        "oneOf": [
+                            { "type": "number", "minimum": 1.0, "maximum": 5.0 },
+                            { "type": "string", "enum": ["pass", "fail", "stale", "n/a"] }
+                        ]
+                    },
+                    "weight": {
+                        "type": "number",
+                        "minimum": 0.0
+                    },
+                    "determinism": {
+                        "type": "string",
+                        "enum": ["deterministic", "non-deterministic"]
+                    },
+                    "graderIdentity": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["kind", "name", "version"],
+                        "properties": {
+                            "kind": {
+                                "type": "string",
+                                "enum": ["llm", "human", "script"]
+                            },
+                            "name": { "type": "string", "minLength": 1 },
+                            "version": { "type": "string", "minLength": 1 }
+                        }
+                    },
+                    "llmModel": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "selectionContext": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": ["groupId", "personaIds"],
+                        "properties": {
+                            "groupId": { "type": "string", "minLength": 1 },
+                            "personaIds": {
+                                "type": "array",
+                                "minItems": 1,
+                                "items": { "type": "string", "minLength": 1 }
+                            },
+                            "domainDocId": { "type": "string", "minLength": 1 }
+                        }
+                    },
+                    "timestamp": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "evidence": {
+                        "oneOf": [
+                            { "type": "string", "minLength": 1 },
+                            { "type": "object" }
+                        ]
+                    },
+                    "reasoning": {
+                        "type": "string"
+                    }
+                },
+                "allOf": [
+                    {
+                        "if": { "properties": { "determinism": { "const": "non-deterministic" } } },
+                        "then": {
+                            "required": ["selectionContext"],
+                            "properties": {
+                                "selectionContext": {
+                                    "required": ["personaIds"],
+                                    "properties": {
+                                        "personaIds": { "minItems": 1 }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "graderIdentity": {
+                                    "properties": { "kind": { "const": "llm" } },
+                                    "required": ["kind"]
+                                }
+                            },
+                            "required": ["graderIdentity"]
+                        },
+                        "then": {
+                            "required": ["llmModel"]
+                        }
+                    }
+                ]
+            }
+        },
+        "categoricalVeto": {
+            "oneOf": [
+                { "type": "null" },
+                {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["triggeredBy", "graderIdentity", "evidence", "timestamp"],
+                    "properties": {
+                        "triggeredBy": {
+                            "type": "string",
+                            "enum": [
+                                "malicious-module",
+                                "api-key-domain-mismatch",
+                                "illegal-content",
+                                "ai-security-veto"
+                            ]
+                        },
+                        "graderIdentity": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": ["kind", "name", "version"],
+                            "properties": {
+                                "kind": {
+                                    "type": "string",
+                                    "enum": ["llm", "human", "script"]
+                                },
+                                "name": { "type": "string", "minLength": 1 },
+                                "version": { "type": "string", "minLength": 1 }
+                            }
+                        },
+                        "evidence": { "type": "string", "minLength": 1 },
+                        "reasoning": { "type": "string" },
+                        "timestamp": { "type": "string", "format": "date-time" }
+                    },
+                    "allOf": [
+                        {
+                            "if": { "properties": { "triggeredBy": { "const": "ai-security-veto" } } },
+                            "then": { "required": ["reasoning"] }
+                        }
+                    ]
+                }
+            ]
+        },
+        "regradingTrigger": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["triggeredBy", "previousGradingId", "timestamp"],
+            "properties": {
+                "triggeredBy": {
+                    "type": "string",
+                    "enum": [
+                        "user-report",
+                        "scheduled",
+                        "scoring-system-bump",
+                        "grading-system-bump"
+                    ]
+                },
+                "reportedIssue": { "type": "string" },
+                "requestedBy": { "type": "string" },
+                "previousGradingId": { "type": "string", "minLength": 1 },
+                "timestamp": { "type": "string", "format": "date-time" }
+            },
+            "allOf": [
+                {
+                    "if": { "properties": { "triggeredBy": { "const": "user-report" } } },
+                    "then": { "required": ["reportedIssue", "requestedBy"] }
+                }
+            ]
+        },
+        "aggregateGrade": {
+            "type": "string",
+            "enum": ["A", "B", "C", "D", "F", "REJECTED"]
+        },
+        "maxAttainableGrade": {
+            "type": "string",
+            "enum": ["A", "B"]
+        }
+    },
+    "allOf": [
+        {
+            "if": { "properties": { "gradingTier": { "const": "group-bound" } } },
+            "then": { "required": ["selectionId"] }
+        },
+        {
+            "if": { "properties": { "gradingTier": { "const": "autonomous" } } },
+            "then": { "properties": { "maxAttainableGrade": { "const": "B" } } }
+        },
+        {
+            "if": { "properties": { "gradingTier": { "const": "group-bound" } } },
+            "then": { "properties": { "maxAttainableGrade": { "const": "A" } } }
+        },
+        {
+            "if": { "not": { "properties": { "categoricalVeto": { "type": "null" } } } },
+            "then": { "properties": { "aggregateGrade": { "const": "REJECTED" } } }
+        }
+    ]
+}
