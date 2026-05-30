@@ -4,7 +4,9 @@
     "title": "Evaluator-Response — single-test",
     "description": "Area 1 — schema description of a single tool. Persona = null (neutral area per the grading spec).",
     "oneOf": [
-        { "$ref": "_master.schema.json#/$defs/blocker" },
+        {
+            "$ref": "_master.schema.json#/$defs/blocker"
+        },
         {
             "type": "object",
             "properties": {
@@ -37,7 +39,9 @@
                     "maxItems": 10,
                     "items": {
                         "allOf": [
-                            { "$ref": "_master.schema.json#/$defs/answer" },
+                            {
+                                "$ref": "_master.schema.json#/$defs/answer"
+                            },
                             {
                                 "type": "object",
                                 "properties": {
@@ -62,7 +66,16 @@
                 },
                 "improvementHints": {
                     "type": "array",
-                    "items": { "$ref": "_master.schema.json#/$defs/improvementHint" }
+                    "items": {
+                        "$ref": "_master.schema.json#/$defs/improvementHint"
+                    }
+                },
+                "harness": {
+                    "type": "string",
+                    "enum": [
+                        "claude-code"
+                    ],
+                    "description": "Execution harness that produced this grading. Only 'claude-code' is currently supported."
                 }
             },
             "required": [
@@ -73,7 +86,8 @@
                 "timestamp",
                 "persona",
                 "answers",
-                "improvementHints"
+                "improvementHints",
+                "harness"
             ],
             "additionalProperties": false
         }

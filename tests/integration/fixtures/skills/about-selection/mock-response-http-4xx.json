@@ -8,6 +8,7 @@
         "basePersonaId": "decision-maker",
         "lensId": "crypto-trader"
     },
+    "harness": "claude-code",
     "answers": [
         {
             "questionId": "Q-about-selection-01",

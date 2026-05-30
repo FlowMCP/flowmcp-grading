@@ -114,18 +114,26 @@ describe( 'DataPretest typed-test extraction + happy path', () => {
         expect( out.errors ).toEqual( [] )
         expect( out.results ).toHaveLength( 3 )
         expect( out.results.every( ( r ) => r.primitive === 'tool' && r.working === true ) ).toBe( true )
-        expect( out.payloadHash ).toMatch( /^[0-9a-f]{8}$/ )
+        expect( out.perTool.getBalance ).toEqual( { working: 3, total: 3 } )
 
-        const raw = await readFile( out.payloadPath, 'utf-8' )
-        const payload = JSON.parse( raw )
-        expect( payload.namespace ).toBe( 'etherscan' )
-        expect( payload.toolName ).toBe( 'getBalance' )
-        expect( payload.ok ).toBe( true )
-        expect( payload.passedDownloadable ).toBe( 3 )
-        expect( payload.tests ).toHaveLength( 3 )
-        expect( payload.payloadHash ).toBe( out.payloadHash )
-        expect( out.payloadPath ).toContain( join( 'schemas', 'etherscan', 'data-pretest' ) )
-        expect( out.payloadPath ).toContain( `getBalance--${out.payloadHash}.json` )
+        // summary.json — human-readable, no opaque hash
+        const summary = JSON.parse( await readFile( out.summaryPath, 'utf-8' ) )
+        expect( summary.namespace ).toBe( 'etherscan' )
+        expect( summary.schemaFile ).toBe( 'getBalance' )
+        expect( summary.ok ).toBe( true )
+        expect( summary.perTool.getBalance ).toEqual( { working: 3, total: 3 } )
+        expect( out.summaryPath ).toContain( join( 'schemas', 'etherscan', 'getBalance', 'summary.json' ) )
+
+        // per-test files: numbered + self-describing (request params + real response)
+        const t1 = JSON.parse( await readFile( join( out.schemaDir, 'getBalance', 'tests', 'test-1.json' ), 'utf-8' ) )
+        expect( t1.test ).toBe( 1 )
+        expect( t1.tool ).toBe( 'getBalance' )
+        expect( t1.status ).toBe( true )
+        expect( t1.working ).toBe( true )
+        expect( t1.request ).toBeDefined()
+        expect( t1.response ).not.toBeNull()
+        const t3 = JSON.parse( await readFile( join( out.schemaDir, 'getBalance', 'tests', 'test-3.json' ), 'utf-8' ) )
+        expect( t3.test ).toBe( 3 )
     } )
 } )
 
@@ -147,7 +155,39 @@ describe( 'DataPretest abort rule', () => {
 
         expect( out.ok ).toBe( false )
         expect( out.passedDownloadable ).toBe( 2 )
-        expect( out.stopReason ).toContain( 'fewer-than-3' )
+        expect( out.stopReason ).toContain( 'tools-below-3' )
+        expect( out.errors.some( ( e ) => e.includes( 'DPT-003' ) ) ).toBe( true )
+    } )
+
+    test( 'per-tool gate: one fully-working tool does NOT mask a sibling with zero working tests', async () => {
+        // getBalance: 3 working; getSupply: 3 failing. Schema-file total = 3 (>=3),
+        // but the per-tool rule must FAIL because getSupply has 0/3 working.
+        fetchQueue = [
+            successFetch( { result: '284938' } ),
+            successFetch( { result: '190021' } ),
+            successFetch( { result: '77310' } )
+            // getSupply's 3 tests hit the empty queue -> status:false -> 0 working
+        ]
+        const main = {
+            namespace: 'etherscan',
+            requiredServerParams: [],
+            tools: {
+                getBalance: { description: 'get balance', tests: [ { address: '0x1' }, { address: '0x2' }, { address: '0x3' } ] },
+                getSupply: { description: 'get supply', tests: [ { address: '0x4' }, { address: '0x5' }, { address: '0x6' } ] }
+            }
+        }
+
+        const out = await DataPretest.run( {
+            namespace: 'etherscan',
+            toolName: 'multi',
+            main,
+            gradingDataDir: tempRoot
+        } )
+
+        expect( out.passedDownloadable ).toBe( 3 )
+        expect( out.ok ).toBe( false )
+        expect( out.toolsBelowThreshold.some( ( t ) => t.includes( 'getSupply' ) ) ).toBe( true )
+        expect( out.toolsBelowThreshold.some( ( t ) => t.includes( 'getBalance' ) ) ).toBe( false )
         expect( out.errors.some( ( e ) => e.includes( 'DPT-003' ) ) ).toBe( true )
     } )
 
@@ -262,21 +302,8 @@ describe( 'DataPretest stub primitives', () => {
 } )
 
 
-describe( 'DataPretest namespace.json merge (no-overwrite)', () => {
-    test( 'merges a dataPretest block into the matching member, preserving other fields', async () => {
-        const nsDir = join( tempRoot, 'schemas', 'mergens' )
-        await mkdir( nsDir, { recursive: true } )
-        const indexBefore = {
-            namespace: 'mergens',
-            namespaceHash: 'deadbeef',
-            aboutHash: 'PENDING',
-            members: [
-                { schemaId: 'mergens.getBalance', schemaVersion: '1.0.0', schemaHash: '9f8e7d6c' },
-                { schemaId: 'mergens.other', schemaVersion: '1.0.0', schemaHash: '11112222' }
-            ]
-        }
-        await writeFile( join( nsDir, 'namespace.json' ), JSON.stringify( indexBefore, null, 4 ) + '\n', 'utf-8' )
-
+describe( 'DataPretest on-disk layout (readable: per-tool numbered tests + summary)', () => {
+    test( 'writes schemas/<ns>/<schemaFile>/tests/<tool>/test-N.json + summary.json', async () => {
         fetchQueue = [
             successFetch( { result: '1' } ),
             successFetch( { result: '2' } ),
@@ -285,53 +312,37 @@ describe( 'DataPretest namespace.json merge (no-overwrite)', () => {
         const main = makeMainWithToolTests( { count: 3 } )
 
         const out = await DataPretest.run( {
-            namespace: 'mergens',
-            toolName: 'getBalance',
+            namespace: 'layoutns',
+            toolName: 'prices',
             main,
             gradingDataDir: tempRoot
         } )
         expect( out.ok ).toBe( true )
 
-        const raw = await readFile( join( nsDir, 'namespace.json' ), 'utf-8' )
-        const indexAfter = JSON.parse( raw )
+        // numbered, self-describing test files under tests/<tool>/
+        const toolDir = join( tempRoot, 'schemas', 'layoutns', 'prices', 'getBalance', 'tests' )
+        const files = ( await readdir( toolDir ) ).sort()
+        expect( files ).toEqual( [ 'test-1.json', 'test-2.json', 'test-3.json' ] )
 
-        // Top-level fields preserved.
-        expect( indexAfter.namespaceHash ).toBe( 'deadbeef' )
-        expect( indexAfter.aboutHash ).toBe( 'PENDING' )
+        const t2 = JSON.parse( await readFile( join( toolDir, 'test-2.json' ), 'utf-8' ) )
+        expect( t2.test ).toBe( 2 )
+        expect( t2.tool ).toBe( 'getBalance' )
+        expect( t2.request ).toBeDefined()
+        expect( t2.response ).not.toBeNull()
+        expect( t2.working ).toBe( true )
 
-        const matched = indexAfter.members.find( ( m ) => m.schemaId === 'mergens.getBalance' )
-        expect( matched.schemaHash ).toBe( '9f8e7d6c' )
-        expect( matched.schemaVersion ).toBe( '1.0.0' )
-        expect( matched.dataPretest.ok ).toBe( true )
-        expect( matched.dataPretest.passedDownloadable ).toBe( 3 )
-        expect( matched.dataPretest.payloadHash ).toBe( out.payloadHash )
-        expect( matched.dataPretest.payloadPath ).toBe( `schemas/mergens/data-pretest/getBalance--${out.payloadHash}.json` )
-        expect( matched.dataPretest.payloadPath.startsWith( '/' ) ).toBe( false )
+        // summary.json with per-tool gate result, no opaque hash filename
+        const summary = JSON.parse( await readFile( join( tempRoot, 'schemas', 'layoutns', 'prices', 'summary.json' ), 'utf-8' ) )
+        expect( summary.schemaFile ).toBe( 'prices' )
+        expect( summary.ok ).toBe( true )
+        expect( summary.perTool.getBalance ).toEqual( { working: 3, total: 3 } )
 
-        // The non-matching member is untouched.
-        const other = indexAfter.members.find( ( m ) => m.schemaId === 'mergens.other' )
-        expect( other.dataPretest ).toBeUndefined()
-        expect( other.schemaHash ).toBe( '11112222' )
-    } )
-
-    test( 'no namespace.json present -> payload still written, no crash', async () => {
-        fetchQueue = [
-            successFetch( { result: '1' } ),
-            successFetch( { result: '2' } ),
-            successFetch( { result: '3' } )
-        ]
-        const main = makeMainWithToolTests( { count: 3 } )
-
-        const out = await DataPretest.run( {
-            namespace: 'orphan',
-            toolName: 'getBalance',
-            main,
-            gradingDataDir: tempRoot
-        } )
-
-        expect( out.ok ).toBe( true )
-        const files = await readdir( join( tempRoot, 'schemas', 'orphan', 'data-pretest' ) )
-        expect( files.length ).toBe( 1 )
+        // tool folder holds tests/ (+ later _gradings/); schema level holds summary.json
+        const schemaFileEntries = await readdir( join( tempRoot, 'schemas', 'layoutns', 'prices' ) )
+        expect( schemaFileEntries ).not.toContain( 'data-pretest' )
+        expect( schemaFileEntries.sort() ).toEqual( [ 'getBalance', 'summary.json' ] )
+        const toolEntries = await readdir( join( tempRoot, 'schemas', 'layoutns', 'prices', 'getBalance' ) )
+        expect( toolEntries ).toContain( 'tests' )
     } )
 } )
 

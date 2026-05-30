@@ -59,6 +59,7 @@ import { NaReason } from './NaReason.mjs'
 import { SharedLists } from './SharedLists.mjs'
 import { DataPretest } from './DataPretest.mjs'
 import { ModuleApi } from './ModuleApi.mjs'
+import { SkillComposition } from './SkillComposition.mjs'
 
 
 const REPO_VERSION = '1.0.0'
@@ -282,6 +283,7 @@ export {
     SharedLists,
     DataPretest,
     ModuleApi,
+    SkillComposition,
     gradeSingleSchema,
     gradeSelection,
     validateGradingEntry,

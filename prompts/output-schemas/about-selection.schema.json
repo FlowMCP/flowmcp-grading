@@ -66,6 +66,13 @@
                     "items": {
                         "$ref": "_master.schema.json#/$defs/improvementHint"
                     }
+                },
+                "harness": {
+                    "type": "string",
+                    "enum": [
+                        "claude-code"
+                    ],
+                    "description": "Execution harness that produced this grading. Only 'claude-code' is currently supported."
                 }
             },
             "required": [
@@ -76,7 +83,8 @@
                 "timestamp",
                 "persona",
                 "answers",
-                "improvementHints"
+                "improvementHints",
+                "harness"
             ],
             "additionalProperties": false
         }

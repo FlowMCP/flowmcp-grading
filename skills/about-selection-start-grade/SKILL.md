@@ -28,7 +28,7 @@ Parameters (passed by the caller via tool call):
 6. **Load persona (mandatory)** — split `personaSlug` into `<basePersona>--<lens>`. Read the base persona from `repos/flowmcp-spec/personas/<basePersona>.md`. Read the lens helper from `flowmcp-grading/grading-data/personas/<lens>-<YYYY>.md`.
 7. **Load previous grading (optional)** — if `iteration > 1`: read `previousGradingPath`, extract `improvementHints[]`.
 8. **Build prompt** — call `PromptBuilder.build({ template, preInstructions, outputSchema, questions, persona: { base, lens }, previousHints, selectionPath, iteration })`.
-9. **Spawn sub-agent** — via Bash: `claude --print --model inherit --max-turns 1 --output-format json --append-system-prompt "Sub-Agent: Strict-JSON only. No prose." -- <prompt>`. Read-only tools. Fresh empty context.
+9. **Spawn sub-agent** — via Bash: `Agent()` (sub-agent evaluator; harness `claude-code` — fresh empty context, read-only, strict JSON validated against the output-schema. See `docs/harness.md`). Read-only tools. Fresh empty context.
 10. **Validate response** — parse JSON. Validate against `about-selection.schema.json`. On schema failure: `{ "blocker": "schema-validation", "reason": "<details>" }`.
 11. **Hand-off** — call `about-selection-apply-improvement` with the JSON + `iteration` + `selectionPath` + `personaSlug`.
 

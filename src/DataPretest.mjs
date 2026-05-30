@@ -131,6 +131,8 @@ class DataPretest {
                 return {
                     primitive: entry[ 'primitive' ],
                     name: entry[ 'name' ],
+                    description: entry[ 'description' ] === undefined ? '' : entry[ 'description' ],
+                    request: entry[ 'request' ] === undefined ? {} : entry[ 'request' ],
                     status: entry[ 'status' ],
                     error: entry[ 'error' ] === undefined ? null : entry[ 'error' ],
                     hasData,
@@ -144,58 +146,81 @@ class DataPretest {
             .filter( ( entry ) => entry[ 'working' ] === true )
             .length
 
-        const ok = passedDownloadable >= minWorkingTests
+        // Per-tool gate (the spec is per-tool, NOT a schema-file total): every
+        // downloadable tool must reach minWorkingTests working tests on its own.
+        // A tool whose tests all fail must fail the pretest even when sibling
+        // tools in the same schema file pass.
+        const workingByTool = results
+            .filter( ( entry ) => DOWNLOADABLE_PRIMITIVES.includes( entry[ 'primitive' ] ) )
+            .reduce( ( acc, entry ) => {
+                const name = entry[ 'name' ]
+                const prev = acc[ name ] === undefined ? 0 : acc[ name ]
+                acc[ name ] = entry[ 'working' ] === true ? prev + 1 : prev
+                return acc
+            }, {} )
+
+        const downloadableToolCount = Object.keys( workingByTool ).length
+
+        const toolsBelowThreshold = Object.entries( workingByTool )
+            .filter( ( pair ) => pair[ 1 ] < minWorkingTests )
+            .map( ( pair ) => `${pair[ 0 ]} (${pair[ 1 ]}/${minWorkingTests})` )
+
+        // ok requires at least one downloadable tool AND every such tool meeting
+        // the threshold. No downloadable tools at all (e.g. only stubs) is a FAIL.
+        const ok = downloadableToolCount > 0 && toolsBelowThreshold.length === 0
         const stopReason = ok
             ? null
-            : `fewer-than-${minWorkingTests}-working-downloadable-tests`
+            : ( downloadableToolCount === 0
+                ? 'no-downloadable-tools'
+                : `tools-below-${minWorkingTests}-working-downloadable-tests` )
 
         if( !ok ) {
-            errors.push( `DPT-003: Data-pretest abort: fewer than ${minWorkingTests} working downloadable tests (found ${passedDownloadable})` )
+            const detail = downloadableToolCount === 0
+                ? 'no downloadable tools with working tests'
+                : `tool(s) below ${minWorkingTests} working downloadable tests: ${toolsBelowThreshold.join( ', ' )}`
+            errors.push( `DPT-003: Data-pretest abort: ${detail}` )
         }
 
-        const createdAt = new Date().toISOString()
-        const payload = DataPretest.#buildPayload( {
-            namespace,
-            toolName,
-            createdAt,
-            minWorkingTests,
-            passedDownloadable,
-            ok,
-            results
-        } )
+        const totalByTool = results
+            .filter( ( entry ) => DOWNLOADABLE_PRIMITIVES.includes( entry[ 'primitive' ] ) )
+            .reduce( ( acc, entry ) => {
+                const name = entry[ 'name' ]
+                acc[ name ] = ( acc[ name ] === undefined ? 0 : acc[ name ] ) + 1
+                return acc
+            }, {} )
 
-        const { hash: payloadHash, errors: hashErrors } = HashGenerator.computeHash( { value: payload } )
-        if( hashErrors.length > 0 ) {
-            hashErrors.forEach( ( message ) => { errors.push( message ) } )
-            return {
-                ok: false,
-                passedDownloadable,
-                required: minWorkingTests,
-                payloadPath: null,
-                payloadHash: null,
-                results,
-                stopReason: stopReason === null ? 'payload-hash-failed' : stopReason,
-                errors
-            }
-        }
+        const perTool = Object.keys( totalByTool )
+            .reduce( ( acc, name ) => {
+                acc[ name ] = { working: workingByTool[ name ], total: totalByTool[ name ] }
+                return acc
+            }, {} )
 
+        const checkedAt = new Date().toISOString()
         const persisted = await DataPretest.#persist( {
             gradingDataDir,
             namespace,
-            toolName,
-            payload,
-            payloadHash,
-            ok,
-            passedDownloadable,
-            createdAt
+            schemaFile: toolName,
+            results,
+            summary: {
+                namespace,
+                schemaFile: toolName,
+                checkedAt,
+                minWorkingTests,
+                ok,
+                passedDownloadable,
+                toolsBelowThreshold,
+                perTool
+            }
         } )
 
         return {
             ok,
             passedDownloadable,
             required: minWorkingTests,
-            payloadPath: persisted[ 'payloadPath' ],
-            payloadHash,
+            toolsBelowThreshold,
+            perTool,
+            schemaDir: persisted[ 'schemaFileDir' ],
+            summaryPath: persisted[ 'summaryPath' ],
             results,
             stopReason,
             errors
@@ -205,106 +230,52 @@ class DataPretest {
 
     // --- persistence -------------------------------------------------------
 
-    static async #persist( {
-        gradingDataDir, namespace, toolName, payload, payloadHash, ok, passedDownloadable, createdAt
-    } ) {
-        const namespaceDir = join( gradingDataDir, 'schemas', namespace )
-        const pretestDir = join( namespaceDir, 'data-pretest' )
-        const payloadFileName = `${toolName}--${payloadHash}.json`
-        const absolutePayloadPath = join( pretestDir, payloadFileName )
-        const relativePayloadPath = `schemas/${namespace}/data-pretest/${payloadFileName}`
+    // Human-readable layout (no opaque hash filenames, no invented folder names):
+    //   schemas/<namespace>/<schemaFile>/tests/<tool>/test-<n>.json   (one file per test)
+    //   schemas/<namespace>/<schemaFile>/summary.json                  (per-tool gate result)
+    // Each test file is self-describing: the request params plus the real response,
+    // so the filename and contents tell you exactly what was tested without code.
+    static async #persist( { gradingDataDir, namespace, schemaFile, results, summary } ) {
+        const schemaFileDir = join( gradingDataDir, 'schemas', namespace, schemaFile )
 
-        const payloadToWrite = Object.assign( {}, payload, { payloadHash } )
+        const downloadable = results
+            .filter( ( entry ) => DOWNLOADABLE_PRIMITIVES.includes( entry[ 'primitive' ] ) )
 
-        await mkdir( pretestDir, { recursive: true } )
-        await writeFile( absolutePayloadPath, JSON.stringify( payloadToWrite, null, 4 ) + '\n', 'utf-8' )
+        const counters = {}
+        await downloadable.reduce( ( promise, entry ) => promise.then( async () => {
+            const tool = entry[ 'name' ]
+            const next = counters[ tool ] === undefined ? 1 : counters[ tool ] + 1
+            counters[ tool ] = next
+            // Layout: schemas/<ns>/<schemaFile>/<tool>/tests/test-N.json
+            const toolDir = join( schemaFileDir, tool, 'tests' )
+            await mkdir( toolDir, { recursive: true } )
+            const fileBody = {
+                tool,
+                test: next,
+                description: entry[ 'description' ] === undefined ? '' : entry[ 'description' ],
+                request: entry[ 'request' ] === undefined ? {} : entry[ 'request' ],
+                status: entry[ 'status' ],
+                hasData: entry[ 'hasData' ],
+                working: entry[ 'working' ],
+                durationMs: entry[ 'durationMs' ],
+                error: entry[ 'error' ] === undefined ? null : entry[ 'error' ],
+                response: DataPretest.#parseResponse( { output: entry[ 'output' ] } )
+            }
+            await writeFile( join( toolDir, `test-${next}.json` ), JSON.stringify( fileBody, null, 4 ) + '\n', 'utf-8' )
+        } ), Promise.resolve() )
 
-        await DataPretest.#mergeNamespaceIndex( {
-            namespaceDir,
-            namespace,
-            toolName,
-            payloadHash,
-            relativePayloadPath,
-            ok,
-            passedDownloadable,
-            checkedAt: createdAt
-        } )
+        await mkdir( schemaFileDir, { recursive: true } )
+        const summaryPath = join( schemaFileDir, 'summary.json' )
+        await writeFile( summaryPath, JSON.stringify( summary, null, 4 ) + '\n', 'utf-8' )
 
-        return { payloadPath: absolutePayloadPath, relativePayloadPath }
+        return { schemaFileDir, summaryPath }
     }
 
 
-    // No-overwrite merge: read the existing namespace.json, attach a dataPretest
-    // block to the matching member, keep every other field as-is. If the index
-    // file or the member is absent, the dataPretest write is skipped (the index
-    // is produced by a separate generator) rather than silently fabricated.
-    static async #mergeNamespaceIndex( {
-        namespaceDir, namespace, toolName, payloadHash, relativePayloadPath, ok, passedDownloadable, checkedAt
-    } ) {
-        const indexPath = join( namespaceDir, 'namespace.json' )
-        if( existsSync( indexPath ) === false ) {
-            return { merged: false, reason: 'no-namespace-json' }
-        }
-
-        const content = await readFile( indexPath, 'utf-8' )
-        const index = JSON.parse( content )
-        const members = Array.isArray( index[ 'members' ] ) ? index[ 'members' ] : []
-
-        const schemaId = `${namespace}.${toolName}`
-        const dataPretestBlock = {
-            payloadHash,
-            payloadPath: relativePayloadPath,
-            ok,
-            passedDownloadable,
-            checkedAt
-        }
-
-        let touched = false
-        const nextMembers = members
-            .map( ( member ) => {
-                const matchesSchemaId = member[ 'schemaId' ] === schemaId
-                const matchesToolName = member[ 'toolName' ] === toolName
-                if( matchesSchemaId === false && matchesToolName === false ) {
-                    return member
-                }
-                touched = true
-                // Preserve every existing field, attach/replace only dataPretest.
-                return Object.assign( {}, member, { dataPretest: dataPretestBlock } )
-            } )
-
-        if( touched === false ) {
-            return { merged: false, reason: 'no-matching-member' }
-        }
-
-        const nextIndex = Object.assign( {}, index, { members: nextMembers } )
-        await writeFile( indexPath, JSON.stringify( nextIndex, null, 4 ) + '\n', 'utf-8' )
-
-        return { merged: true }
-    }
-
-
-    static #buildPayload( { namespace, toolName, createdAt, minWorkingTests, passedDownloadable, ok, results } ) {
-        const tests = results
-            .map( ( entry ) => {
-                return {
-                    primitive: entry[ 'primitive' ],
-                    name: entry[ 'name' ],
-                    status: entry[ 'status' ],
-                    hasData: entry[ 'hasData' ],
-                    durationMs: entry[ 'durationMs' ],
-                    output: entry[ 'output' ]
-                }
-            } )
-
-        return {
-            namespace,
-            toolName,
-            createdAt,
-            minWorkingTests,
-            passedDownloadable,
-            ok,
-            tests
-        }
+    static #parseResponse( { output } ) {
+        if( output === undefined || output === null ) { return null }
+        if( typeof output !== 'string' ) { return output }
+        try { return JSON.parse( output ) } catch { return output }
     }
 
 
@@ -574,10 +545,13 @@ class DataPretest {
                     fullOutput
                 } )
 
+                const testCase = typedTest[ 'test' ] === undefined ? {} : typedTest[ 'test' ]
                 acc.push( {
                     primitive: typedTest[ 'primitive' ],
                     name: typedTest[ 'name' ],
                     schemaRef: typedTest[ 'schemaRef' ],
+                    description: testCase[ '_description' ] === undefined ? '' : testCase[ '_description' ],
+                    request: testCase[ 'userParams' ] === undefined ? {} : testCase[ 'userParams' ],
                     ...result
                 } )
 

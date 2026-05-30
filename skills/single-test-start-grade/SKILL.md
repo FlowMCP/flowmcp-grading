@@ -28,7 +28,7 @@ Parameters (passed by the caller via tool call):
 6. **Load Persona (optional)** — `personaRequired: false` — the persona block stays empty.
 7. **Load previous Grading (optional)** — If `iteration > 1`: read `previousGradingPath` and extract `improvementHints[]` for the next iteration.
 8. **Build Prompt** — Call `PromptBuilder.build({ template, preInstructions, outputSchema, questions, persona: null, previousHints, schemaPath, iteration })`. Returns `{ prompt: string }`.
-9. **Spawn Sub-Agent** — Via Bash: `claude --print --model inherit --max-turns 1 --output-format json --append-system-prompt "Sub-Agent: Strict-JSON only. No prose." -- <prompt>`. Read-only tools. Fresh, empty context.
+9. **Spawn Sub-Agent** — Via `Agent()` (sub-agent evaluator; harness `claude-code` — fresh empty context, read-only, strict JSON validated against the output-schema. See `docs/harness.md`). Read-only tools. Fresh, empty context.
 10. **Validate Response** — Parse JSON. Validate against `single-test.schema.json`. On schema failure: `{ "blocker": "schema-validation", "reason": "<details>" }`.
 11. **Hand-off** — Call `single-test-apply-improvement` with the validated JSON + `iteration` + `schemaPath` + `personaSlug="neutral"`.
 

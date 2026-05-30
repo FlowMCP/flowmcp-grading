@@ -47,10 +47,21 @@
                 },
                 "persona": {
                     "oneOf": [
-                        { "type": "null" },
-                        { "$ref": "#/$defs/persona" }
+                        {
+                            "type": "null"
+                        },
+                        {
+                            "$ref": "#/$defs/persona"
+                        }
                     ],
                     "description": "null for neutral areas (1-4); persona object for persona areas (5-8)."
+                },
+                "harness": {
+                    "type": "string",
+                    "enum": [
+                        "claude-code"
+                    ],
+                    "description": "Execution harness that produced this grading. Only 'claude-code' is currently supported."
                 }
             },
             "required": [
@@ -59,7 +70,8 @@
                 "area",
                 "iteration",
                 "timestamp",
-                "persona"
+                "persona",
+                "harness"
             ],
             "additionalProperties": false
         },
@@ -81,7 +93,10 @@
                     "minLength": 1
                 }
             },
-            "required": [ "basePersonaId", "lensId" ],
+            "required": [
+                "basePersonaId",
+                "lensId"
+            ],
             "additionalProperties": false
         },
         "answer": {
@@ -97,12 +112,17 @@
                     "oneOf": [
                         {
                             "type": "number",
-                            "minimum": 1.0,
-                            "maximum": 5.0
+                            "minimum": 1,
+                            "maximum": 5
                         },
                         {
                             "type": "string",
-                            "enum": [ "pass", "fail", "stale", "n/a" ]
+                            "enum": [
+                                "pass",
+                                "fail",
+                                "stale",
+                                "n/a"
+                            ]
                         }
                     ],
                     "description": "Numeric score 1.0–5.0 or categorical pass/fail/stale/n/a per Spec 08 §5.2."
@@ -113,8 +133,12 @@
                 },
                 "evidence": {
                     "oneOf": [
-                        { "type": "string" },
-                        { "type": "object" }
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "object"
+                        }
                     ],
                     "description": "Optional evidence — citation, snippet, or structured object."
                 },
@@ -131,13 +155,23 @@
                     "description": "Closed reason set per Spec 08 §5.3. REQUIRED when score = 'n/a'."
                 }
             },
-            "required": [ "questionId", "score", "reasoning" ],
+            "required": [
+                "questionId",
+                "score",
+                "reasoning"
+            ],
             "additionalProperties": false,
             "allOf": [
                 {
                     "if": {
-                        "properties": { "score": { "const": "n/a" } },
-                        "required": [ "score" ]
+                        "properties": {
+                            "score": {
+                                "const": "n/a"
+                            }
+                        },
+                        "required": [
+                            "score"
+                        ]
                     },
                     "then": {
                         "properties": {
@@ -153,7 +187,9 @@
                                 ]
                             }
                         },
-                        "required": [ "naReason" ]
+                        "required": [
+                            "naReason"
+                        ]
                     }
                 }
             ]
@@ -172,10 +208,18 @@
                 },
                 "priority": {
                     "type": "string",
-                    "enum": [ "low", "medium", "high" ]
+                    "enum": [
+                        "low",
+                        "medium",
+                        "high"
+                    ]
                 }
             },
-            "required": [ "targetField", "suggestion", "priority" ],
+            "required": [
+                "targetField",
+                "suggestion",
+                "priority"
+            ],
             "additionalProperties": false
         },
         "blocker": {
@@ -192,7 +236,10 @@
                     "minLength": 1
                 }
             },
-            "required": [ "blocker", "reason" ],
+            "required": [
+                "blocker",
+                "reason"
+            ],
             "additionalProperties": false
         }
     }
