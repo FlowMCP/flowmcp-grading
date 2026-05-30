@@ -48,8 +48,6 @@ const PUBLIC_ONLY_PATTERNS = [
 
 // Identifiers that are unambiguously on-hold-marked or third-party APIs (false positives).
 function shouldIgnoreLine( { line } ) {
-    if( line.includes( 'Memo-080 Kap 12' ) ) { return true }
-    if( line.includes( 'Memo 080 Kap 12' ) ) { return true }
     if( line.includes( 'out-of-scope-resource' ) ) { return true }
     if( line.includes( 'out-of-scope-prompt' ) ) { return true }
     if( line.includes( 'out-of-scope-procedure' ) ) { return true }
@@ -121,10 +119,7 @@ async function scanFile( { absPath } ) {
 
 function classify( { hit, file } ) {
     // on-hold-marked code = explicit on-hold, no new TODO needed.
-    // Comments that already carry the on-hold marker are pre-marked.
-    if( hit.snippet.includes( 'Memo-080 Kap 12' ) || hit.snippet.includes( 'Memo 080 Kap 12' ) ) {
-        return 'pre-marked'
-    }
+    // Comments that already carry an out-of-scope marker are pre-marked.
     // false-positives: hits inside "//" comments referencing closed-set values.
     if( hit.snippet.includes( 'out-of-scope-resource' ) || hit.snippet.includes( 'out-of-scope-prompt' ) || hit.snippet.includes( 'out-of-scope-procedure' ) ) {
         return 'pre-marked'

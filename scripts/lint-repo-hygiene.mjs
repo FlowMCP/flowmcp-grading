@@ -2,12 +2,13 @@
 /**
  * lint-repo-hygiene.mjs — guards the public repo against two regressions:
  *
- *   1. Internal memo references  (e.g. "Memo 080", "memo-082", "Memo 76")
- *   2. Non-English content        (umlauts + a conservative German wordlist)
+ *   1. Internal memo references  (the literal word "memo" followed by a number)
+ *   2. Non-English content        (umlauts + a conservative non-English wordlist)
  *
- * Scope: shipped/public content (src, skills, prompts, docs, bin, scripts,
- * plus README.md and AGENTS.md). Internal test scaffolding (tests/) and
- * generated/transient dirs are out of scope.
+ * Scope: src, skills, prompts, docs, bin, scripts, tests, plus README.md and
+ * AGENTS.md. Generated/transient dirs (node_modules, grading-data, coverage,
+ * .tmp) and underscore-prefixed scratch files are out of scope. This detector
+ * file is self-excluded because it intentionally carries the pattern wordlist.
  *
  * The non-English check is a HEURISTIC, not a guarantee: it catches umlauts
  * and a small set of distinctive German function words. It will not detect
@@ -27,7 +28,7 @@ import { fileURLToPath } from 'node:url'
 
 const REPO_ROOT = join( fileURLToPath( import.meta.url ), '..', '..' )
 
-const SCAN_DIRS = [ 'src', 'skills', 'prompts', 'docs', 'bin', 'scripts' ]
+const SCAN_DIRS = [ 'src', 'skills', 'prompts', 'docs', 'bin', 'scripts', 'tests' ]
 const SCAN_ROOT_FILES = [ 'README.md', 'AGENTS.md' ]
 const SCAN_EXTENSIONS = [ '.md', '.mjs', '.json', '.mdx' ]
 
@@ -40,16 +41,17 @@ const EXCLUDED_DIR_NAMES = [ 'node_modules', '.git', '.memo', 'grading-data', 'c
 
 const MEMO_REF_REGEX = /\bmemo[\s_-]?\d+/i
 
-// Conservative German wordlist — distinctive words unlikely to collide with
-// English. Ambiguous words (die, der, das, also, bin, war) are deliberately
-// omitted to avoid false positives.
+// Conservative non-English wordlist — distinctive words unlikely to collide
+// with English. Ambiguous words (die, der, das, also, bin, war) are
+// deliberately omitted to avoid false positives. Words carrying diacritics
+// are written with unicode escapes so this detector file stays byte-clean.
 const GERMAN_WORDS = [
-    'und', 'oder', 'nicht', 'werden', 'müssen', 'fuer', 'für', 'eine', 'keine',
-    'wenn', 'dann', 'pruefung', 'prüfen', 'verbindlich', 'pflicht', 'beschreibung',
-    'aenderung', 'änderung', 'soll', 'wird', 'sind', 'diese', 'dieser', 'quelle'
+    'und', 'oder', 'nicht', 'werden', 'm\u00fcssen', 'fuer', 'f\u00fcr', 'eine', 'keine',
+    'wenn', 'dann', 'pruefung', 'pr\u00fcfen', 'verbindlich', 'pflicht', 'beschreibung',
+    'aenderung', '\u00e4nderung', 'soll', 'wird', 'sind', 'diese', 'dieser', 'quelle'
 ]
 const GERMAN_WORD_REGEX = new RegExp( `\\b(${GERMAN_WORDS.join( '|' )})\\b`, 'i' )
-const UMLAUT_REGEX = /[äöüÄÖÜß]/
+const UMLAUT_REGEX = /[\u00e4\u00f6\u00fc\u00c4\u00d6\u00dc\u00df]/
 
 const collectFiles = ( { dir } ) => {
     const abs = join( REPO_ROOT, dir )

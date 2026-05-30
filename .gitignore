@@ -1,4 +1,4 @@
-# Grading results — see README, never push (Memo 076, Chapter 14)
+# Grading results — see README, never push
 grading-data/
 
 # Node.js
@@ -19,7 +19,7 @@ scripts/_*.mjs
 .vscode/
 *.swp
 
-# Memo working dirs — never push (Memo 081)
+# Local working notes — never push
 .memo/
 
 # Local environment overrides (no .env should live in this repo — see AGENTS.md)

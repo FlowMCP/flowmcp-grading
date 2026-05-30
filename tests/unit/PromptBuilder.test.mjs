@@ -17,8 +17,8 @@ const sampleFilesWithPersona = [
 ]
 
 const sampleQuestions = [
-    { id: 'Q-001', question: 'Ist die Tool-Beschreibung praezise?' },
-    { id: 'Q-002', question: 'Ist die Input-Schema-Beschreibung vollstaendig?' }
+    { id: 'Q-001', question: 'Is the tool description precise?' },
+    { id: 'Q-002', question: 'Is the input-schema description complete?' }
 ]
 
 const sampleOutputSchema = {
@@ -392,7 +392,7 @@ describe( 'PromptBuilder.build — smoke + metadata integrity', () => {
             area: 'single-test'
         } )
         expect( result.prompt ).toContain( '[Q-001]' )
-        expect( result.prompt ).toContain( 'Ist die Tool-Beschreibung praezise?' )
+        expect( result.prompt ).toContain( 'Is the tool description precise?' )
     } )
 
     test( 'pre-instruction block contains mandatory header and numbered files', () => {
