@@ -2,7 +2,7 @@
 
 > Source: `prompts/generated/questions.json` — generated via `scripts/build-test-catalog.mjs`
 > The catalog is derived from the questions, NOT maintained manually.
-> generatedAt: 2026-05-30T08:43:30.433Z
+> generatedAt: 2026-05-30T09:06:54.152Z
 
 ## Mapping Question → Code-Test-Bucket
 

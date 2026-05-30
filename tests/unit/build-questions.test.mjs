@@ -203,6 +203,88 @@ describe( 'QuestionBuilder.build (validation failures)', () => {
 } )
 
 
+describe( 'QuestionBuilder.build (naming-convention enforcement)', () => {
+    let tmpDir
+    let outFile
+
+    beforeEach( () => {
+        tmpDir = mkdtempSync( join( tmpdir(), 'qb-' ) )
+        outFile = join( tmpDir, 'questions.json' )
+    } )
+
+    afterEach( () => {
+        rmSync( tmpDir, { recursive: true, force: true } )
+    } )
+
+    function validFrontmatter( { determinism } ) {
+        return [
+            '---',
+            'id: Q-single-test-01',
+            'area: single-test',
+            'dimension: docsUrlReachable',
+            'question: "Q"',
+            'scoreType: boolean',
+            'weight: 1.0',
+            `determinism: ${determinism}`,
+            'tier: P1',
+            'filesToRead:',
+            '  - "{{schemaPath}}"',
+            'preInstructionRef: x',
+            'evaluatorTask: "T"',
+            'outputSchemaRef: y',
+            'personaRequired: false',
+            'version: 1.0.0',
+            '---'
+        ].join( '\n' )
+    }
+
+    test( 'fails on filename not matching the regex', () => {
+        const badDir = mkdtempSync( join( tmpdir(), 'qb-fn-' ) )
+        mkdirSync( join( badDir, 'deterministic' ), { recursive: true } )
+        writeFileSync(
+            join( badDir, 'deterministic', 'BadName.md' ),
+            validFrontmatter( { determinism: 'deterministic' } )
+        )
+        const result = QuestionBuilder.build( { rootDir: badDir, outFile } )
+        rmSync( badDir, { recursive: true, force: true } )
+        expect( result.status ).toBe( false )
+        const hasFilenamePattern = result.struct.messages
+            .some( ( m ) => m.includes( 'FILENAME-PATTERN' ) )
+        expect( hasFilenamePattern ).toBe( true )
+    } )
+
+    test( 'fails when folder does not match determinism field', () => {
+        const badDir = mkdtempSync( join( tmpdir(), 'qb-fd-' ) )
+        mkdirSync( join( badDir, 'deterministic' ), { recursive: true } )
+        writeFileSync(
+            join( badDir, 'deterministic', '01-wrong.md' ),
+            validFrontmatter( { determinism: 'non-deterministic' } )
+        )
+        const result = QuestionBuilder.build( { rootDir: badDir, outFile } )
+        rmSync( badDir, { recursive: true, force: true } )
+        expect( result.status ).toBe( false )
+        const hasMismatch = result.struct.messages
+            .some( ( m ) => m.includes( 'FOLDER-DETERMINISM-MISMATCH' ) )
+        expect( hasMismatch ).toBe( true )
+    } )
+
+    test( 'does not emit the internal _folder field', () => {
+        const okDir = mkdtempSync( join( tmpdir(), 'qb-ok-' ) )
+        mkdirSync( join( okDir, 'deterministic' ), { recursive: true } )
+        writeFileSync(
+            join( okDir, 'deterministic', '01-ok.md' ),
+            validFrontmatter( { determinism: 'deterministic' } )
+        )
+        const result = QuestionBuilder.build( { rootDir: okDir, outFile } )
+        rmSync( okDir, { recursive: true, force: true } )
+        expect( result.status ).toBe( true )
+        const payload = JSON.parse( readFileSync( outFile, 'utf8' ) )
+        expect( payload.questions[ 0 ]._folder ).toBeUndefined()
+        expect( payload.questions[ 0 ]._sourcePath ).toBe( 'deterministic/01-ok.md' )
+    } )
+} )
+
+
 describe( 'QuestionBuilder.build (production catalog)', () => {
     let tmpDir
     let outFile

@@ -103,26 +103,41 @@ The exact dimensions are set per question during calibration.
 prompts/questions/
 ├── deterministic/
 │   ├── 01-docs-url-reachable.md
-│   ├── 02-tool-executable.md
+│   ├── 02-output-schema-matches-response.md
 │   └── ...
 ├── non-deterministic/
 │   ├── 01-description-clarity.md
-│   ├── 02-persona-fit-about-namespace.md
+│   ├── 21-about-namespace-persona-reference.md
 │   └── ...
-└── mixed/
-    └── 01-output-schema-vs-response.md
+└── mixed/            # part of the convention, currently empty
 ```
 
-Convention:
+Convention (authoritative — this is the single source of truth, enforced by
+`scripts/build-questions.mjs`):
 
-- Path template: `prompts/questions/<dimension>/<NN>-<slug>.md`
-- `<dimension>` = `deterministic` | `non-deterministic` | `mixed` (matching the `determinism` field)
+- Each deterministic test and each non-deterministic question is exactly **one**
+  self-describing file. The filename alone reveals what is tested/asked, so the
+  catalog is readable without opening any code.
+- Path template: `prompts/questions/<determinism>/<NN>-<slug>.md`
+- `<determinism>` = `deterministic` | `non-deterministic` | `mixed`. The subfolder
+  name **must equal** the frontmatter `determinism` field. A mismatch fails the
+  build (`FOLDER-DETERMINISM-MISMATCH`, exit code != 0, question path in the message).
 - `<NN>` = 01..99, ascending locally per subfolder, with a leading zero
 - `<slug>` = lowercase kebab-case, max 50 chars, ASCII only (no umlauts; transliterate, e.g. `ae`, `oe`, `ue`, `ss`)
-- Filename matches the regex `^\d{2}-[a-z0-9-]+\.md$`
+- Filename **must** match the regex `^\d{2}-[a-z0-9-]+\.md$`. A violation fails the
+  build (`FILENAME-PATTERN`).
+- The `mixed/` subfolder is part of the convention but is currently empty; the
+  build skips empty subfolders without error. Do not invent placeholder content —
+  add a `mixed/` file only when a real partial-code/partial-LLM question exists.
 
-Rationale: sorting by `dimension` makes the build output groupable and lets the
-build test catalog map deterministic questions directly to `flowmcp-core` tests.
+Rationale: sorting by `determinism` makes the build output groupable and lets the
+test catalog map deterministic questions directly to `flowmcp-core` tests, while
+non-deterministic questions map to `no-code-test (LLM-only)`.
+
+Single loader: `scripts/build-questions.mjs` aggregates every question file into
+`prompts/generated/questions.json`. Skills and tooling import **only** that
+aggregated JSON (filtered by `area`) — never individual Markdown files directly.
+There is no second, parallel question/test structure.
 
 ---
 
@@ -177,12 +192,15 @@ questions. It is stored physically in `prompts/questions/non-deterministic/`.
 
 The build script `scripts/build-questions.mjs` checks per question:
 
-1. All 14 required fields present (otherwise `MISSING-FIELD`)
-2. `id` matches the regex `^Q-[a-zA-Z0-9-]+-\d{2}$`
-3. `area` is in the 10-item enum list (section 3)
-4. `filesToRead` is a non-empty array
-5. `personaRequired` must match the area mapping (areas 1-4 = false, 5-8 = true)
-6. The sum of the `weight` values per `(area, tier)` bucket is between 0.95 and 1.05
+1. Filename matches `^\d{2}-[a-z0-9-]+\.md$` (otherwise `FILENAME-PATTERN`)
+2. Subfolder name equals the `determinism` field (otherwise `FOLDER-DETERMINISM-MISMATCH`)
+3. All 14 required fields present (otherwise `MISSING-FIELD`)
+4. `id` matches the regex `^Q-[a-zA-Z0-9-]+-\d{2}$`
+5. `area` is in the 10-item enum list (section 3)
+6. `determinism` and `scoreType` are within their enums
+7. `filesToRead` is a non-empty array
+8. `personaRequired` must match the area mapping (areas 1-4 = false, 5-8 = true)
+9. The sum of the `weight` values per `(area, tier)` bucket is between 0.95 and 1.05
    (tolerance for rounding errors)
 
 If a check fails, the build script aborts with exit code != 0 and names the

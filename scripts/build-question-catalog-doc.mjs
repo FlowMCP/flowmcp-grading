@@ -149,9 +149,60 @@ class QuestionCatalogDocBuilder {
             : new Date().toISOString()
 
         const header = QuestionCatalogDocBuilder.#renderHeader( { stats: struct.stats, generatedAt } )
+        const overview = QuestionCatalogDocBuilder.#renderFilenameOverview( { questions: struct.questions } )
         const sections = QuestionCatalogDocBuilder.#renderSections( { grouped: struct.grouped } )
 
-        struct.output = `${header}\n${sections}`
+        struct.output = `${header}\n${overview}\n${sections}`
+    }
+
+
+    static #renderFilenameOverview( { questions } ) {
+        const order = [ 'deterministic', 'non-deterministic', 'mixed' ]
+        const labels = {
+            'deterministic': 'Deterministic',
+            'non-deterministic': 'Non-deterministic',
+            'mixed': 'Mixed'
+        }
+
+        const blocks = order
+            .map( ( determinism ) => {
+                const rows = questions
+                    .filter( ( q ) => q.determinism === determinism )
+                    .sort( ( a, b ) => ( a._sourcePath || '' ).localeCompare( b._sourcePath || '' ) )
+                if( rows.length === 0 ) { return null }
+                return QuestionCatalogDocBuilder.#renderOverviewBlock( { label: labels[ determinism ], rows } )
+            } )
+            .filter( ( b ) => b !== null )
+
+        const intro = [
+            '## Overview by Filename',
+            '',
+            'Generated from the question filenames and frontmatter — every test/question',
+            'is exactly one self-describing file under `prompts/questions/<determinism>/`.',
+            'The filename alone reveals what is tested/asked, no code reading required.',
+            ''
+        ].join( '\n' )
+
+        return `${intro}\n${blocks.join( '\n\n' )}\n`
+    }
+
+
+    static #renderOverviewBlock( { label, rows } ) {
+        const lines = [
+            `### ${label} (${rows.length})`,
+            '',
+            '| File | ID | Area | Dimension | Question |',
+            '|------|----|------|-----------|----------|'
+        ]
+
+        rows
+            .forEach( ( q ) => {
+                const file = q._sourcePath || '—'
+                const escapedQuestion = ( q.question || '' ).replace( /\|/g, '\\|' )
+                lines.push( `| \`${file}\` | \`${q.id}\` | ${q.area} | \`${q.dimension}\` | ${escapedQuestion} |` )
+            } )
+
+        return lines.join( '\n' )
     }
 
 

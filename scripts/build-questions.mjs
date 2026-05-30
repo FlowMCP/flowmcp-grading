@@ -32,6 +32,7 @@ class QuestionBuilder {
     static #collectFiles( { struct } ) {
         const { rootDir } = struct
         const dims = [ 'deterministic', 'non-deterministic', 'mixed' ]
+        const filenameRegex = /^\d{2}-[a-z0-9-]+\.md$/
 
         dims
             .forEach( ( dim ) => {
@@ -39,17 +40,27 @@ class QuestionBuilder {
                 const exists = QuestionBuilder.#dirExists( { dirPath: dimPath } )
                 if( !exists ) { return }
 
-                const files = readdirSync( dimPath )
+                const entries = readdirSync( dimPath )
                     .filter( ( f ) => f.endsWith( '.md' ) )
-                    .map( ( f ) => join( dimPath, f ) )
-                struct.files.push( ...files )
+
+                entries
+                    .forEach( ( fileName ) => {
+                        if( !filenameRegex.test( fileName ) ) {
+                            struct.messages.push( `FILENAME-PATTERN ${dim}/${fileName} (expected ^\\d{2}-[a-z0-9-]+\\.md$)` )
+                        }
+                        struct.files.push( {
+                            filePath: join( dimPath, fileName ),
+                            folder: dim,
+                            fileName
+                        } )
+                    } )
             } )
     }
 
 
     static #parseFrontmatter( { struct } ) {
         struct.files
-            .forEach( ( filePath ) => {
+            .forEach( ( { filePath, folder } ) => {
                 const raw = readFileSync( filePath, 'utf8' )
                 const fmMatch = raw.match( /^---\n([\s\S]*?)\n---/ )
 
@@ -61,6 +72,7 @@ class QuestionBuilder {
                 try {
                     const data = yaml.load( fmMatch[ 1 ] )
                     data._sourcePath = relative( struct.rootDir, filePath )
+                    data._folder = folder
                     struct.questions.push( data )
                 } catch( err ) {
                     struct.messages.push( `YAML-ERROR ${filePath}: ${err.message}` )
@@ -110,6 +122,10 @@ class QuestionBuilder {
 
                 if( !determinisms.includes( q.determinism ) ) {
                     struct.messages.push( `DETERMINISM-ENUM ${ref}: ${q.determinism}` )
+                }
+
+                if( typeof q._folder === 'string' && q._folder !== q.determinism ) {
+                    struct.messages.push( `FOLDER-DETERMINISM-MISMATCH ${q._sourcePath}: folder=${q._folder}, determinism=${q.determinism}` )
                 }
 
                 if( !scoreTypes.includes( q.scoreType ) ) {
@@ -169,11 +185,17 @@ class QuestionBuilder {
             ? '1970-01-01T00:00:00.000Z'
             : new Date().toISOString()
 
+        const emittedQuestions = struct.questions
+            .map( ( q ) => {
+                const { _folder, ...rest } = q
+                return rest
+            } )
+
         const payload = {
             version: '1.0.0',
             generatedAt,
-            count: struct.questions.length,
-            questions: struct.questions
+            count: emittedQuestions.length,
+            questions: emittedQuestions
         }
         writeFileSync( struct.outFile, JSON.stringify( payload, null, 2 ) + '\n' )
     }
