@@ -32,7 +32,7 @@ repository.
 
 ```
 grading-data/
-├── schemas/                      Source-of-Truth (frozen schema snapshots)
+├── schemas/                      Source-of-Truth (frozen schema snapshots, FLAT GLOBAL BASE)
 │   └── <namespace>/
 │       ├── namespace.json        Payload with members[] + namespaceHash + aboutHash
 │       ├── about/
@@ -50,10 +50,32 @@ grading-data/
 │       ├── about/<aboutHash>--about.md
 │       ├── skills/<skillname>.mjs   (max 4)
 │       └── gradings/<selectionHash>--<timestamp>.json
+├── projects/                     Per-project entries (index + project selections)
+│   └── <projectName>/
+│       ├── index.json            Single index — data-pretest / single-grading / selection-grading all write here
+│       └── selection/
+│           └── <selectionId>/
+│               ├── selection.json
+│               └── selection.lock.json
 └── phase-status/                 Lifecycle tracking per schema/selection
     ├── single/<namespace>--<tool>.json
     └── selection/<selectionId>.json
 ```
+
+The `schemas/` base is **flat and global** — it is shared across all projects and there is
+**no per-project schema duplication**. A project entry under `projects/<projectName>/` holds a
+single `index.json` plus the project's own selections. A selection member **references** a
+flat-base snapshot by `schemaId`; it never copies the snapshot file.
+
+### Reference + optional override
+
+A selection member references a flat-base schema and MAY carry an optional `override` layer that
+adapts the presented tool `name` / `description` at selection level. The override is applied
+**on-top and is non-mutating**: the frozen schema snapshot and its `schemaHash` stay untouched.
+Because the override is part of `selection.json`, it flows into the `selectionHash` only. Only the
+whitelisted keys `name` and `description` are accepted. See
+[`docs/project-index-layout.md`](docs/project-index-layout.md) for the concrete index contract and
+an example.
 
 ---
 

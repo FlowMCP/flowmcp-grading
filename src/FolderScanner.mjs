@@ -11,6 +11,7 @@
  *   - single/<ns>--<tool>/ MUST correspond to namespace.json members
  *   - selection/<id>/selection.json MUST exist
  *   - phase-status/single/<ns>--<tool>.json hash matches snapshot hash
+ *   - projects/<projectName>/index.json MUST exist and be a valid index (SCN-011)
  *
  * NO SILENT DEFAULTS. Static methods only, object params, object returns.
  */
@@ -19,6 +20,7 @@ import { readFile, readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { SourceSnapshot, SNAPSHOT_FILENAME_REGEX } from './SourceSnapshot.mjs'
+import { ProjectIndex } from './ProjectIndex.mjs'
 
 
 class FolderScanner {
@@ -40,15 +42,18 @@ class FolderScanner {
         const schemasDir = join( gradingDataRoot, 'schemas' )
         const singleDir = join( gradingDataRoot, 'single' )
         const selectionDir = join( gradingDataRoot, 'selection' )
+        const projectsDir = join( gradingDataRoot, 'projects' )
 
         const namespaces = await FolderScanner.#listDirs( { path: schemasDir } )
         const singles = await FolderScanner.#listDirs( { path: singleDir } )
         const selections = await FolderScanner.#listDirs( { path: selectionDir } )
+        const projects = await FolderScanner.#listDirs( { path: projectsDir } )
 
         const issuesNested = await Promise.all( [
             ...namespaces.map( ( ns ) => FolderScanner.checkNamespaceFolder( { gradingDataRoot, namespace: ns } ) ),
             ...singles.map( ( nsTool ) => FolderScanner.#checkSingleFolder( { gradingDataRoot, namespaceTool: nsTool, namespaces } ) ),
             ...selections.map( ( id ) => FolderScanner.checkSelectionFolder( { gradingDataRoot, selectionId: id } ) ),
+            ...projects.map( ( name ) => FolderScanner.checkProjectIndex( { gradingDataRoot, projectName: name } ) ),
             FolderScanner.checkPhaseStatus( { gradingDataRoot } )
         ] )
 
@@ -70,6 +75,7 @@ class FolderScanner {
             schemas: schemasCount,
             singles: singles.length,
             selections: selections.length,
+            projects: projects.length,
             gaps
         }
 
@@ -214,6 +220,42 @@ class FolderScanner {
                 code: 'SCN-009',
                 path: lockfilePath,
                 message: `SCN-009: Lockfile-Consistency error (delegated): selection.lock.json missing at ${lockfilePath}`
+            } )
+        }
+
+        return { issues, errors: [] }
+    }
+
+
+    static async checkProjectIndex( { gradingDataRoot, projectName } ) {
+        const { status, messages } = FolderScanner.#validation( { gradingDataRoot, key: 'gradingDataRoot' } )
+        if( !status ) { return { issues: [], errors: messages } }
+        if( projectName === undefined || projectName === null || typeof projectName !== 'string' ) {
+            return { issues: [], errors: [ 'SCN-011: projectName argument required' ] }
+        }
+
+        const issues = []
+        const projectDir = join( gradingDataRoot, 'projects', projectName )
+        const indexPath = join( projectDir, 'index.json' )
+
+        const exists = await FolderScanner.#fileExists( { path: indexPath } )
+        if( !exists ) {
+            issues.push( {
+                severity: 'error',
+                code: 'SCN-011',
+                path: indexPath,
+                message: `SCN-011: project index missing: ${indexPath}`
+            } )
+            return { issues, errors: [] }
+        }
+
+        const read = await ProjectIndex.read( { gradingDataRoot, projectName } )
+        if( read.errors.length > 0 ) {
+            issues.push( {
+                severity: 'error',
+                code: 'SCN-011',
+                path: indexPath,
+                message: `SCN-011: project index invalid: ${read.errors.join( '; ' )}`
             } )
         }
 

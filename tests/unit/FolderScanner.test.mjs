@@ -88,3 +88,46 @@ describe( 'FolderScanner.checkSelectionFolder', () => {
         expect( has ).toBe( true )
     } )
 } )
+
+
+describe( 'FolderScanner project index (SCN-011)', () => {
+    const validIndex = ( { projectName } ) => ( {
+        indexVersion: 1,
+        projectName,
+        createdAt: '2026-05-30T10:00:00.000Z',
+        updatedAt: '2026-05-30T10:00:00.000Z',
+        dataPretest: {},
+        singleGradings: {},
+        selectionGradings: {}
+    } )
+
+    test( 'project entry without index.json → SCN-011 in scan', async () => {
+        const root = join( tempRoot, 'project-no-index' )
+        await mkdir( join( root, 'projects', 'demo-project' ), { recursive: true } )
+        const r = await FolderScanner.scan( { gradingDataRoot: root } )
+        const has = r.issues.some( ( i ) => i.code === 'SCN-011' )
+        expect( has ).toBe( true )
+        expect( r.summary.projects ).toBe( 1 )
+    } )
+
+    test( 'invalid index.json → SCN-011 in checkProjectIndex', async () => {
+        const root = join( tempRoot, 'project-bad-index' )
+        const projDir = join( root, 'projects', 'demo-project' )
+        await mkdir( projDir, { recursive: true } )
+        await writeFile( join( projDir, 'index.json' ), JSON.stringify( { indexVersion: 99 } ), 'utf-8' )
+
+        const r = await FolderScanner.checkProjectIndex( { gradingDataRoot: root, projectName: 'demo-project' } )
+        const has = r.issues.some( ( i ) => i.code === 'SCN-011' )
+        expect( has ).toBe( true )
+    } )
+
+    test( 'valid index.json → no SCN-011', async () => {
+        const root = join( tempRoot, 'project-good-index' )
+        const projDir = join( root, 'projects', 'demo-project' )
+        await mkdir( projDir, { recursive: true } )
+        await writeFile( join( projDir, 'index.json' ), JSON.stringify( validIndex( { projectName: 'demo-project' } ) ), 'utf-8' )
+
+        const r = await FolderScanner.checkProjectIndex( { gradingDataRoot: root, projectName: 'demo-project' } )
+        expect( r.issues ).toEqual( [] )
+    } )
+} )

@@ -18,7 +18,8 @@
  * | SourceSnapshot          | class    | static create / parseSnapshotFilename / verify / listForNamespace                          | SNP-*                     |
  * | PartialGrading          | class    | static buildPartialEntry / validateSequence / listGradedDimensions                         | PRT-*                     |
  * | StablePromotion         | class    | static checkEligibility / promoteIfEligible                                                | STB-*                     |
- * | SelectionLockfile       | class    | static generate / read / diff                                                              | LCK-*                     |
+ * | SelectionLockfile       | class    | static generate / read / diff / validateOverride                                           | LCK-*                     |
+ * | ProjectIndex            | class    | static init / read / write / validateIndex / indexPath                                     | IDX-*                     |
  * | PreConditionCheck       | class    | static check / checkLockfile                                                               | PRE-*                     |
  * | BumpHelper              | class    | static diffSchemas / diffSelections / checkVersionHashConsistency                          | BMP-*                     |
  * | FolderScanner           | class    | static scan / checkNamespaceFolder / checkSchemaSnapshots / checkSelectionFolder           | SCN-*                     |
@@ -45,6 +46,7 @@ import { SourceSnapshot } from './SourceSnapshot.mjs'
 import { PartialGrading } from './Phases/PartialGrading.mjs'
 import { StablePromotion } from './StablePromotion.mjs'
 import { SelectionLockfile } from './SelectionLockfile.mjs'
+import { ProjectIndex } from './ProjectIndex.mjs'
 import { PreConditionCheck } from './PreConditionCheck.mjs'
 import { BumpHelper } from './BumpHelper.mjs'
 import { FolderScanner } from './FolderScanner.mjs'
@@ -265,6 +267,7 @@ export {
     PartialGrading,
     StablePromotion,
     SelectionLockfile,
+    ProjectIndex,
     PreConditionCheck,
     BumpHelper,
     FolderScanner,

@@ -133,3 +133,70 @@ describe( 'SelectionLockfile.diff', () => {
         expect( d.errors[ 0 ] ).toContain( 'LCK-001' )
     } )
 } )
+
+
+describe( 'SelectionLockfile.validateOverride', () => {
+    test( 'accepts whitelisted name + description', () => {
+        const r = SelectionLockfile.validateOverride( { override: { name: 'Forecast', description: 'short' } } )
+        expect( r.valid ).toBe( true )
+        expect( r.errors ).toEqual( [] )
+    } )
+
+    test( 'rejects non-whitelisted key with LCK-005', () => {
+        const r = SelectionLockfile.validateOverride( { override: { name: 'ok', tags: [ 'x' ] } } )
+        expect( r.valid ).toBe( false )
+        const has = r.errors.some( ( e ) => e.includes( 'LCK-005' ) )
+        expect( has ).toBe( true )
+    } )
+
+    test( 'rejects non-string value with LCK-005', () => {
+        const r = SelectionLockfile.validateOverride( { override: { name: 42 } } )
+        expect( r.valid ).toBe( false )
+        expect( r.errors[ 0 ] ).toContain( 'LCK-005' )
+    } )
+
+    test( 'rejects empty override with LCK-005', () => {
+        const r = SelectionLockfile.validateOverride( { override: {} } )
+        expect( r.valid ).toBe( false )
+        expect( r.errors[ 0 ] ).toContain( 'LCK-005' )
+    } )
+
+    test( 'missing override yields LCK-001', () => {
+        const r = SelectionLockfile.validateOverride( {} )
+        expect( r.valid ).toBe( false )
+        expect( r.errors[ 0 ] ).toContain( 'LCK-001' )
+    } )
+} )
+
+
+describe( 'SelectionLockfile.generate with override', () => {
+    test( 'records a valid override in the lockfile member state', async () => {
+        const selectionId = 'demo-override-ok'
+        const members = [ { schemaId: 'a.b', override: { name: 'Renamed' } } ]
+        await seedSelection( { selectionId, members } )
+        await seedPhaseStatus( { schemaId: 'a.b', schemaHash: 'aaaaaaaa', schemaVersion: '1.0.0', gradingStatus: 'stable' } )
+
+        const result = await SelectionLockfile.generate( { gradingDataRoot: tempRoot, selectionId } )
+        expect( result.errors ).toEqual( [] )
+        expect( result.lockfile.members[ 0 ].override ).toEqual( { name: 'Renamed' } )
+    } )
+
+    test( 'member without override gets override = null', async () => {
+        const selectionId = 'demo-override-none'
+        await seedSelection( { selectionId, members: [ { schemaId: 'a.b' } ] } )
+        await seedPhaseStatus( { schemaId: 'a.b', schemaHash: 'aaaaaaaa', schemaVersion: '1.0.0', gradingStatus: 'stable' } )
+
+        const result = await SelectionLockfile.generate( { gradingDataRoot: tempRoot, selectionId } )
+        expect( result.errors ).toEqual( [] )
+        expect( result.lockfile.members[ 0 ].override ).toBeNull()
+    } )
+
+    test( 'invalid member override rejects generation with LCK-005', async () => {
+        const selectionId = 'demo-override-bad'
+        await seedSelection( { selectionId, members: [ { schemaId: 'a.b', override: { color: 'red' } } ] } )
+
+        const result = await SelectionLockfile.generate( { gradingDataRoot: tempRoot, selectionId } )
+        expect( result.lockfile ).toBeNull()
+        expect( result.errors[ 0 ] ).toContain( 'LCK-005' )
+    } )
+} )
