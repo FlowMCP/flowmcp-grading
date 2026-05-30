@@ -20,6 +20,7 @@
  * | StablePromotion         | class    | static checkEligibility / promoteIfEligible                                                | STB-*                     |
  * | SelectionLockfile       | class    | static generate / read / diff / validateOverride                                           | LCK-*                     |
  * | ProjectIndex            | class    | static init / read / write / validateIndex / indexPath                                     | IDX-*                     |
+ * | RebuildIndex            | class    | static resolveLatest / rebuildNamespaceIndex / rebuildSelectionIndex / buildLockSnapshot / validateIndex / mapAggregateGradeToStatus | IDX-* |
  * | PreConditionCheck       | class    | static check / checkLockfile                                                               | PRE-*                     |
  * | BumpHelper              | class    | static diffSchemas / diffSelections / checkVersionHashConsistency                          | BMP-*                     |
  * | FolderScanner           | class    | static scan / checkNamespaceFolder / checkSchemaSnapshots / checkSelectionFolder           | SCN-*                     |
@@ -60,6 +61,7 @@ import { SharedLists } from './SharedLists.mjs'
 import { DataPretest } from './DataPretest.mjs'
 import { ModuleApi } from './ModuleApi.mjs'
 import { SkillComposition } from './SkillComposition.mjs'
+import { RebuildIndex } from './RebuildIndex.mjs'
 
 
 const REPO_VERSION = '1.0.0'
@@ -284,6 +286,7 @@ export {
     DataPretest,
     ModuleApi,
     SkillComposition,
+    RebuildIndex,
     gradeSingleSchema,
     gradeSelection,
     validateGradingEntry,
