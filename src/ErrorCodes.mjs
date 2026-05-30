@@ -18,6 +18,7 @@
  *   SL-*  — SharedLists (loader + hash + filename)
  *   NA-*  — NaReason (closed-set n/a-Reason validator)
  *   DPT-* — DataPretest (live test runner + abort rule + payload persistence)
+ *   API-* — ModuleApi (public state-read + schema add/upgrade + scope-rule guard)
  *
  * Code format (strict):
  *   ERROR    → ^[A-Z]{3}-\d{3}$           (e.g. GRD-001)
@@ -497,12 +498,39 @@ const ERROR_CODE_TABLE = Object.freeze( {
             severity: 'ERROR',
             message: 'Required server parameter absent from serverParams: {detail}'
         } )
+    } ),
+    API: Object.freeze( {
+        'API-001': Object.freeze( {
+            code: 'API-001',
+            severity: 'ERROR',
+            message: 'Required field missing: {field}'
+        } ),
+        'API-002': Object.freeze( {
+            code: 'API-002',
+            severity: 'ERROR',
+            message: 'Type mismatch for field {field}: expected {expected}, got {actual}'
+        } ),
+        'API-003': Object.freeze( {
+            code: 'API-003',
+            severity: 'ERROR',
+            message: 'Invalid version upgrade: {detail}'
+        } ),
+        'API-004': Object.freeze( {
+            code: 'API-004',
+            severity: 'ERROR',
+            message: 'Invalid scope: {value} (expected `schema` or `selection`)'
+        } ),
+        'API-005': Object.freeze( {
+            code: 'API-005',
+            severity: 'ERROR',
+            message: 'Cross-scope grading forbidden: {detail}'
+        } )
     } )
 } )
 
 
 const CODE_FORMAT_REGEX = /^[A-Z]{2,3}(-WARN|-INFO)?-(\d{3}|S\d)$/
-const VALID_PREFIXES = [ 'GRD', 'SCO', 'VET', 'HSH', 'SNP', 'PRT', 'STB', 'LCK', 'PRE', 'SEL', 'BMP', 'SCN', 'ABT', 'SL', 'NA', 'DPT' ]
+const VALID_PREFIXES = [ 'GRD', 'SCO', 'VET', 'HSH', 'SNP', 'PRT', 'STB', 'LCK', 'PRE', 'SEL', 'BMP', 'SCN', 'ABT', 'SL', 'NA', 'DPT', 'API' ]
 const VALID_SEVERITIES = [ 'ERROR', 'WARNING', 'INFO' ]
 
 

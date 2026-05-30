@@ -16,7 +16,7 @@
  * | ErrorCodes              | class    | static getCode / formatMessage / listByPrefix / listBySeverity / validateCodeFormat        | GRD-*                     |
  * | HashGenerator           | class    | static canonicalize / computeHash / computeSchemaHash / computeSelectionHash / ...         | HSH-*                     |
  * | SourceSnapshot          | class    | static create / parseSnapshotFilename / verify / listForNamespace                          | SNP-*                     |
- * | PartialGrading          | class    | static buildPartialEntry / validateSequence / listGradedDimensions                         | PRT-*                     |
+ * | PartialGrading          | class    | static getValidModes / buildPartialEntry / validateSequence / listGradedDimensions         | PRT-*                     |
  * | StablePromotion         | class    | static checkEligibility / promoteIfEligible                                                | STB-*                     |
  * | SelectionLockfile       | class    | static generate / read / diff / validateOverride                                           | LCK-*                     |
  * | ProjectIndex            | class    | static init / read / write / validateIndex / indexPath                                     | IDX-*                     |
@@ -24,7 +24,10 @@
  * | BumpHelper              | class    | static diffSchemas / diffSelections / checkVersionHashConsistency                          | BMP-*                     |
  * | FolderScanner           | class    | static scan / checkNamespaceFolder / checkSchemaSnapshots / checkSelectionFolder           | SCN-*                     |
  * | AboutConsistencyCheck   | class    | static checkNamespaceAbout / checkSelectionAbout / verifyNamespace                         | ABT-*                     |
+ * | NaReason                | class    | static (closed-set n/a-reason validator)                                                   | NA-*                      |
+ * | SharedLists             | class    | static (shared-list loader + hash + filename)                                              | SL-*                      |
  * | DataPretest             | class    | static getVersion / run                                                                    | DPT-*                     |
+ * | ModuleApi               | class    | static readState / stats / addSchema / upgradeSchema / assertFullScopeRule / assertSelectionRespectsSchemaFull / getScopes | API-* |
  * | gradeSingleSchema       | function | ( { schemaPath, schemaId, grader, options } ) → { grading, errors }                        | GRD-001, GRD-002, GRD-003 |
  * | gradeSelection          | function | ( { selectionId, schemaIds, grader, options } ) → { grading, errors }                      | GRD-001, GRD-002, GRD-004 |
  * | validateGradingEntry    | function | ( { entry } ) → { valid, errors }                                                          | GRD-001, GRD-002          |
@@ -55,6 +58,7 @@ import { AboutConsistencyCheck } from './AboutConsistencyCheck.mjs'
 import { NaReason } from './NaReason.mjs'
 import { SharedLists } from './SharedLists.mjs'
 import { DataPretest } from './DataPretest.mjs'
+import { ModuleApi } from './ModuleApi.mjs'
 
 
 const REPO_VERSION = '1.0.0'
@@ -277,6 +281,7 @@ export {
     NaReason,
     SharedLists,
     DataPretest,
+    ModuleApi,
     gradeSingleSchema,
     gradeSelection,
     validateGradingEntry,
