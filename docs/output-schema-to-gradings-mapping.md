@@ -4,7 +4,7 @@
 |-------|-------|
 | Status | Implementation-Reference |
 | Source | PRD-09 (Memo 082 Phase 2e) |
-| Targets | `prompts/output-schemas/_master.schema.json`, `spec/1.1.0/08-grading-model.md` |
+| Targets | `prompts/output-schemas/_master.schema.json`, `flowmcp-spec/grading/1.1.0/08-grading-model.md` |
 
 This document maps every field of the Evaluator-Response Master Envelope (and
 of the per-area schemas) onto the durable grading entry defined in Spec 08.

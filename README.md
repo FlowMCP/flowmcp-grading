@@ -4,7 +4,7 @@
 
 Reference implementation of the FlowMCP Grading-Spec. The active spec is `gradingSpec/1.1.0`
 (Memo 076 base, extended by Memo 080 with the Source-of-Truth layout and the Pre-Condition rule).
-The repository hosts the spec documents (`spec/1.1.0/`), the source modules that implement Scoring,
+The repository hosts the spec documents (`flowmcp-spec/grading/1.1.0/`), the source modules that implement Scoring,
 Grading, and Veto logic, LLM grader prompts, and the unit test suite. The spec is a **living
 document** and evolves with the FlowMCP schema corpus.
 
@@ -25,7 +25,7 @@ den Unterschied explizit (Memo 082, Kap 2 + 3).
 ## Grading starten
 
 Ein Grading wird in einem leeren LLM-Kontext durchgefuehrt. Die Empty-Context-Pflicht
-ist konventionell (siehe [Spec §3](./spec/1.1.0/02-eligibility.md) + [Spec §18](./spec/1.1.0/20-entry-point-prompt.md))
+ist konventionell (siehe [Spec §3](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/02-eligibility.md) + [Spec §18](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/20-entry-point-prompt.md))
 und wird durch den folgenden Eintrittspunkt-Prompt sichergestellt.
 
 ### Eintrittspunkt-Prompt (verbindlich)
@@ -76,7 +76,7 @@ Fuer einen sauberen Grading-Lauf:
 4. Prompt absenden — der Agent fuehrt die Grading-Sequenz aus
 5. Ergebnis landet unter `grading-data/{single,selection}/.../gradings/<hash>--<timestamp>.json`
 
-Siehe [Spec §18](./spec/1.1.0/20-entry-point-prompt.md) (Eintrittspunkt-Prompt) und [Spec §20](./spec/1.1.0/21-pre-conditions.md) (Pre-Conditions) fuer die formale Definition. Empty-Context-Konvention ist in [Spec §3](./spec/1.1.0/02-eligibility.md) verankert.
+Siehe [Spec §18](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/20-entry-point-prompt.md) (Eintrittspunkt-Prompt) und [Spec §20](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/21-pre-conditions.md) (Pre-Conditions) fuer die formale Definition. Empty-Context-Konvention ist in [Spec §3](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/02-eligibility.md) verankert.
 
 ## Status — Phase 2 of Memo 080 complete
 
@@ -280,7 +280,7 @@ returns { grading, errors }
 
 ### `.validateGradingEntry()`
 
-Structural validation of a grading entry against the data model defined in `spec/1.1.0/08-grading-model.md`. Use to verify externally generated grading JSON before downstream consumption.
+Structural validation of a grading entry against the data model defined in `flowmcp-spec/grading/1.1.0/08-grading-model.md`. Use to verify externally generated grading JSON before downstream consumption.
 
 **Method**
 
@@ -353,7 +353,7 @@ Six classes expose the underlying primitives for advanced use. All methods are s
 | `SelectionPhases` | Group-bound S1-S4 phase runners | `runS1` .. `runS4`, `runAll`, `getTier` | `GRD-` |
 | `ErrorCodes` | Error code lookup, formatting, listing | `getCode`, `formatMessage`, `listByPrefix`, `listBySeverity`, `validateCodeFormat` | `GRD-`, `SCO-`, `VET-` |
 
-See `spec/1.1.0/08-grading-model.md` for the full data model and `src/` for in-source JSDoc.
+See `flowmcp-spec/grading/1.1.0/08-grading-model.md` for the full data model and `src/` for in-source JSDoc.
 
 ## Repository Layout
 
@@ -419,9 +419,9 @@ diff highlights the replacement clearly.
 
 Three independent namespaces (Memo 076 F5):
 
-- `gradingSpec/1.1.0` — the active specification documents under `spec/1.1.0/`
+- `gradingSpec/1.1.0` — the active specification documents under `flowmcp-spec/grading/1.1.0/`
   (Memo 080 additions: Source-of-Truth layout, Pre-Condition rule, namespace payload, partial-mode).
-  The previous `gradingSpec/1.0.0` under `spec/1.0.0/` is preserved read-only for traceability.
+  The previous `gradingSpec/1.0.0` under `flowmcp-spec/grading/1.0.0/` is preserved read-only for traceability.
 - `scoringSystem/1.0.0` — the scoring rules and dimensions
 - `gradingSystem/1.0.0` — the grading rules, veto logic, and tier mapping
 
@@ -429,7 +429,7 @@ These versions are **never coupled**. Bumping one does not imply bumping the oth
 
 ## Hierarchy
 
-The [FlowMCP Schemas Specification](https://github.com/FlowMCP/flowmcp-spec) at `spec/v4.1.0/` is the highest instance — it defines what a schema, a selection, and the primitives are. This Grading-Spec sits below and describes **how** schemas and selections are evaluated. See `spec/1.1.0/00-overview.md` for the full hierarchy table.
+The [FlowMCP Schemas Specification](https://github.com/FlowMCP/flowmcp-spec) at `spec/v4.1.0/` is the highest instance — it defines what a schema, a selection, and the primitives are. This Grading-Spec sits below and describes **how** schemas and selections are evaluated. See `flowmcp-spec/grading/1.1.0/00-overview.md` for the full hierarchy table.
 
 ## Contributing
 

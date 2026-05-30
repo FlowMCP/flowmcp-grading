@@ -1,6 +1,6 @@
 ---
 area: namespace-skills
-specRef: spec/1.1.0/13-skills.md#3
+specRef: flowmcp-spec/grading/1.1.0/13-skills.md#3
 personaRequired: true
 outputSchemaRef: prompts/output-schemas/namespace-skills.schema.json
 version: 1.0.0

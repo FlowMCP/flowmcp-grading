@@ -1,6 +1,6 @@
 ---
 area: namespace-description
-specRef: spec/1.1.0/01-namespace-extensions.md
+specRef: flowmcp-spec/grading/1.1.0/01-namespace-extensions.md
 personaRequired: false
 outputSchemaRef: prompts/output-schemas/namespace-description.schema.json
 version: 1.0.0

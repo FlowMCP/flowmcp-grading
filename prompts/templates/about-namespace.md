@@ -1,6 +1,6 @@
 ---
 area: about-namespace
-specRef: spec/1.1.0/11-about-convention.md#4
+specRef: flowmcp-spec/grading/1.1.0/11-about-convention.md#4
 personaRequired: true
 outputSchemaRef: prompts/output-schemas/about-namespace.schema.json
 version: 1.0.0
