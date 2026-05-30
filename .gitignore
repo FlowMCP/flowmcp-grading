@@ -6,6 +6,13 @@ node_modules/
 npm-debug.log*
 .npm/
 
+# Test coverage + transient run artifacts
+coverage/
+.tmp/
+
+# Local scratch scripts (underscore prefix) — never committed (Scripts-Policy)
+scripts/_*.mjs
+
 # OS / Editor
 .DS_Store
 .idea/

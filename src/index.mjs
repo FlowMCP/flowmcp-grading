@@ -12,8 +12,17 @@
  * | Scoring                 | class    | static getVersion / scoreDimension / validateScore / computeWeightedSum                    | SCO-*, GRD-*              |
  * | Veto                    | class    | static getTriggers / applyVeto / isVetoed / validateVeto                                   | VET-*                     |
  * | SingleSchemaPhases      | class    | static getTier / runP1..runP7 / runAll                                                     | GRD-*                     |
- * | SelectionPhases         | class    | static getTier / runS1..runS4 / runAll                                                     | GRD-*                     |
+ * | SelectionPhases         | class    | static getTier / runS1..runS4 / runAll / runAllStub                                        | GRD-*, SEL-*              |
  * | ErrorCodes              | class    | static getCode / formatMessage / listByPrefix / listBySeverity / validateCodeFormat        | GRD-*                     |
+ * | HashGenerator           | class    | static canonicalize / computeHash / computeSchemaHash / computeSelectionHash / ...         | HSH-*                     |
+ * | SourceSnapshot          | class    | static create / parseSnapshotFilename / verify / listForNamespace                          | SNP-*                     |
+ * | PartialGrading          | class    | static buildPartialEntry / validateSequence / listGradedDimensions                         | PRT-*                     |
+ * | StablePromotion         | class    | static checkEligibility / promoteIfEligible                                                | STB-*                     |
+ * | SelectionLockfile       | class    | static generate / read / diff                                                              | LCK-*                     |
+ * | PreConditionCheck       | class    | static check / checkLockfile                                                               | PRE-*                     |
+ * | BumpHelper              | class    | static diffSchemas / diffSelections / checkVersionHashConsistency                          | BMP-*                     |
+ * | FolderScanner           | class    | static scan / checkNamespaceFolder / checkSchemaSnapshots / checkSelectionFolder           | SCN-*                     |
+ * | AboutConsistencyCheck   | class    | static checkNamespaceAbout / checkSelectionAbout / verifyNamespace                         | ABT-*                     |
  * | gradeSingleSchema       | function | ( { schemaPath, schemaId, grader, options } ) → { grading, errors }                        | GRD-001, GRD-002, GRD-003 |
  * | gradeSelection          | function | ( { selectionId, schemaIds, grader, options } ) → { grading, errors }                      | GRD-001, GRD-002, GRD-004 |
  * | validateGradingEntry    | function | ( { entry } ) → { valid, errors }                                                          | GRD-001, GRD-002          |
@@ -31,6 +40,17 @@ import { Veto } from './Veto.mjs'
 import { SingleSchemaPhases } from './Phases/SingleSchema.mjs'
 import { SelectionPhases } from './Phases/Selection.mjs'
 import { ErrorCodes } from './ErrorCodes.mjs'
+import { HashGenerator } from './HashGenerator.mjs'
+import { SourceSnapshot } from './SourceSnapshot.mjs'
+import { PartialGrading } from './Phases/PartialGrading.mjs'
+import { StablePromotion } from './StablePromotion.mjs'
+import { SelectionLockfile } from './SelectionLockfile.mjs'
+import { PreConditionCheck } from './PreConditionCheck.mjs'
+import { BumpHelper } from './BumpHelper.mjs'
+import { FolderScanner } from './FolderScanner.mjs'
+import { AboutConsistencyCheck } from './AboutConsistencyCheck.mjs'
+import { NaReason } from './NaReason.mjs'
+import { SharedLists } from './SharedLists.mjs'
 
 
 const REPO_VERSION = '1.0.0'
@@ -187,13 +207,7 @@ const gradeSelection = ( { selectionId, schemaIds, grader, options } ) => {
         return { grading: created.entry, errors: created.errors }
     }
 
-    const run = SelectionPhases.runAll( {
-        entry: created.entry,
-        selectionId,
-        schemaEntries: [],
-        domainDocPath: null,
-        personaIds: null
-    } )
+    const run = SelectionPhases.runAllStub( { entry: created.entry } )
     const aggregate = Grading.computeAggregateGrade( { entry: run.entry } )
 
     return {
@@ -246,6 +260,17 @@ export {
     SingleSchemaPhases,
     SelectionPhases,
     ErrorCodes,
+    HashGenerator,
+    SourceSnapshot,
+    PartialGrading,
+    StablePromotion,
+    SelectionLockfile,
+    PreConditionCheck,
+    BumpHelper,
+    FolderScanner,
+    AboutConsistencyCheck,
+    NaReason,
+    SharedLists,
     gradeSingleSchema,
     gradeSelection,
     validateGradingEntry,

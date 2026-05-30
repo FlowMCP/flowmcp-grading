@@ -1,10 +1,22 @@
 /**
  * ErrorCodes — PREFIX-NUMBER error catalog for the flowmcp-grading repo.
  *
- * Three prefixes match the three core components:
+ * Twelve prefixes:
  *   GRD-* — Grading-System (data model, tier, re-grading)
  *   SCO-* — Scoring-System (dimensions, score range, aggregation)
  *   VET-* — Veto (closed trigger list, evidence requirement)
+ *   HSH-* — HashGenerator (canonical JSON + sha256 8-char prefix) — Memo 080 Kap 3
+ *   SNP-* — SourceSnapshot (frozen schema snapshots, NO-OVERWRITE) — Memo 080 Kap 2
+ *   PRT-* — PartialGrading (gradingMode, Pflicht-Sequenz) — Memo 080 Kap 4
+ *   STB-* — StablePromotion (stable/pending gate) — Memo 080 Kap 11
+ *   LCK-* — SelectionLockfile (lockfile generator/reader) — Memo 080 Kap 11
+ *   PRE-* — PreConditionCheck (universal stable-gate) — Memo 080 Kap 13
+ *   SEL-* — Selection-Validator S1-S4 — Memo 080 Kap 5
+ *   BMP-* — BumpHelper (diff + bump-rule) — Memo 080 Kap 10
+ *   SCN-* — FolderScanner (grading-data/ structure check) — Memo 080 Kap 2
+ *   ABT-* — AboutConsistencyCheck (text-vs-schema) — Memo 080 Kap 13
+ *   SL-*  — SharedLists (loader + hash + filename) — Memo 080 Kap 12 / Phase 5 PRD-20
+ *   NA-*  — NaReason (closed-set n/a-Reason validator) — Memo 080 Kap 12 / Phase 5 PRD-20
  *
  * Code format (strict):
  *   ERROR    → ^[A-Z]{3}-\d{3}$           (e.g. GRD-001)
@@ -143,12 +155,326 @@ const ERROR_CODE_TABLE = Object.freeze( {
             severity: 'INFO',
             message: 'Entry marked as REJECTED due to categoricalVeto.triggeredBy={trigger}'
         } )
+    } ),
+    HSH: Object.freeze( {
+        'HSH-001': Object.freeze( {
+            code: 'HSH-001',
+            severity: 'ERROR',
+            message: 'Required field missing: {field}'
+        } ),
+        'HSH-002': Object.freeze( {
+            code: 'HSH-002',
+            severity: 'ERROR',
+            message: 'Type mismatch for field {field}: expected {expected}, got {actual}'
+        } ),
+        'HSH-003': Object.freeze( {
+            code: 'HSH-003',
+            severity: 'ERROR',
+            message: 'Invalid value: {detail}'
+        } ),
+        'HSH-004': Object.freeze( {
+            code: 'HSH-004',
+            severity: 'ERROR',
+            message: 'Hash computation failed: {detail}'
+        } ),
+        'HSH-WARN-001': Object.freeze( {
+            code: 'HSH-WARN-001',
+            severity: 'WARNING',
+            message: 'Empty input — hash defaulted to all zeros'
+        } )
+    } ),
+    SNP: Object.freeze( {
+        'SNP-001': Object.freeze( {
+            code: 'SNP-001',
+            severity: 'ERROR',
+            message: 'Required field missing: {field}'
+        } ),
+        'SNP-002': Object.freeze( {
+            code: 'SNP-002',
+            severity: 'ERROR',
+            message: 'Type mismatch for field {field}: expected {expected}, got {actual}'
+        } ),
+        'SNP-003': Object.freeze( {
+            code: 'SNP-003',
+            severity: 'ERROR',
+            message: 'Invalid value: {detail}'
+        } ),
+        'SNP-004': Object.freeze( {
+            code: 'SNP-004',
+            severity: 'ERROR',
+            message: 'Snapshot conflict — target file exists with different content'
+        } ),
+        'SNP-005': Object.freeze( {
+            code: 'SNP-005',
+            severity: 'ERROR',
+            message: 'Source file not readable: {path}'
+        } )
+    } ),
+    PRT: Object.freeze( {
+        'PRT-001': Object.freeze( {
+            code: 'PRT-001',
+            severity: 'ERROR',
+            message: 'Required field missing: {field}'
+        } ),
+        'PRT-002': Object.freeze( {
+            code: 'PRT-002',
+            severity: 'ERROR',
+            message: 'Invalid gradingMode: {value} (expected `partial` or `full`)'
+        } ),
+        'PRT-003': Object.freeze( {
+            code: 'PRT-003',
+            severity: 'ERROR',
+            message: 'First grading entry must be gradingMode: full'
+        } ),
+        'PRT-004': Object.freeze( {
+            code: 'PRT-004',
+            severity: 'ERROR',
+            message: 'Partial entry changed aggregateGrade from {previous} to {current}'
+        } ),
+        'PRT-WARN-001': Object.freeze( {
+            code: 'PRT-WARN-001',
+            severity: 'WARNING',
+            message: 'Partial entry has empty gradings[]'
+        } )
+    } ),
+    STB: Object.freeze( {
+        'STB-001': Object.freeze( {
+            code: 'STB-001',
+            severity: 'ERROR',
+            message: 'Required field missing: {field}'
+        } ),
+        'STB-002': Object.freeze( {
+            code: 'STB-002',
+            severity: 'ERROR',
+            message: 'Type mismatch for field {field}: expected {expected}, got {actual}'
+        } ),
+        'STB-003': Object.freeze( {
+            code: 'STB-003',
+            severity: 'ERROR',
+            message: 'Invalid threshold: {value} (expected one of [A, B, C, D, F])'
+        } ),
+        'STB-WARN-001': Object.freeze( {
+            code: 'STB-WARN-001',
+            severity: 'WARNING',
+            message: 'Stable-Promotion blocked: last grading entry is partial'
+        } ),
+        'STB-WARN-002': Object.freeze( {
+            code: 'STB-WARN-002',
+            severity: 'WARNING',
+            message: 'Stable-Promotion blocked: aggregateGrade below threshold'
+        } )
+    } ),
+    LCK: Object.freeze( {
+        'LCK-001': Object.freeze( {
+            code: 'LCK-001',
+            severity: 'ERROR',
+            message: 'Required field missing: {field}'
+        } ),
+        'LCK-002': Object.freeze( {
+            code: 'LCK-002',
+            severity: 'ERROR',
+            message: 'selection.json not found: {path}'
+        } ),
+        'LCK-003': Object.freeze( {
+            code: 'LCK-003',
+            severity: 'ERROR',
+            message: 'selection.json malformed: {detail}'
+        } ),
+        'LCK-004': Object.freeze( {
+            code: 'LCK-004',
+            severity: 'ERROR',
+            message: 'Lockfile generation failed: {detail}'
+        } ),
+        'LCK-WARN-001': Object.freeze( {
+            code: 'LCK-WARN-001',
+            severity: 'WARNING',
+            message: 'Lockfile already exists — overwriting with new state'
+        } )
+    } ),
+    PRE: Object.freeze( {
+        'PRE-001': Object.freeze( {
+            code: 'PRE-001',
+            severity: 'ERROR',
+            message: 'Required field missing: {field}'
+        } ),
+        'PRE-002': Object.freeze( {
+            code: 'PRE-002',
+            severity: 'ERROR',
+            message: 'Lockfile not readable: {path}'
+        } ),
+        'PRE-003': Object.freeze( {
+            code: 'PRE-003',
+            severity: 'ERROR',
+            message: 'Lockfile format invalid: {detail}'
+        } ),
+        'PRE-004': Object.freeze( {
+            code: 'PRE-004',
+            severity: 'ERROR',
+            message: 'Pre-Condition not met: missing stable single-gradings: {list}'
+        } ),
+        'PRE-WARN-001': Object.freeze( {
+            code: 'PRE-WARN-001',
+            severity: 'WARNING',
+            message: 'Lockfile is empty — no members to check'
+        } )
+    } ),
+    SEL: Object.freeze( {
+        'SEL-S1': Object.freeze( {
+            code: 'SEL-S1',
+            severity: 'ERROR',
+            message: 'Selection S1 (Member-Coverage) violation: {detail}'
+        } ),
+        'SEL-S2': Object.freeze( {
+            code: 'SEL-S2',
+            severity: 'ERROR',
+            message: 'Selection S2 (Lockfile-Consistency) violation: {detail}'
+        } ),
+        'SEL-S3': Object.freeze( {
+            code: 'SEL-S3',
+            severity: 'ERROR',
+            message: 'Selection S3 (Skills-Coverage) violation: {detail}'
+        } ),
+        'SEL-S4': Object.freeze( {
+            code: 'SEL-S4',
+            severity: 'ERROR',
+            message: 'Selection S4 (Persona-Reference-Coherence) violation: {detail}'
+        } )
+    } ),
+    BMP: Object.freeze( {
+        'BMP-001': Object.freeze( {
+            code: 'BMP-001',
+            severity: 'ERROR',
+            message: 'Required field missing: {field}'
+        } ),
+        'BMP-002': Object.freeze( {
+            code: 'BMP-002',
+            severity: 'ERROR',
+            message: 'Type mismatch for field {field}: expected {expected}, got {actual}'
+        } ),
+        'BMP-003': Object.freeze( {
+            code: 'BMP-003',
+            severity: 'ERROR',
+            message: 'Invalid schema/selection — not parsable: {detail}'
+        } ),
+        'BMP-WARN-001': Object.freeze( {
+            code: 'BMP-WARN-001',
+            severity: 'WARNING',
+            message: 'Bump-Rule violation: same schemaVersion with different schemaHashes'
+        } ),
+        'BMP-INFO-001': Object.freeze( {
+            code: 'BMP-INFO-001',
+            severity: 'INFO',
+            message: 'No diff detected — bump: none'
+        } )
+    } ),
+    SCN: Object.freeze( {
+        'SCN-001': Object.freeze( {
+            code: 'SCN-001',
+            severity: 'ERROR',
+            message: 'gradingDataRoot does not exist: {path}'
+        } ),
+        'SCN-002': Object.freeze( {
+            code: 'SCN-002',
+            severity: 'ERROR',
+            message: 'namespace.json missing: {path}'
+        } ),
+        'SCN-003': Object.freeze( {
+            code: 'SCN-003',
+            severity: 'ERROR',
+            message: 'namespace.json malformed: {detail}'
+        } ),
+        'SCN-004': Object.freeze( {
+            code: 'SCN-004',
+            severity: 'ERROR',
+            message: 'Orphan schema snapshot — hash not in namespace.json: {hash}'
+        } ),
+        'SCN-005': Object.freeze( {
+            code: 'SCN-005',
+            severity: 'ERROR',
+            message: 'Hash-Mismatch — filename hash != recomputed hash: {detail}'
+        } ),
+        'SCN-006': Object.freeze( {
+            code: 'SCN-006',
+            severity: 'WARNING',
+            message: 'About-Page-Hash does not match namespace.json#aboutHash'
+        } ),
+        'SCN-007': Object.freeze( {
+            code: 'SCN-007',
+            severity: 'ERROR',
+            message: 'Dangling single-folder — no matching tool in namespace.json: {path}'
+        } ),
+        'SCN-008': Object.freeze( {
+            code: 'SCN-008',
+            severity: 'ERROR',
+            message: 'Dangling selection-folder — selection.json missing: {path}'
+        } ),
+        'SCN-009': Object.freeze( {
+            code: 'SCN-009',
+            severity: 'ERROR',
+            message: 'Lockfile-Consistency error (delegated): {detail}'
+        } ),
+        'SCN-010': Object.freeze( {
+            code: 'SCN-010',
+            severity: 'WARNING',
+            message: 'phase-status references non-existent schemaHash: {hash}'
+        } )
+    } ),
+    ABT: Object.freeze( {
+        'ABT-001': Object.freeze( {
+            code: 'ABT-001',
+            severity: 'ERROR',
+            message: 'Required field missing: {field}'
+        } ),
+        'ABT-002': Object.freeze( {
+            code: 'ABT-002',
+            severity: 'ERROR',
+            message: 'About file not found: {path}'
+        } ),
+        'ABT-003': Object.freeze( {
+            code: 'ABT-003',
+            severity: 'ERROR',
+            message: 'namespace.json malformed: {detail}'
+        } ),
+        'ABT-004': Object.freeze( {
+            code: 'ABT-004',
+            severity: 'ERROR',
+            message: 'Tool name missing in About-Text: {toolName}'
+        } ),
+        'ABT-WARN-001': Object.freeze( {
+            code: 'ABT-WARN-001',
+            severity: 'WARNING',
+            message: 'Description keyword overlap below threshold: {detail}'
+        } )
+    } ),
+    SL: Object.freeze( {
+        'SL-001': Object.freeze( {
+            code: 'SL-001',
+            severity: 'ERROR',
+            message: 'Required field missing: {field}'
+        } ),
+        'SL-002': Object.freeze( {
+            code: 'SL-002',
+            severity: 'ERROR',
+            message: 'Type mismatch for field {field}: expected {expected}, got {actual}'
+        } ),
+        'SL-003': Object.freeze( {
+            code: 'SL-003',
+            severity: 'ERROR',
+            message: 'Invalid shared-list filename or path: {detail}'
+        } )
+    } ),
+    NA: Object.freeze( {
+        'NA-001': Object.freeze( {
+            code: 'NA-001',
+            severity: 'ERROR',
+            message: 'naReason missing or outside closed-set: {detail}'
+        } )
     } )
 } )
 
 
-const CODE_FORMAT_REGEX = /^[A-Z]{3}(-WARN|-INFO)?-\d{3}$/
-const VALID_PREFIXES = [ 'GRD', 'SCO', 'VET' ]
+const CODE_FORMAT_REGEX = /^[A-Z]{2,3}(-WARN|-INFO)?-(\d{3}|S\d)$/
+const VALID_PREFIXES = [ 'GRD', 'SCO', 'VET', 'HSH', 'SNP', 'PRT', 'STB', 'LCK', 'PRE', 'SEL', 'BMP', 'SCN', 'ABT', 'SL', 'NA' ]
 const VALID_SEVERITIES = [ 'ERROR', 'WARNING', 'INFO' ]
 
 
@@ -230,7 +556,7 @@ class ErrorCodes {
 
         const matches = CODE_FORMAT_REGEX.test( code )
         if( !matches ) {
-            errors.push( `Invalid code format: ${code} (expected ^[A-Z]{3}(-WARN|-INFO)?-\\d{3}$)` )
+            errors.push( `Invalid code format: ${code} (expected ^[A-Z]{2,3}(-WARN|-INFO)?-(\\d{3}|S\\d)$)` )
             return { valid: false, errors }
         }
 

@@ -1,8 +1,0 @@
-{
-    "phaseId": "P4",
-    "status": "passed",
-    "dimensionsConsidered": [
-        "apiAvailability",
-        "outputSchemaConformance"
-    ]
-}
