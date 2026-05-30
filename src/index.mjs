@@ -24,6 +24,7 @@
  * | BumpHelper              | class    | static diffSchemas / diffSelections / checkVersionHashConsistency                          | BMP-*                     |
  * | FolderScanner           | class    | static scan / checkNamespaceFolder / checkSchemaSnapshots / checkSelectionFolder           | SCN-*                     |
  * | AboutConsistencyCheck   | class    | static checkNamespaceAbout / checkSelectionAbout / verifyNamespace                         | ABT-*                     |
+ * | DataPretest             | class    | static getVersion / run                                                                    | DPT-*                     |
  * | gradeSingleSchema       | function | ( { schemaPath, schemaId, grader, options } ) → { grading, errors }                        | GRD-001, GRD-002, GRD-003 |
  * | gradeSelection          | function | ( { selectionId, schemaIds, grader, options } ) → { grading, errors }                      | GRD-001, GRD-002, GRD-004 |
  * | validateGradingEntry    | function | ( { entry } ) → { valid, errors }                                                          | GRD-001, GRD-002          |
@@ -53,6 +54,7 @@ import { FolderScanner } from './FolderScanner.mjs'
 import { AboutConsistencyCheck } from './AboutConsistencyCheck.mjs'
 import { NaReason } from './NaReason.mjs'
 import { SharedLists } from './SharedLists.mjs'
+import { DataPretest } from './DataPretest.mjs'
 
 
 const REPO_VERSION = '1.0.0'
@@ -274,6 +276,7 @@ export {
     AboutConsistencyCheck,
     NaReason,
     SharedLists,
+    DataPretest,
     gradeSingleSchema,
     gradeSelection,
     validateGradingEntry,

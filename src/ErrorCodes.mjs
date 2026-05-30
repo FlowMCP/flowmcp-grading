@@ -17,6 +17,7 @@
  *   ABT-* — AboutConsistencyCheck (text-vs-schema)
  *   SL-*  — SharedLists (loader + hash + filename)
  *   NA-*  — NaReason (closed-set n/a-Reason validator)
+ *   DPT-* — DataPretest (live test runner + abort rule + payload persistence)
  *
  * Code format (strict):
  *   ERROR    → ^[A-Z]{3}-\d{3}$           (e.g. GRD-001)
@@ -469,12 +470,39 @@ const ERROR_CODE_TABLE = Object.freeze( {
             severity: 'ERROR',
             message: 'naReason missing or outside closed-set: {detail}'
         } )
+    } ),
+    DPT: Object.freeze( {
+        'DPT-001': Object.freeze( {
+            code: 'DPT-001',
+            severity: 'ERROR',
+            message: 'Required field missing: {field}'
+        } ),
+        'DPT-002': Object.freeze( {
+            code: 'DPT-002',
+            severity: 'ERROR',
+            message: 'Type mismatch for field {field}: expected {expected}, got {actual}'
+        } ),
+        'DPT-003': Object.freeze( {
+            code: 'DPT-003',
+            severity: 'ERROR',
+            message: 'Data-pretest abort: fewer than {required} working downloadable tests (found {found})'
+        } ),
+        'DPT-004': Object.freeze( {
+            code: 'DPT-004',
+            severity: 'ERROR',
+            message: 'Test failed (not counted as a working download): {detail}'
+        } ),
+        'DPT-005': Object.freeze( {
+            code: 'DPT-005',
+            severity: 'ERROR',
+            message: 'Required server parameter absent from serverParams: {detail}'
+        } )
     } )
 } )
 
 
 const CODE_FORMAT_REGEX = /^[A-Z]{2,3}(-WARN|-INFO)?-(\d{3}|S\d)$/
-const VALID_PREFIXES = [ 'GRD', 'SCO', 'VET', 'HSH', 'SNP', 'PRT', 'STB', 'LCK', 'PRE', 'SEL', 'BMP', 'SCN', 'ABT', 'SL', 'NA' ]
+const VALID_PREFIXES = [ 'GRD', 'SCO', 'VET', 'HSH', 'SNP', 'PRT', 'STB', 'LCK', 'PRE', 'SEL', 'BMP', 'SCN', 'ABT', 'SL', 'NA', 'DPT' ]
 const VALID_SEVERITIES = [ 'ERROR', 'WARNING', 'INFO' ]
 
 
