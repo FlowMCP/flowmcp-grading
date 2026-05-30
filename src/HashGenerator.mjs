@@ -1,9 +1,13 @@
 /**
  * HashGenerator — deterministic canonical-JSON + sha256-prefix hashing.
  *
- * Per the grading spec:
- *   - The hash is the stable schema identifier.
- *   - Defines selectionHash and namespaceHash.
+ * Per the grading spec (neutrality / B3):
+ *   - The hash is the stable identifier for a schema / selection / namespace.
+ *   - It is a pure compute: every method only RETURNS a hash string. The hash
+ *     sink is the versioned filename and the derived index.json — it is NEVER
+ *     written back into the neutral source body (computeSchemaHash /
+ *     computeSelectionHash even strip any pre-existing schemaHash/selectionHash
+ *     before hashing so a stale in-source value cannot drift the result).
  *
  * Algorithm:
  *   1. canonicalize(value) — sorted-key, no-whitespace JSON, undefined removed

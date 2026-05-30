@@ -17,10 +17,16 @@
  *   static async run( { ... } ) -> { ok, passedDownloadable, required,
  *       payloadPath, payloadHash, results, stopReason, errors }
  *
- * Persistence (the caller passes gradingDataDir, the flat grading-data root):
- *   payload -> grading-data/schemas/<namespace>/data-pretest/<toolName>--<payloadHash>.json
- *   metadata -> merged into grading-data/schemas/<namespace>/namespace.json
- *     (per-member dataPretest block, existing fields preserved — no overwrite)
+ * Persistence (the caller passes gradingDataDir, the grading-data root):
+ *   per-test  -> grading-data/providers/<namespace>/<schema>/tools/<tool>/tests/test-N.json
+ *   summary   -> grading-data/providers/<namespace>/<schema>/summary.json
+ *
+ * F26 key-hygiene (HARD rule): a persisted test file carries ONLY the API
+ * response plus the HTTP status and run metadata. The `request` field is NEVER
+ * written to disk — FlowMCP core bakes interpolated `{{KEY}}` server params into
+ * the request URL, so persisting it would leak API keys onto the filesystem. No
+ * API key ever lands on disk. The in-memory results[] returned to the caller may
+ * still carry request params for live inspection, but they are not persisted.
  *
  * Abort rule (deterministic): every tool needs at least minWorkingTests
  * (default 3) working downloadable tests. A working test is a `tool` or
@@ -231,12 +237,13 @@ class DataPretest {
     // --- persistence -------------------------------------------------------
 
     // Human-readable layout (no opaque hash filenames, no invented folder names):
-    //   schemas/<namespace>/<schemaFile>/tests/<tool>/test-<n>.json   (one file per test)
-    //   schemas/<namespace>/<schemaFile>/summary.json                  (per-tool gate result)
-    // Each test file is self-describing: the request params plus the real response,
-    // so the filename and contents tell you exactly what was tested without code.
+    //   providers/<namespace>/<schema>/tools/<tool>/tests/test-<n>.json   (one file per test)
+    //   providers/<namespace>/<schema>/summary.json                       (per-tool gate result)
+    // Each test file is self-describing through the real API response plus the
+    // HTTP status. The request is NEVER persisted (F26) — it would carry the
+    // interpolated {{KEY}} server params and leak API keys onto disk.
     static async #persist( { gradingDataDir, namespace, schemaFile, results, summary } ) {
-        const schemaFileDir = join( gradingDataDir, 'schemas', namespace, schemaFile )
+        const schemaFileDir = join( gradingDataDir, 'providers', namespace, schemaFile )
 
         const downloadable = results
             .filter( ( entry ) => DOWNLOADABLE_PRIMITIVES.includes( entry[ 'primitive' ] ) )
@@ -246,14 +253,15 @@ class DataPretest {
             const tool = entry[ 'name' ]
             const next = counters[ tool ] === undefined ? 1 : counters[ tool ] + 1
             counters[ tool ] = next
-            // Layout: schemas/<ns>/<schemaFile>/<tool>/tests/test-N.json
-            const toolDir = join( schemaFileDir, tool, 'tests' )
+            // Layout: providers/<ns>/<schema>/tools/<tool>/tests/test-N.json
+            const toolDir = join( schemaFileDir, 'tools', tool, 'tests' )
             await mkdir( toolDir, { recursive: true } )
+            // F26: NO `request` field. Persist only the API response, the HTTP
+            // status and run metadata, so no interpolated {{KEY}} ever hits disk.
             const fileBody = {
                 tool,
                 test: next,
                 description: entry[ 'description' ] === undefined ? '' : entry[ 'description' ],
-                request: entry[ 'request' ] === undefined ? {} : entry[ 'request' ],
                 status: entry[ 'status' ],
                 hasData: entry[ 'hasData' ],
                 working: entry[ 'working' ],

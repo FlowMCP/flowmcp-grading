@@ -8,13 +8,11 @@
  *   - L3 are in-depth application use cases; every L3 MUST be assigned to
  *     (mentioned in) at least one L2 topic area.
  *
- * Note: the FlowMCP Schemas Spec v4.1.0 skill object has no `level` field; the
- * L1/L2/L3 level is carried here as an additive field for selection-skill
- * grading. The "L1 atomic" wording in the grading spec refers to a different
- * model; this module implements the signpost/topic/depth model.
+ * `level` (L1/L2/L3) is an additive grading field; the schema spec skill object
+ * does not carry it. Grading reads `level` — no level prefix in the skill name.
  *
- * Error codes: SKC-001 (bad input), SKC-002 (L1 misses an L2),
- * SKC-003 (L3 not assigned to any L2).
+ * Error codes (registered in ErrorCodes.mjs, SKC prefix): SKC-001 (bad input),
+ * SKC-002 (L1 misses an L2, rule A), SKC-003 (L3 not assigned to any L2, rule B).
  */
 
 const LEVELS = [ 'L1', 'L2', 'L3' ]

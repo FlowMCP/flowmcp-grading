@@ -14,6 +14,10 @@
  *   - evidence is required for categoricalVeto.
  *   - REJECTED overrides aggregation; maxAttainableGrade stays cosmetic.
  *   - reasoning is required for the ai-security-veto trigger.
+ *   - Index derivation maps aggregateGrade `REJECTED` to the terminal node
+ *     status `rejected` (5-status enum, F25/C2). mapAggregateGradeToStatus
+ *     exposes that mapping cleanly via an explicit map (no silent default); the
+ *     index rollup itself is built downstream (rebuild*Index).
  */
 
 const VALID_TRIGGERS = Object.freeze( [
@@ -22,6 +26,9 @@ const VALID_TRIGGERS = Object.freeze( [
     'illegal-content',
     'ai-security-veto'
 ] )
+
+const REJECTED_AGGREGATE_GRADE = 'REJECTED'
+const REJECTED_NODE_STATUS = 'rejected'
 
 
 class Veto {
@@ -45,11 +52,29 @@ class Veto {
 
         const updated = Object.assign( {}, entry, {
             categoricalVeto,
-            aggregateGrade: 'REJECTED',
+            aggregateGrade: REJECTED_AGGREGATE_GRADE,
             updatedAt: now
         } )
 
         return { entry: updated, errors: [] }
+    }
+
+
+    // Index derivation: translate an aggregateGrade into the terminal node
+    // status used by the rollup. Only REJECTED has a Veto-driven status here;
+    // every other grade is left to the downstream rollup. Explicit map, no
+    // silent default — an unknown aggregateGrade returns status null + an error.
+    static mapAggregateGradeToStatus( { aggregateGrade } ) {
+        if( aggregateGrade === undefined || aggregateGrade === null ) {
+            return { status: null, errors: [ 'GRD-001: Required field missing: aggregateGrade' ] }
+        }
+        if( typeof aggregateGrade !== 'string' ) {
+            return { status: null, errors: [ `GRD-002: Type mismatch for field aggregateGrade: expected string, got ${typeof aggregateGrade}` ] }
+        }
+        if( aggregateGrade === REJECTED_AGGREGATE_GRADE ) {
+            return { status: REJECTED_NODE_STATUS, errors: [] }
+        }
+        return { status: null, errors: [] }
     }
 
 
@@ -139,4 +164,4 @@ class Veto {
 }
 
 
-export { Veto, VALID_TRIGGERS }
+export { Veto, VALID_TRIGGERS, REJECTED_AGGREGATE_GRADE, REJECTED_NODE_STATUS }

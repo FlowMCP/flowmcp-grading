@@ -1,7 +1,7 @@
 /**
  * ErrorCodes — PREFIX-NUMBER error catalog for the flowmcp-grading repo.
  *
- * Twelve prefixes:
+ * Prefixes:
  *   GRD-* — Grading-System (data model, tier, re-grading)
  *   SCO-* — Scoring-System (dimensions, score range, aggregation)
  *   VET-* — Veto (closed trigger list, evidence requirement)
@@ -19,6 +19,7 @@
  *   NA-*  — NaReason (closed-set n/a-Reason validator)
  *   DPT-* — DataPretest (live test runner + abort rule + payload persistence)
  *   API-* — ModuleApi (public state-read + schema add/upgrade + scope-rule guard)
+ *   SKC-* — SkillComposition (selection-skill cross-reference rules A/B)
  *
  * Code format (strict):
  *   ERROR    → ^[A-Z]{3}-\d{3}$           (e.g. GRD-001)
@@ -525,12 +526,29 @@ const ERROR_CODE_TABLE = Object.freeze( {
             severity: 'ERROR',
             message: 'Cross-scope grading forbidden: {detail}'
         } )
+    } ),
+    SKC: Object.freeze( {
+        'SKC-001': Object.freeze( {
+            code: 'SKC-001',
+            severity: 'ERROR',
+            message: 'Invalid input: skills must be an array'
+        } ),
+        'SKC-002': Object.freeze( {
+            code: 'SKC-002',
+            severity: 'ERROR',
+            message: 'Cross-reference rule A violation: an L1 skill must mention every L2 skill by name: {detail}'
+        } ),
+        'SKC-003': Object.freeze( {
+            code: 'SKC-003',
+            severity: 'ERROR',
+            message: 'Cross-reference rule B violation: each L3 skill must be mentioned in at least one L2 skill: {detail}'
+        } )
     } )
 } )
 
 
 const CODE_FORMAT_REGEX = /^[A-Z]{2,3}(-WARN|-INFO)?-(\d{3}|S\d)$/
-const VALID_PREFIXES = [ 'GRD', 'SCO', 'VET', 'HSH', 'SNP', 'PRT', 'STB', 'LCK', 'PRE', 'SEL', 'BMP', 'SCN', 'ABT', 'SL', 'NA', 'DPT', 'API' ]
+const VALID_PREFIXES = [ 'GRD', 'SCO', 'VET', 'HSH', 'SNP', 'PRT', 'STB', 'LCK', 'PRE', 'SEL', 'BMP', 'SCN', 'ABT', 'SL', 'NA', 'DPT', 'API', 'SKC' ]
 const VALID_SEVERITIES = [ 'ERROR', 'WARNING', 'INFO' ]
 
 

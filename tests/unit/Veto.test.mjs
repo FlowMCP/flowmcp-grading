@@ -1,6 +1,6 @@
 import { describe, test, expect } from '@jest/globals'
 
-import { Veto } from '../../src/Veto.mjs'
+import { Veto, REJECTED_AGGREGATE_GRADE, REJECTED_NODE_STATUS } from '../../src/Veto.mjs'
 import { validAutonomousEntry, vetoExample } from '../helpers/fixtures.mjs'
 
 
@@ -119,5 +119,41 @@ describe( 'Veto.validateVeto', () => {
         const result = Veto.validateVeto( { veto } )
         expect( result.valid ).toBe( false )
         expect( result.errors.some( ( e ) => e.includes( 'VET-001' ) ) ).toBe( true )
+    } )
+} )
+
+
+describe( 'Veto.mapAggregateGradeToStatus (REJECTED -> rejected)', () => {
+    test( 'REJECTED maps to node status rejected', () => {
+        const result = Veto.mapAggregateGradeToStatus( { aggregateGrade: REJECTED_AGGREGATE_GRADE } )
+        expect( result.status ).toBe( REJECTED_NODE_STATUS )
+        expect( result.status ).toBe( 'rejected' )
+        expect( result.errors ).toEqual( [] )
+    } )
+
+    test( 'a vetoed entry aggregates to REJECTED and derives status rejected', () => {
+        const veto = vetoExample()
+        const applied = Veto.applyVeto( {
+            entry: validAutonomousEntry(),
+            triggeredBy: veto.triggeredBy,
+            grader: veto.grader,
+            evidence: veto.evidence,
+            reasoning: veto.reasoning
+        } )
+        expect( applied.entry.aggregateGrade ).toBe( 'REJECTED' )
+        const mapped = Veto.mapAggregateGradeToStatus( { aggregateGrade: applied.entry.aggregateGrade } )
+        expect( mapped.status ).toBe( 'rejected' )
+    } )
+
+    test( 'a non-REJECTED grade is left to the downstream rollup (no silent default)', () => {
+        const result = Veto.mapAggregateGradeToStatus( { aggregateGrade: 'B' } )
+        expect( result.status ).toBeNull()
+        expect( result.errors ).toEqual( [] )
+    } )
+
+    test( 'missing aggregateGrade is an explicit error, not a default', () => {
+        const result = Veto.mapAggregateGradeToStatus( {} )
+        expect( result.status ).toBeNull()
+        expect( result.errors.some( ( e ) => e.includes( 'GRD-001' ) ) ).toBe( true )
     } )
 } )

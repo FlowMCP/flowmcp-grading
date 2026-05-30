@@ -122,17 +122,18 @@ describe( 'DataPretest typed-test extraction + happy path', () => {
         expect( summary.schemaFile ).toBe( 'getBalance' )
         expect( summary.ok ).toBe( true )
         expect( summary.perTool.getBalance ).toEqual( { working: 3, total: 3 } )
-        expect( out.summaryPath ).toContain( join( 'schemas', 'etherscan', 'getBalance', 'summary.json' ) )
+        expect( out.summaryPath ).toContain( join( 'providers', 'etherscan', 'getBalance', 'summary.json' ) )
 
-        // per-test files: numbered + self-describing (request params + real response)
-        const t1 = JSON.parse( await readFile( join( out.schemaDir, 'getBalance', 'tests', 'test-1.json' ), 'utf-8' ) )
+        // per-test files: numbered + self-describing (real response + HTTP status,
+        // NO request — F26 forbids persisting interpolated {{KEY}} server params)
+        const t1 = JSON.parse( await readFile( join( out.schemaDir, 'tools', 'getBalance', 'tests', 'test-1.json' ), 'utf-8' ) )
         expect( t1.test ).toBe( 1 )
         expect( t1.tool ).toBe( 'getBalance' )
         expect( t1.status ).toBe( true )
         expect( t1.working ).toBe( true )
-        expect( t1.request ).toBeDefined()
+        expect( Object.prototype.hasOwnProperty.call( t1, 'request' ) ).toBe( false )
         expect( t1.response ).not.toBeNull()
-        const t3 = JSON.parse( await readFile( join( out.schemaDir, 'getBalance', 'tests', 'test-3.json' ), 'utf-8' ) )
+        const t3 = JSON.parse( await readFile( join( out.schemaDir, 'tools', 'getBalance', 'tests', 'test-3.json' ), 'utf-8' ) )
         expect( t3.test ).toBe( 3 )
     } )
 } )
@@ -303,7 +304,7 @@ describe( 'DataPretest stub primitives', () => {
 
 
 describe( 'DataPretest on-disk layout (readable: per-tool numbered tests + summary)', () => {
-    test( 'writes schemas/<ns>/<schemaFile>/tests/<tool>/test-N.json + summary.json', async () => {
+    test( 'writes providers/<ns>/<schema>/tools/<tool>/tests/test-N.json + summary.json', async () => {
         fetchQueue = [
             successFetch( { result: '1' } ),
             successFetch( { result: '2' } ),
@@ -319,30 +320,103 @@ describe( 'DataPretest on-disk layout (readable: per-tool numbered tests + summa
         } )
         expect( out.ok ).toBe( true )
 
-        // numbered, self-describing test files under tests/<tool>/
-        const toolDir = join( tempRoot, 'schemas', 'layoutns', 'prices', 'getBalance', 'tests' )
+        // numbered, self-describing test files under tools/<tool>/tests/
+        const toolDir = join( tempRoot, 'providers', 'layoutns', 'prices', 'tools', 'getBalance', 'tests' )
         const files = ( await readdir( toolDir ) ).sort()
         expect( files ).toEqual( [ 'test-1.json', 'test-2.json', 'test-3.json' ] )
 
         const t2 = JSON.parse( await readFile( join( toolDir, 'test-2.json' ), 'utf-8' ) )
         expect( t2.test ).toBe( 2 )
         expect( t2.tool ).toBe( 'getBalance' )
-        expect( t2.request ).toBeDefined()
         expect( t2.response ).not.toBeNull()
         expect( t2.working ).toBe( true )
+        // F26: no request field is persisted
+        expect( Object.prototype.hasOwnProperty.call( t2, 'request' ) ).toBe( false )
 
         // summary.json with per-tool gate result, no opaque hash filename
-        const summary = JSON.parse( await readFile( join( tempRoot, 'schemas', 'layoutns', 'prices', 'summary.json' ), 'utf-8' ) )
+        const summary = JSON.parse( await readFile( join( tempRoot, 'providers', 'layoutns', 'prices', 'summary.json' ), 'utf-8' ) )
         expect( summary.schemaFile ).toBe( 'prices' )
         expect( summary.ok ).toBe( true )
         expect( summary.perTool.getBalance ).toEqual( { working: 3, total: 3 } )
 
-        // tool folder holds tests/ (+ later _gradings/); schema level holds summary.json
-        const schemaFileEntries = await readdir( join( tempRoot, 'schemas', 'layoutns', 'prices' ) )
+        // schema folder holds tools/ + summary.json; the tool lives under tools/
+        const schemaFileEntries = await readdir( join( tempRoot, 'providers', 'layoutns', 'prices' ) )
         expect( schemaFileEntries ).not.toContain( 'data-pretest' )
-        expect( schemaFileEntries.sort() ).toEqual( [ 'getBalance', 'summary.json' ] )
-        const toolEntries = await readdir( join( tempRoot, 'schemas', 'layoutns', 'prices', 'getBalance' ) )
+        expect( schemaFileEntries.sort() ).toEqual( [ 'summary.json', 'tools' ] )
+        const toolEntries = await readdir( join( tempRoot, 'providers', 'layoutns', 'prices', 'tools', 'getBalance' ) )
         expect( toolEntries ).toContain( 'tests' )
+    } )
+} )
+
+
+describe( 'DataPretest F26 key-hygiene (no request, no API key on disk)', () => {
+    const collectFiles = async ( { dir } ) => {
+        const entries = await readdir( dir, { withFileTypes: true } )
+        const nested = await entries
+            .reduce( ( promise, entry ) => promise.then( async ( acc ) => {
+                const full = join( dir, entry.name )
+                if( entry.isDirectory() ) {
+                    const sub = await collectFiles( { dir: full } )
+                    return acc.concat( sub )
+                }
+                return acc.concat( [ full ] )
+            } ), Promise.resolve( [] ) )
+        return nested
+    }
+
+    test( 'persisted test files omit request and never leak a serverParams key value', async () => {
+        const secret = 'SUPER-SECRET-API-KEY-1234567890'
+        fetchQueue = [
+            successFetch( { result: 'a' } ),
+            successFetch( { result: 'b' } ),
+            successFetch( { result: 'c' } )
+        ]
+        const main = {
+            namespace: 'keyns',
+            requiredServerParams: [ 'ETHERSCAN_API_KEY' ],
+            tools: {
+                getBalance: {
+                    description: 'get balance',
+                    tests: Array.from( { length: 3 } )
+                        .map( ( _e, idx ) => ( { _description: `case ${idx}`, address: `0xabc${idx}` } ) )
+                }
+            }
+        }
+
+        const out = await DataPretest.run( {
+            namespace: 'keyns',
+            toolName: 'getBalance',
+            main,
+            serverParams: { ETHERSCAN_API_KEY: secret },
+            gradingDataDir: tempRoot
+        } )
+        expect( out.ok ).toBe( true )
+
+        const persisted = await collectFiles( { dir: join( tempRoot, 'providers', 'keyns' ) } )
+        expect( persisted.length ).toBeGreaterThan( 0 )
+
+        const contents = await persisted
+            .reduce( ( promise, file ) => promise.then( async ( acc ) => {
+                const body = await readFile( file, 'utf-8' )
+                return acc.concat( [ { file, body } ] )
+            } ), Promise.resolve( [] ) )
+
+        // No persisted artifact contains the secret key value anywhere.
+        contents
+            .forEach( ( { body } ) => {
+                expect( body.includes( secret ) ).toBe( false )
+            } )
+
+        // Every persisted test file omits the `request` field entirely.
+        const testFiles = contents
+            .filter( ( { file } ) => file.endsWith( '.json' ) && file.includes( join( 'tests', 'test-' ) ) )
+        expect( testFiles.length ).toBe( 3 )
+        testFiles
+            .forEach( ( { body } ) => {
+                const parsed = JSON.parse( body )
+                expect( Object.prototype.hasOwnProperty.call( parsed, 'request' ) ).toBe( false )
+                expect( parsed.response ).not.toBeNull()
+            } )
     } )
 } )
 

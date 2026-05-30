@@ -74,6 +74,11 @@ describe( 'ErrorCodes.listByPrefix', () => {
         expect( result.codes ).toEqual( [] )
         expect( result.errors.length ).toBeGreaterThan( 0 )
     } )
+
+    test( 'returns the SKC family (SKC-001/002/003)', () => {
+        const result = ErrorCodes.listByPrefix( { prefix: 'SKC' } )
+        expect( result.codes.sort() ).toEqual( [ 'SKC-001', 'SKC-002', 'SKC-003' ] )
+    } )
 } )
 
 
@@ -111,6 +116,21 @@ describe( 'ErrorCodes.validateCodeFormat', () => {
         const result = ErrorCodes.validateCodeFormat( { code: 'invalid' } )
         expect( result.valid ).toBe( false )
         expect( result.errors.length ).toBeGreaterThan( 0 )
+    } )
+
+    test( 'SKC-001 is a valid PREFIX-NUMBER code', () => {
+        const result = ErrorCodes.validateCodeFormat( { code: 'SKC-001' } )
+        expect( result.valid ).toBe( true )
+    } )
+
+    test( 'SKC codes resolve via getCode with ERROR severity', () => {
+        const codes = [ 'SKC-001', 'SKC-002', 'SKC-003' ]
+        codes
+            .forEach( ( code ) => {
+                const lookup = ErrorCodes.getCode( { code } )
+                expect( lookup.found ).toBe( true )
+                expect( lookup.entry.severity ).toBe( 'ERROR' )
+            } )
     } )
 } )
 
