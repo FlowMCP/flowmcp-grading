@@ -1,9 +1,9 @@
 /**
  * BumpHelper — diff-based bump-rule application for schemas and selections.
  *
- * Memo 080 anchors:
- *   Kap 10 — Bump-Tabellen (schemaVersion + selectionVersion)
- *   Z. 448 — Same schemaVersion + different schemaHash = bump rule violation
+ * Per the grading spec:
+ *   - Defines the bump tables (schemaVersion + selectionVersion).
+ *   - Same schemaVersion + different schemaHash = bump rule violation.
  *
  * NO SILENT DEFAULTS. Static methods only, object params, object returns.
  */

@@ -99,7 +99,7 @@ describe( 'AboutConsistencyCheck.checkNamespaceAbout', () => {
 
 
 describe( 'AboutConsistencyCheck.verifyNamespace', () => {
-    test( 'without lockfile → only Schritt 1 (consistency) runs', async () => {
+    test( 'without lockfile → only Step 1 (consistency) runs', async () => {
         const root = await seedNamespace( {
             namespace: 'verifyok',
             tools: { getThing: { method: 'GET', path: '/x', description: 'Get thing' } },

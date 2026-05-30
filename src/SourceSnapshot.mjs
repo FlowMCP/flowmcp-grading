@@ -1,9 +1,9 @@
 /**
  * SourceSnapshot — frozen schema snapshots in grading-data/schemas/<namespace>/.
  *
- * Memo 080 anchors:
- *   Kap 2 — Folder layout for grading-data/schemas/
- *   Kap 3 — NO-OVERWRITE rule (Memo 032 generalisation)
+ * Per the grading spec:
+ *   - Defines the folder layout for grading-data/schemas/.
+ *   - Enforces the NO-OVERWRITE rule.
  *
  * Layout:
  *   grading-data/

@@ -1,4 +1,4 @@
-// Phase-Status separation script for Memo 080 Phase 2 (PRD-08).
+// Phase-status separation script.
 //
 // Migrates the legacy grading-data/phase-status/<ns>--<tool>.json files into
 // grading-data/phase-status/single/<ns>--<tool>.json with the new schema:

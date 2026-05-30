@@ -1,92 +1,91 @@
-# Fragen-Katalog — Eintrags-Schema (v1.0.0)
+# Question Catalog — Entry Schema (v1.0.0)
 
-> Quelle: Memo 082 Kap 5.1 (Eintrags-Schema), Kap 5.2 (Datei-Layout), Kap 6 (Deterministisch vs. Nicht-Deterministisch), Kap 7.1 (Acht Bereiche), Kap 7.4 (Persona-Anwendungs-Tabelle).
->
-> Liefer-PRD: PRD-10 (Memo 082 Phase 2c).
-
----
-
-## 1. Zweck
-
-Dieses Dokument definiert das verbindliche Eintrags-Schema und Datei-Layout fuer
-den Fragen-Katalog des Grading-Moduls. Alle Fragen werden als Markdown-Dateien mit
-YAML-Frontmatter abgelegt; das Build-Skript `scripts/build-questions.mjs` (PRD-12)
-aggregiert sie zu `prompts/generated/questions.json` und validiert sie gegen dieses
-Schema.
-
-Der Fragen-Katalog ist Bestandteil des Generator-Evaluator-Recursive-Feedback-Loops
-(Memo 082 Kap 4). Er enthaelt 60-80 Fragen verteilt ueber 10 Bereiche (acht
-Bereiche, davon Bereich 7 in L1/L2/L3 aufgesplittet).
+> Source: grading spec — entry schema, file layout, deterministic vs.
+> non-deterministic classification, the eight areas, and the
+> persona-application table.
 
 ---
 
-## 2. Pflichtfelder (14)
+## 1. Purpose
 
-Jede Frage hat genau 14 Pflichtfelder im YAML-Frontmatter:
+This document defines the binding entry schema and file layout for the question
+catalog of the grading module. All questions are stored as Markdown files with
+YAML frontmatter; the build script `scripts/build-questions.mjs` aggregates them
+into `prompts/generated/questions.json` and validates them against this schema.
 
-| Feld | Typ | Format | Beispiel | Definition |
+The question catalog is part of the generator-evaluator recursive feedback loop.
+It contains 60-80 questions spread across 10 areas (eight areas, with area 7
+split into L1/L2/L3).
+
+---
+
+## 2. Required Fields (14)
+
+Each question has exactly 14 required fields in its YAML frontmatter:
+
+| Field | Type | Format | Example | Definition |
 |------|-----|--------|----------|------------|
-| `id` | string | `Q-<area>-<NN>` | `Q-single-test-01` | Eindeutige Frage-ID. Regex `^Q-[a-zA-Z0-9-]+-\d{2}$` (Uppercase erlaubt fuer `selection-skills-L1/L2/L3`). |
-| `area` | enum | siehe 3. | `single-test` | Bereich-Slug aus der 10er-Liste. |
-| `dimension` | enum | siehe 4. | `descriptionClarity` | Dimension aus P1-P7 / S1-S4 oder Memo-082-Erweiterung. |
-| `question` | string | freier Text, max 500 Zeichen | `Ist die Tool-Description ohne Marketing-Begriffe?` | Die eigentliche Eval-Frage in Klartext. |
-| `scoreType` | enum | `boolean`, `scale-1-5`, `percent` | `boolean` | Skalentyp der Antwort. |
-| `weight` | number | 0.0 - 1.0 | `0.15` | Gewichtung innerhalb des `(area, tier)`-Buckets. |
-| `determinism` | enum | `deterministic`, `non-deterministic`, `mixed` | `non-deterministic` | Klassifikation Kap 6 — bestimmt LLM-Pflicht. |
-| `tier` | enum | siehe 4. | `P3` | P1-P7 (Single) oder S1-S4 (Selection). |
-| `filesToRead` | array<string> | Pfad-Templates mit Platzhaltern | `["{{schemaPath}}", "{{aboutPath}}"]` | Pre-Instruction-Files (Kap 8). Mindestens 1 Eintrag. |
-| `preInstructionRef` | string | relativer Pfad | `pre-instructions/single-test.md` | Verweis auf Pflicht-Block. |
-| `evaluatorTask` | string | Imperativ, max 200 Zeichen | `Bewerte die Description auf Marketing-Sprache.` | Anweisung an Sub-Agent. |
-| `outputSchemaRef` | string | relativer Pfad | `output-schemas/single-test.schema.json` | JSON-Schema fuer Antwort. |
-| `personaRequired` | boolean | `true`/`false` | `false` | Persona-Anwendung; muss zu Kap 7.4 Mapping passen. |
-| `version` | string | semver | `1.0.0` | Frage-Version fuer Aenderungs-Tracking. |
+| `id` | string | `Q-<area>-<NN>` | `Q-single-test-01` | Unique question ID. Regex `^Q-[a-zA-Z0-9-]+-\d{2}$` (uppercase allowed for `selection-skills-L1/L2/L3`). |
+| `area` | enum | see 3. | `single-test` | Area slug from the 10-item list. |
+| `dimension` | enum | see 4. | `descriptionClarity` | Dimension from P1-P7 / S1-S4 or a grading-spec extension. |
+| `question` | string | free text, max 500 chars | `Is the tool description free of marketing terms?` | The actual eval question in plain text. |
+| `scoreType` | enum | `boolean`, `scale-1-5`, `percent` | `boolean` | Scale type of the answer. |
+| `weight` | number | 0.0 - 1.0 | `0.15` | Weight within the `(area, tier)` bucket. |
+| `determinism` | enum | `deterministic`, `non-deterministic`, `mixed` | `non-deterministic` | Determinism classification — determines whether an LLM is required. |
+| `tier` | enum | see 4. | `P3` | P1-P7 (single) or S1-S4 (selection). |
+| `filesToRead` | array<string> | path templates with placeholders | `["{{schemaPath}}", "{{aboutPath}}"]` | Pre-instruction files (section 8). At least 1 entry. |
+| `preInstructionRef` | string | relative path | `pre-instructions/single-test.md` | Reference to the mandatory block. |
+| `evaluatorTask` | string | imperative, max 200 chars | `Evaluate the description for marketing language.` | Instruction to the sub-agent. |
+| `outputSchemaRef` | string | relative path | `output-schemas/single-test.schema.json` | JSON schema for the answer. |
+| `personaRequired` | boolean | `true`/`false` | `false` | Persona application; must match the area mapping. |
+| `version` | string | semver | `1.0.0` | Question version for change tracking. |
 
 ---
 
-## 3. area-Enum (10 Werte)
+## 3. area Enum (10 values)
 
-Aus Memo 082 Kap 7.1 (8 Bereiche, Bereich 7 in L1/L2/L3 aufgesplittet):
+The eight areas, with area 7 split into L1/L2/L3:
 
-| area-Slug | Sub-Template? | personaRequired (Default) |
+| area slug | Sub-template? | personaRequired (default) |
 |-----------|---------------|----------------------------|
-| `single-test` | nein | false |
-| `tools-aggregate-schema` | nein | false |
-| `namespace-description` | nein | false |
-| `tools-aggregate-namespace` | nein | false |
-| `about-namespace` | nein | true |
-| `about-selection` | nein | true |
-| `selection-skills-L1` | ja (`selection-skills`) | true |
-| `selection-skills-L2` | ja (`selection-skills`) | true |
-| `selection-skills-L3` | ja (`selection-skills`) | true |
-| `namespace-skills` | nein | true |
+| `single-test` | no | false |
+| `tools-aggregate-schema` | no | false |
+| `namespace-description` | no | false |
+| `tools-aggregate-namespace` | no | false |
+| `about-namespace` | no | true |
+| `about-selection` | no | true |
+| `selection-skills-L1` | yes (`selection-skills`) | true |
+| `selection-skills-L2` | yes (`selection-skills`) | true |
+| `selection-skills-L3` | yes (`selection-skills`) | true |
+| `namespace-skills` | no | true |
 
-Persona-Anwendungs-Mapping aus Memo 082 Kap 7.4:
+Persona-application mapping:
 
-- Bereiche 1-4 = **Neutral** (`personaRequired: false`)
-- Bereiche 5-8 = **MIT Persona** (`personaRequired: true`)
+- Areas 1-4 = **Neutral** (`personaRequired: false`)
+- Areas 5-8 = **WITH persona** (`personaRequired: true`)
 
 ---
 
-## 4. dimension-Enum + Tier-Mapping
+## 4. dimension Enum + Tier Mapping
 
-Tier-Liste aus Memo 080 PRD-01 §5.1:
+Tier list:
 
-- **P1-P7** — Single-Dimensionen (tool-zentriert)
-- **S1-S4** — Selection-Dimensionen (Coverage, Persona-Fit, Skill-Adequacy, Domain-Document-Alignment)
+- **P1-P7** — single dimensions (tool-centric)
+- **S1-S4** — selection dimensions (coverage, persona fit, skill adequacy, domain-document alignment)
 
-Memo 082 Kap 14.2 erweitert (in Phase 2c verbindlich):
+Grading-spec extension (binding):
 
-- `namespaceDescriptionClarity` (Bereich 3, P-Bucket)
-- `domainCoverage` (Bereich 4, P-Bucket)
+- `namespaceDescriptionClarity` (area 3, P bucket)
+- `domainCoverage` (area 4, P bucket)
 
-Tier-Mapping pro area:
+Tier mapping per area:
 
-| area | tier-Bucket | Beispiel-Dimensionen |
+| area | tier bucket | example dimensions |
 |------|-------------|----------------------|
 | `single-test` | P1, P2, P3 | descriptionClarity, paramConsistency, exampleQuality |
 | `tools-aggregate-schema` | P4, P5 | routesCoherence, namingConsistency |
-| `namespace-description` | P-bucket (Memo 082 Erweiterung) | namespaceDescriptionClarity |
-| `tools-aggregate-namespace` | P-bucket | domainCoverage |
+| `namespace-description` | P bucket (grading-spec extension) | namespaceDescriptionClarity |
+| `tools-aggregate-namespace` | P bucket | domainCoverage |
 | `about-namespace` | P6, P7 | personaReference, valueProposition |
 | `about-selection` | P6, P7 | personaReference, useCaseClarity |
 | `selection-skills-L1` | S1, S2 | coverage, personaFit |
@@ -94,11 +93,11 @@ Tier-Mapping pro area:
 | `selection-skills-L3` | S3, S4 | skillAdequacy, domainAlignment |
 | `namespace-skills` | S3, S4 | skillAdequacy, domainAlignment |
 
-Die exakten Dimensionen werden in PRD-11 pro Frage gesetzt (Kalibrierungs-Spielraum).
+The exact dimensions are set per question during calibration.
 
 ---
 
-## 5. Datei-Layout-Konvention
+## 5. File-Layout Convention
 
 ```
 prompts/questions/
@@ -114,33 +113,32 @@ prompts/questions/
     └── 01-output-schema-vs-response.md
 ```
 
-Konvention:
+Convention:
 
-- Pfad-Schablone: `prompts/questions/<dimension>/<NN>-<slug>.md`
-- `<dimension>` = `deterministic` | `non-deterministic` | `mixed` (passend zum Feld `determinism`)
-- `<NN>` = 01..99, lokal pro Unterordner aufsteigend, mit fuehrender Null
-- `<slug>` = lowercase-kebab-case, max 50 Zeichen, keine Umlaute (`ae` statt `ä`)
-- Filename matched Regex `^\d{2}-[a-z0-9-]+\.md$`
+- Path template: `prompts/questions/<dimension>/<NN>-<slug>.md`
+- `<dimension>` = `deterministic` | `non-deterministic` | `mixed` (matching the `determinism` field)
+- `<NN>` = 01..99, ascending locally per subfolder, with a leading zero
+- `<slug>` = lowercase kebab-case, max 50 chars, ASCII only (no umlauts; transliterate, e.g. `ae`, `oe`, `ue`, `ss`)
+- Filename matches the regex `^\d{2}-[a-z0-9-]+\.md$`
 
-Begruendung: Sortierung nach `dimension` macht den Build-Output gruppierbar und
-erlaubt dem Build-Test-Katalog (PRD-12), deterministische Fragen direkt mit
-`flowmcp-core`-Tests zu mappen.
+Rationale: sorting by `dimension` makes the build output groupable and lets the
+build test catalog map deterministic questions directly to `flowmcp-core` tests.
 
 ---
 
-## 6. Frontmatter-Konvention
+## 6. Frontmatter Convention
 
-Jede Frage-Datei hat einen YAML-Frontmatter-Block am Dateianfang (zwischen
-`---`-Markern) mit allen 14 Pflichtfeldern. Der Body danach ist OPTIONAL und
-dient nur als Mensch-lesbare Erlaeuterung — das Build-Skript uebernimmt ihn
-nicht in `questions.json`.
+Each question file has a YAML frontmatter block at the start of the file
+(between `---` markers) with all 14 required fields. The body afterward is
+OPTIONAL and serves only as a human-readable explanation — the build script
+does not carry it into `questions.json`.
 
 ```yaml
 ---
 id: Q-single-test-01
 area: single-test
 dimension: descriptionClarity
-question: "Ist die Tool-Description ohne Marketing-Begriffe?"
+question: "Is the tool description free of marketing terms?"
 scoreType: boolean
 weight: 0.15
 determinism: non-deterministic
@@ -148,66 +146,66 @@ tier: P3
 filesToRead:
   - "{{schemaPath}}"
 preInstructionRef: pre-instructions/single-test.md
-evaluatorTask: "Bewerte die Description auf Marketing-Sprache (Buzzwords, Adjektive ohne Substanz)."
+evaluatorTask: "Evaluate the description for marketing language (buzzwords, adjectives without substance)."
 outputSchemaRef: output-schemas/single-test.schema.json
 personaRequired: false
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Marketing-Sprache verzerrt die User-Erwartung an das Tool. Eine Description sollte
-deskriptiv sein ("Returns contract metadata"), nicht werblich ("Powerful contract API").
+Marketing language distorts the user's expectation of the tool. A description
+should be descriptive ("Returns contract metadata"), not promotional ("Powerful
+contract API").
 
 ## Anti-Pattern
 
-- "Powerful", "Advanced", "Easy-to-use" — keine technische Information
-- Superlative ohne Beleg
+- "Powerful", "Advanced", "Easy-to-use" — no technical information
+- Superlatives without evidence
 ```
 
 ---
 
-## 7. Vollstaendige Beispiel-Frage
+## 7. Complete Example Question
 
-Die obenstehende Frage `Q-single-test-01` ist die vollstaendige Vorlage fuer alle
-weiteren Fragen. Sie liegt physisch in `prompts/questions/non-deterministic/`
-(siehe PRD-11).
-
----
-
-## 8. Validierungs-Regeln (Vorgriff auf build-questions.mjs)
-
-Das Build-Skript `scripts/build-questions.mjs` prueft pro Frage:
-
-1. Alle 14 Pflichtfelder vorhanden (sonst `MISSING-FIELD`)
-2. `id` matched Regex `^Q-[a-zA-Z0-9-]+-\d{2}$`
-3. `area` in der 10er-Enum-Liste (Sektion 3)
-4. `filesToRead` ist ein nicht-leeres Array
-5. `personaRequired` muss zu Kap 7.4 Mapping passen (Bereiche 1-4 = false, 5-8 = true)
-6. Die Summe der `weight`-Werte pro `(area, tier)`-Bucket liegt zwischen 0.95 und 1.05
-   (Toleranz fuer Rundungs-Fehler)
-
-Schlaegt eine Pruefung fehl, bricht das Build-Skript mit Exit-Code != 0 ab und
-nennt den Frage-Pfad in der Fehler-Message.
+The question `Q-single-test-01` above is the complete template for all other
+questions. It is stored physically in `prompts/questions/non-deterministic/`.
 
 ---
 
-## 9. Versionierung
+## 8. Validation Rules (anticipating build-questions.mjs)
 
-- Schema-Version: `1.0.0` (dieses Dokument)
-- Pro Frage: `version`-Feld im Frontmatter (semver)
-- Schema-Breaking-Changes (z.B. neue Pflichtfelder) erhoehen die Schema-Major-Version
-  und ziehen ein Sammel-Update aller Frage-`version`-Felder nach sich
+The build script `scripts/build-questions.mjs` checks per question:
+
+1. All 14 required fields present (otherwise `MISSING-FIELD`)
+2. `id` matches the regex `^Q-[a-zA-Z0-9-]+-\d{2}$`
+3. `area` is in the 10-item enum list (section 3)
+4. `filesToRead` is a non-empty array
+5. `personaRequired` must match the area mapping (areas 1-4 = false, 5-8 = true)
+6. The sum of the `weight` values per `(area, tier)` bucket is between 0.95 and 1.05
+   (tolerance for rounding errors)
+
+If a check fails, the build script aborts with exit code != 0 and names the
+question path in the error message.
+
+---
+
+## 9. Versioning
+
+- Schema version: `1.0.0` (this document)
+- Per question: the `version` field in the frontmatter (semver)
+- Schema-breaking changes (e.g. new required fields) bump the schema major
+  version and trigger a bulk update of all question `version` fields
 
 ---
 
 ## 10. Cross-Refs
 
-- Eintrags-Schema-Quelle: Memo 082 Kap 5.1
-- Datei-Layout-Quelle: Memo 082 Kap 5.2
-- Determinism-Klassifikation: Memo 082 Kap 6
-- Tier-Liste: Memo 080 PRD-01 §5.1
-- Persona-Anwendung: Memo 082 Kap 7.4
-- Fragen-Content (60-80 Fragen): PRD-11
-- Build-Skript: PRD-12 (`scripts/build-questions.mjs`)
-- Test-Catalog-Skript: PRD-12 (`scripts/build-test-catalog.mjs`)
+- Entry-schema source: grading spec
+- File-layout source: grading spec
+- Determinism classification: grading spec
+- Tier list: grading spec
+- Persona application: grading spec
+- Question content (60-80 questions): question catalog
+- Build script: `scripts/build-questions.mjs`
+- Test-catalog script: `scripts/build-test-catalog.mjs`

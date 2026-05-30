@@ -2,7 +2,7 @@
 id: Q-about-namespace-01
 area: about-namespace
 dimension: personaReference
-question: "Persona-Reference vorhanden?"
+question: "Is a persona reference present?"
 scoreType: scale-1-5
 weight: 1.0
 determinism: non-deterministic
@@ -11,7 +11,7 @@ filesToRead:
   - "{{aboutPath}}"
   - "{{personaPath}}"
 preInstructionRef: pre-instructions/about-namespace.md
-evaluatorTask: "Pruefe Persona-Reference."
+evaluatorTask: "Check the persona reference."
 outputSchemaRef: output-schemas/about-namespace.schema.json
 personaRequired: true
 version: 1.0.0

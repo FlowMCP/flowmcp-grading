@@ -1,114 +1,114 @@
 ---
 name: single-test-apply-improvement
-description: Konsumiert die JSON-Response von single-test-start-grade. Liest improvementHints[], entscheidet ob ein naechster Iterations-Lauf startet (Default maxIterations=3) oder ob die finale Grading-Datei nach grading-data/single/<ns>--<tool>/gradings/<hash>--<ts>--neutral.json (gitignored, Kap 4.6) geschrieben wird. Erzeugt bei Re-Iteration den Re-Invocation-Aufruf von single-test-start-grade mit iteration+1 + previousGradingPath. Decision-Matrix gemaess Memo 082 Kap 12. Persona-Anwendung Bereich 1 = neutral (Kap 7.4).
+description: Consumes the JSON response from single-test-start-grade. Reads improvementHints[], decides whether a next iteration starts (default maxIterations=3) or whether the final grading file is written to grading-data/single/<ns>--<tool>/gradings/<hash>--<ts>--neutral.json (gitignored). On re-iteration, produces the re-invocation call of single-test-start-grade with iteration+1 + previousGradingPath. The decision matrix follows the grading spec. Per the grading spec, the single-test area uses a neutral persona.
 allowed-tools: Read, Write, Bash
 model: inherit
 ---
 
 ## Input
 
-Parameter (vom `single-test-start-grade`-Skill via Hand-off uebergeben):
+Parameters (passed by the `single-test-start-grade` skill via hand-off):
 
-| Parameter | Pflicht | Format | Beispiel |
-|-----------|---------|--------|----------|
-| `responseJson` | ja | Strict-JSON gemaess `single-test.schema.json` | `{ area: "single-test", iteration: 1, gradings: [...], improvementHints: [...] }` |
-| `iteration` | ja | Integer 1..N | `1` |
-| `schemaPath` | ja | Absoluter Pfad zum Tool-Schema | `/.../etherscan/getContractEthereum.mjs` |
-| `personaSlug` | ja | `"neutral"` (Bereich 1 ist neutral, Kap 7.4) | `neutral` |
-| `maxIterations` | nein (Default 3, Kap 12) | Integer 1..N | `3` |
+| Parameter | Required | Format | Example |
+|-----------|----------|--------|---------|
+| `responseJson` | yes | Strict JSON per `single-test.schema.json` | `{ area: "single-test", iteration: 1, gradings: [...], improvementHints: [...] }` |
+| `iteration` | yes | Integer 1..N | `1` |
+| `schemaPath` | yes | Absolute path to the tool schema | `/.../etherscan/getContractEthereum.mjs` |
+| `personaSlug` | yes | `"neutral"` (the single-test area is neutral) | `neutral` |
+| `maxIterations` | no (default 3) | Integer 1..N | `3` |
 
-## Ablauf
+## Process
 
-1. **Validate Input** — `responseJson` ist valid (kein `blocker`). `iteration >= 1`. `schemaPath` existiert.
-2. **Extract improvementHints** — `responseJson.improvementHints[]`. Bei leer: kein Verbesserungs-Potenzial → Finalisieren.
-3. **Decide next iteration** — Decision-Matrix (siehe unten).
-4a. **Wenn Re-Iteration:**
-    - Optional: Schreibe Zwischen-State nach `grading-data/_tmp/<schemaHash>--iteration-<n>.json` (Recovery, Kap 4.6 gitignored).
-    - Re-invoke `single-test-start-grade` mit:
-      - `schemaPath`: unveraendert
+1. **Validate Input** — `responseJson` is valid (no `blocker`). `iteration >= 1`. `schemaPath` exists.
+2. **Extract improvementHints** — `responseJson.improvementHints[]`. If empty: no improvement potential → finalize.
+3. **Decide next iteration** — Decision matrix (see below).
+4a. **If re-iteration:**
+    - Optional: write interim state to `grading-data/_tmp/<schemaHash>--iteration-<n>.json` (recovery, gitignored).
+    - Re-invoke `single-test-start-grade` with:
+      - `schemaPath`: unchanged
       - `personaSlug`: `"neutral"`
       - `iteration`: `iteration + 1`
-      - `previousGradingPath`: Pfad zur Zwischen-Datei oder Inline-Uebergabe der `responseJson`
-    - Skill endet — naechster Loop-Zyklus startet im `start-grade`-Skill.
-4b. **Wenn Finalisieren:**
-    - Berechne `<schemaHash>` (8-Zeichen sha256-Truncate des kanonischen Schema-JSON, Spec 08 §5)
-    - Berechne `<ISO-ts>` (`2026-MM-DDTHH-MM-SSZ`, Doppelpunkt durch Bindestrich, Dateisystem-Kompatibilitaet)
-    - Berechne Zielpfad: `grading-data/single/<namespace>--<tool>/gradings/<schemaHash>--<ISO-ts>--neutral.json`
-    - `mkdir -p` Zielordner
-    - Write finale JSON via `Write`-Tool
-    - Output: `{ finalPath: "<absoluter-Pfad>", iteration: <n>, status: "done" }`
+      - `previousGradingPath`: path to the interim file or inline hand-off of the `responseJson`
+    - Skill ends — the next loop cycle starts in the `start-grade` skill.
+4b. **If finalizing:**
+    - Compute `<schemaHash>` (8-character sha256 truncate of the canonical schema JSON)
+    - Compute `<ISO-ts>` (`2026-MM-DDTHH-MM-SSZ`, colon replaced by hyphen for filesystem compatibility)
+    - Compute the target path: `grading-data/single/<namespace>--<tool>/gradings/<schemaHash>--<ISO-ts>--neutral.json`
+    - `mkdir -p` the target folder
+    - Write the final JSON via the `Write` tool
+    - Output: `{ finalPath: "<absolute-path>", iteration: <n>, status: "done" }`
 
-## Recursive-Loop-Mechanik
+## Recursive-Loop Mechanics
 
-**Decision-Matrix (Kap 12):**
+**Decision matrix:**
 
-| Bedingung | Aktion |
+| Condition | Action |
 |-----------|--------|
-| `iteration >= maxIterations` | Finalisieren |
-| `improvementHints[]` ist leer | Finalisieren |
-| `responseJson.confidence == "high"` (sofern vom Output-Schema gesetzt) | Finalisieren |
-| `responseJson.blocker` ist gesetzt | Finalisieren (mit Blocker-Status) |
-| sonst | Re-Iteration mit `iteration + 1` |
+| `iteration >= maxIterations` | Finalize |
+| `improvementHints[]` is empty | Finalize |
+| `responseJson.confidence == "high"` (if set by the output schema) | Finalize |
+| `responseJson.blocker` is set | Finalize (with blocker status) |
+| otherwise | Re-iterate with `iteration + 1` |
 
-**Default `maxIterations = 3`** (Kap 12 Empfehlung). Iteration 1 = initiale Bewertung, Iteration 2 = Selbst-Korrektur aufgrund Iter-1-improvementHints, Iteration 3 = finaler Konsistenz-Check.
+**Default `maxIterations = 3`.** Iteration 1 = initial assessment, iteration 2 = self-correction based on iteration-1 improvementHints, iteration 3 = final consistency check.
 
-**Re-Invocation:** Hand-off an `single-test-start-grade` mit:
+**Re-Invocation:** Hand off to `single-test-start-grade` with:
 
 ```json
 {
-  "schemaPath": "<unveraendert>",
+  "schemaPath": "<unchanged>",
   "personaSlug": "neutral",
   "iteration": "<iteration + 1>",
-  "previousGradingPath": "<Pfad oder Inline-Daten>"
+  "previousGradingPath": "<path or inline data>"
 }
 ```
 
-Der naechste `start-grade`-Lauf laedt `improvementHints[]` und gibt sie an `PromptBuilder.build({ ...previousHints })` weiter — das ist die Verbesserungs-Schleife (Kap 12).
+The next `start-grade` run loads `improvementHints[]` and passes them to `PromptBuilder.build({ ...previousHints })` — this is the improvement loop.
 
 ## Output
 
-Bei Re-Iteration: keine Datei, naechster Loop-Zyklus startet im `start-grade`-Skill.
+On re-iteration: no file; the next loop cycle starts in the `start-grade` skill.
 
-Bei Finalisieren:
+On finalizing:
 
 ```json
-{ "finalPath": "<absoluter-Pfad>", "iteration": "<n>", "status": "done" }
+{ "finalPath": "<absolute-path>", "iteration": "<n>", "status": "done" }
 ```
 
-## Folder-Garantie (Kap 4.6)
+## Folder Guarantee
 
-Write-Target IMMER im **gitignored `grading-data/`-Folder** (Kap 4.6 — `.gitignore:1`). Niemals in `prompts/`, `skills/`, `spec/`, `src/`, `tests/`, `scripts/`, `docs/` schreiben.
+The write target is ALWAYS inside the **gitignored `grading-data/` folder** (see `.gitignore:1`). Never write into `prompts/`, `skills/`, `spec/`, `src/`, `tests/`, `scripts/`, or `docs/`.
 
-**Pfad-Template (Spec 08 §5 + Spec 19 §17.1 + Kap 13):**
+**Path template:**
 
 ```
 grading-data/single/<namespace>--<tool>/gradings/<schemaHash>--<ISO-ts>--<personaSlug>.json
 ```
 
-Komponenten:
-- `<schemaHash>`: 8-Zeichen sha256-Truncate des kanonischen Schema-JSON
-- `<ISO-ts>`: `2026-MM-DDTHH-MM-SSZ` (Bindestrich statt Doppelpunkt)
-- `<personaSlug>`: `neutral` (Bereich 1, Kap 7.4)
+Components:
+- `<schemaHash>`: 8-character sha256 truncate of the canonical schema JSON
+- `<ISO-ts>`: `2026-MM-DDTHH-MM-SSZ` (hyphen instead of colon)
+- `<personaSlug>`: `neutral` (single-test area)
 
-**Beispiel:**
+**Example:**
 
 ```
 grading-data/single/etherscan--getContractEthereum/gradings/a1b2c3d4--2026-05-30T15-34-12Z--neutral.json
 ```
 
-## Filename-Helper (PRD-21)
+## Filename Helper
 
-Filename-Bildung darf nur via `Grading.formatGradingFilename({ hash, ts, persona })` aus `src/Grading.mjs` laufen — **kein** String-Concat im Save-Step.
+Filename construction may run ONLY via `Grading.formatGradingFilename({ hash, ts, persona })` from `src/Grading.mjs` — **no** string concatenation in the save step.
 
 ```javascript
 import { Grading } from 'flowmcp-grading'
 
 const { filename } = Grading.formatGradingFilename( {
-    hash: schemaHash,             // 8-Zeichen sha256-Truncate ODER PLACEHOLDER\d{3}
-    ts: isoTs,                    // '2026-05-30T15-34-12Z' (Bindestrich statt Doppelpunkt)
-    persona: personaSlug          // 'neutral' (Bereich 1)
+    hash: schemaHash,             // 8-character sha256 truncate OR PLACEHOLDER\d{3}
+    ts: isoTs,                    // '2026-05-30T15-34-12Z' (hyphen instead of colon)
+    persona: personaSlug          // 'neutral' (single-test area)
 } )
 const targetPath = `grading-data/single/${namespace}--${tool}/gradings/${filename}`
 ```
 
-Validierung im Helper (GRD-040/041/042) faengt fehlerhafte Slugs, Hashes und Timestamps ab. Vollstaendige Konvention: `docs/grading-filename-convention.md`.
+Validation in the helper (GRD-040/041/042) catches malformed slugs, hashes, and timestamps. Full convention: `docs/grading-filename-convention.md`.

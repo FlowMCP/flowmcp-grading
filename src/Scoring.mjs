@@ -6,22 +6,19 @@
  * Encapsulates sub-grades (dimensions with weights, deterministic scores).
  * Static methods only, object params, object returns. NO SILENT DEFAULTS.
  *
- * Memo 076 anchors:
- *   Z. 254 — Grading is an array of sub-grades
- *   Z. 268 — Dimension enum (17 values)
- *   Z. 269 — Score value range (1.0-5.0 float OR enum: pass|fail|stale|n/a)
- *   Z. 305 — Multi-grader rule: no automatic consolidation
- *   Z. 309 — n/a pragma: ignored in weighted sum, not zero
- *   Z. 302 — Aging: stale, not fail
- *
- * Auto-memory anchors:
- *   feedback_no_silent_defaults, feedback_no_hidden_defaults, feedback_http_400_is_not_pass
+ * Per the grading spec:
+ *   - A grading is an array of sub-grades.
+ *   - Dimension enum (17 values).
+ *   - Score value range (1.0-5.0 float OR enum: pass|fail|stale|n/a).
+ *   - Multi-grader rule: no automatic consolidation.
+ *   - n/a pragma: ignored in weighted sum, not zero.
+ *   - Aging: stale, not fail.
  */
 
 const SCORING_SYSTEM_VERSION = 'scoringSystem/1.0.0'
 
 
-// Dimensions enum per Memo Kap 7 (Z. 268). Closed list, extensions require memo revision.
+// Dimensions enum per the grading spec. Closed list, extensions require a spec revision.
 const DIMENSIONS = [
     'apiAvailability',
     'apiResponseValid',
@@ -64,7 +61,7 @@ class Scoring {
             score: null,
             reasoning: 'stub: concrete heuristic in src/Phases/*.mjs (follow-up memo)',
             stub: true,
-            todo: 'PRD-21 phase implementation',
+            todo: 'follow-up: per-dimension phase implementation',
             errors: []
         }
     }
@@ -109,11 +106,11 @@ class Scoring {
 
         const aggregated = gradings
             .reduce( ( acc, grading ) => {
-                // n/a entries are ignored per Memo Z. 309 pragma — not counted as zero
+                // n/a entries are ignored per the n/a pragma — not counted as zero
                 if( grading.score === 'n/a' ) {
                     return acc
                 }
-                // stale entries are ignored AND emit a warning per Memo Z. 302-303
+                // stale entries are ignored AND emit a warning per the aging rule
                 if( grading.score === 'stale' ) {
                     acc.errors.push( 'SCO-WARN-001: Score is `stale` due to aging threshold' )
                     return acc

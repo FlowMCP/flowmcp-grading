@@ -3,7 +3,7 @@ import { describe, test, expect } from '@jest/globals'
 import * as api from '../../src/index.mjs'
 
 
-describe( 'Public API exports (PRD-19)', () => {
+describe( 'Public API exports', () => {
     test( 'has at least 10 named exports', () => {
         const keys = Object.keys( api )
         expect( keys.length ).toBeGreaterThanOrEqual( 10 )

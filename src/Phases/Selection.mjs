@@ -1,24 +1,21 @@
 /**
- * SelectionPhases — Skill-Familie 2 (group-bound).
+ * SelectionPhases — skill family 2 (group-bound).
  *
- * Phases S1-S4 (Memo 080 PRD-13):
+ * Phases S1-S4:
  *
- * | Phase | Pruefung                          | Tier         |
+ * | Phase | Check                             | Tier         |
  * |-------|-----------------------------------|--------------|
  * | S1    | Member-Coverage                   | group-bound  |
  * | S2    | Lockfile-Consistency              | group-bound  |
  * | S3    | Skills-Coverage (max 4)           | group-bound  |
  * | S4    | Persona-Reference-Coherence       | group-bound  |
  *
- * Memo 076 anchors:
- *   Z. 258 — Two skill families, shared data model
- *   Z. 294-297 — Selection-Validator consumes single-schema entries, writes S1-S4
- *   Z. 311 — personaIds required for non-deterministic dimensions
- *
- * Memo 080 anchors:
- *   Kap 5 — S1-S4 vollstaendig
- *   Kap 11 — Lockfile + selectionHash
- *   PRD-13 — Code-Implementation
+ * Per the grading spec:
+ *   - There are two skill families sharing one data model.
+ *   - The selection validator consumes single-schema entries and writes S1-S4.
+ *   - personaIds are required for non-deterministic dimensions.
+ *   - S1-S4 form the complete selection-validator phase set.
+ *   - The lockfile + selectionHash define the lockfile contract.
  */
 
 import { readFile, readdir, stat } from 'node:fs/promises'

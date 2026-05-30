@@ -17,16 +17,16 @@ const AREA_ORDER = [
 
 
 const AREA_LABELS = {
-    'single-test': 'Bereich 1 — single-test',
-    'tools-aggregate-schema': 'Bereich 2 — tools-aggregate-schema',
-    'namespace-description': 'Bereich 3 — namespace-description',
-    'tools-aggregate-namespace': 'Bereich 4 — tools-aggregate-namespace',
-    'about-namespace': 'Bereich 5 — about-namespace',
-    'about-selection': 'Bereich 6 — about-selection',
-    'selection-skills-L1': 'Bereich 7a — selection-skills-L1',
-    'selection-skills-L2': 'Bereich 7b — selection-skills-L2',
-    'selection-skills-L3': 'Bereich 7c — selection-skills-L3',
-    'namespace-skills': 'Bereich 8 — namespace-skills'
+    'single-test': 'Area 1 — single-test',
+    'tools-aggregate-schema': 'Area 2 — tools-aggregate-schema',
+    'namespace-description': 'Area 3 — namespace-description',
+    'tools-aggregate-namespace': 'Area 4 — tools-aggregate-namespace',
+    'about-namespace': 'Area 5 — about-namespace',
+    'about-selection': 'Area 6 — about-selection',
+    'selection-skills-L1': 'Area 7a — selection-skills-L1',
+    'selection-skills-L2': 'Area 7b — selection-skills-L2',
+    'selection-skills-L3': 'Area 7c — selection-skills-L3',
+    'namespace-skills': 'Area 8 — namespace-skills'
 }
 
 
@@ -161,21 +161,21 @@ class QuestionCatalogDocBuilder {
             '<!-- Source: prompts/generated/questions.json -->',
             `<!-- Generated: ${generatedAt} -->`,
             '',
-            '# Eval-Frage-Katalog',
+            '# Eval Question Catalog',
             '',
-            'Diese Seite listet alle **Eval-Fragen**, die ein LLM-Sub-Agent waehrend eines',
-            'Gradings beantwortet. **Nicht zu verwechseln mit dem',
-            '[Code-Test-Katalog](./test-catalog.md)** — der listet die Jest-Tests, die die',
-            'Engine selbst absichern.',
+            'This page lists all **eval questions** that an LLM sub-agent answers during a',
+            'grading. **Not to be confused with the',
+            '[Code Test Catalog](./test-catalog.md)** — which lists the Jest tests that protect',
+            'the engine itself.',
             '',
-            '| Stats | Wert |',
+            '| Stats | Value |',
             '|-------|------|',
-            `| Bereiche aktiv | ${stats.areasUsed} (Bereich 7 mit L1/L2/L3) |`,
-            `| Fragen total | ${stats.total} |`,
-            `| Deterministisch | ${stats.deterministic} |`,
-            `| Nicht-deterministisch | ${stats.nonDeterministic} |`,
+            `| Areas active | ${stats.areasUsed} (Area 7 with L1/L2/L3) |`,
+            `| Total questions | ${stats.total} |`,
+            `| Deterministic | ${stats.deterministic} |`,
+            `| Non-deterministic | ${stats.nonDeterministic} |`,
             `| Mixed | ${stats.mixed} |`,
-            `| Persona Pflicht | ${stats.personaRequired} |`,
+            `| Persona required | ${stats.personaRequired} |`,
             ''
         ]
         return lines.join( '\n' )
@@ -200,14 +200,14 @@ class QuestionCatalogDocBuilder {
         const lines = [
             `## ${label}`,
             '',
-            '| ID | Frage | Dimension | Determinismus | Persona |',
-            '|----|-------|-----------|----------------|---------|'
+            '| ID | Question | Dimension | Determinism | Persona |',
+            '|----|----------|-----------|-------------|---------|'
         ]
 
         questions
             .forEach( ( q ) => {
                 const determinismLabel = QuestionCatalogDocBuilder.#determinismLabel( { value: q.determinism } )
-                const personaLabel = q.personaRequired === true ? 'ja' : 'nein'
+                const personaLabel = q.personaRequired === true ? 'yes' : 'no'
                 const escapedQuestion = q.question.replace( /\|/g, '\\|' )
                 lines.push( `| \`${q.id}\` | ${escapedQuestion} | \`${q.dimension}\` | ${determinismLabel} | ${personaLabel} |` )
             } )
@@ -217,8 +217,8 @@ class QuestionCatalogDocBuilder {
 
 
     static #determinismLabel( { value } ) {
-        if( value === 'deterministic' ) { return 'deterministisch' }
-        if( value === 'non-deterministic' ) { return 'nicht-deterministisch' }
+        if( value === 'deterministic' ) { return 'deterministic' }
+        if( value === 'non-deterministic' ) { return 'non-deterministic' }
         if( value === 'mixed' ) { return 'mixed' }
         return value
     }

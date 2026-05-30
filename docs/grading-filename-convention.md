@@ -1,12 +1,11 @@
-# Grading-Filename-Konvention (Memo 082, Phase 2h)
+# Grading Filename Convention
 
-| Feld | Wert |
+| Field | Value |
 |------|------|
 | **Status** | Implementation-Reference |
-| **Source** | PRD-21 (Memo 082 Phase 2h) |
 | **Helper** | `Grading.formatGradingFilename({ hash, ts, persona })` in `src/Grading.mjs` |
 
-Diese Konvention legt das Pattern fuer Grading-Eintragsdateien fest. Filename-Bildung darf **ausschliesslich** ueber den Helper laufen — direkter String-Concat in Aufrufern ist verboten (Validierung im Helper faengt fehlerhafte Slugs, Hashes und Timestamps ab).
+This convention defines the pattern for grading entry files. Filename construction must run **exclusively** through the helper — direct string concatenation in callers is forbidden (validation in the helper catches malformed slugs, hashes, and timestamps).
 
 ---
 
@@ -16,29 +15,29 @@ Diese Konvention legt das Pattern fuer Grading-Eintragsdateien fest. Filename-Bi
 <hash>--<ts>--<persona-slug>.json
 ```
 
-| Segment | Format | Beispiel |
-|---------|--------|----------|
-| `hash` | 6-16 hex Zeichen (Schema-Hash, sha256-Praefix) oder `PLACEHOLDER\d{3}` (Backward-Compat fuer Pilot-Files) | `a1b2c3d4` |
-| `ts` | ISO 8601 mit `-` statt `:` (Filesystem-Safe) | `2026-05-30T10-15-00Z` |
-| `persona-slug` | `neutral` ODER `<basePersona>--<lens>` (zwei lower-kebab-Slugs, durch `--` getrennt) | `decision-maker--crypto-trader` |
+| Segment | Format | Example |
+|---------|--------|---------|
+| `hash` | 6-16 hex characters (schema hash, sha256 prefix) or `PLACEHOLDER\d{3}` (backward-compat for pilot files) | `a1b2c3d4` |
+| `ts` | ISO 8601 with `-` instead of `:` (filesystem-safe) | `2026-05-30T10-15-00Z` |
+| `persona-slug` | `neutral` OR `<basePersona>--<lens>` (two lower-kebab slugs, separated by `--`) | `decision-maker--crypto-trader` |
 
 ---
 
-## Beispiele
+## Examples
 
-- Mit Persona: `a1b2c3d4--2026-05-30T10-15-00Z--decision-maker--crypto-trader.json`
+- With persona: `a1b2c3d4--2026-05-30T10-15-00Z--decision-maker--crypto-trader.json`
 - Neutral: `abc123--2026-05-29T03-00-00Z--neutral.json`
 - Pilot/Legacy: `PLACEHOLDER001--2026-05-29T03-00-00Z--neutral.json`
 
-Sortierbarkeit: Filenames sind lexikographisch nach `hash` gruppiert, danach chronologisch nach `ts`, dann nach `persona`. Damit sortiert `ls grading-data/.../gradings/` natuerlich alle Eintraege desselben Schemas zusammen und in zeitlicher Reihenfolge.
+Sortability: filenames are grouped lexicographically by `hash`, then chronologically by `ts`, then by `persona`. As a result, `ls grading-data/.../gradings/` naturally sorts all entries of the same schema together and in chronological order.
 
 ---
 
-## Wann welcher Persona-Slug?
+## Which persona slug when?
 
-Pro Bereich (Memo 082 Kap 7.4 — Persona-Anwendungs-Tabelle):
+Per area (persona-application table):
 
-| Bereich | Persona-Slug |
+| Area | Persona slug |
 |---------|--------------|
 | 1 `single-test` | `neutral` |
 | 2 `tools-aggregate-schema` | `neutral` |
@@ -55,7 +54,7 @@ Pro Bereich (Memo 082 Kap 7.4 — Persona-Anwendungs-Tabelle):
 
 ## Helper
 
-Filename darf nur via `Grading.formatGradingFilename({ hash, ts, persona })` gebildet werden — kein String-Concat in Aufrufern. Validierung im Helper faengt fehlerhafte Slugs, Hashes und Timestamps ab.
+Filenames may only be built via `Grading.formatGradingFilename({ hash, ts, persona })` — no string concatenation in callers. Validation in the helper catches malformed slugs, hashes, and timestamps.
 
 ```javascript
 import { Grading } from 'flowmcp-grading'
@@ -68,36 +67,33 @@ const { filename } = Grading.formatGradingFilename( {
 // → 'a1b2c3d4--2026-05-30T10-15-00Z--decision-maker--crypto-trader.json'
 ```
 
-Fehler werden als `throw new Error(...)` mit GRD-Codes geworfen:
+Errors are thrown as `throw new Error(...)` with GRD codes:
 
-| Code | Bedeutung |
+| Code | Meaning |
 |------|-----------|
-| `GRD-040` | hash entspricht nicht dem Pattern (6-16 hex ODER `PLACEHOLDER\d{3}`) |
-| `GRD-041` | ts entspricht nicht dem Pattern (ISO 8601 mit `-` statt `:`) |
-| `GRD-042` | persona ist weder `'neutral'` noch `<base>--<lens>` (zwei lower-kebab-Slugs) |
+| `GRD-040` | hash does not match the pattern (6-16 hex OR `PLACEHOLDER\d{3}`) |
+| `GRD-041` | ts does not match the pattern (ISO 8601 with `-` instead of `:`) |
+| `GRD-042` | persona is neither `'neutral'` nor `<base>--<lens>` (two lower-kebab slugs) |
 
 ---
 
-## Lokation
+## Location
 
-Files landen im **gitignored** Folder (Memo 082 Kap 4.6):
+Files land in the **gitignored** folder:
 
 - Single: `grading-data/single/<ns>--<tool>/gradings/<filename>`
 - Selection: `grading-data/selection/<sel>/gradings/<filename>`
 
-Beide Folder-Aeste werden von `.gitignore` ausgeschlossen — Grading-Outputs landen niemals im Public Repo.
+Both folder branches are excluded by `.gitignore` — grading outputs never land in the public repo.
 
 ---
 
 ## Backward-Compat (No FS Overwrites)
 
-Bestehende Pilot-Files mit dem alten Pattern `PLACEHOLDER\d{3}--<ts>.json` (ohne `persona`-Segment) werden **nicht** geloescht oder umbenannt (Memo-Regel „No FS Overwrites Without Ask"). Sie bleiben lesbar via `Grading.readEntry({ json })`, das fehlende Loop-Felder mit Defaults (`iteration: 0`, `improvementHints: []`, `persona: 'neutral'`) befuellt — read-only.
+Existing pilot files using the old pattern `PLACEHOLDER\d{3}--<ts>.json` (without a `persona` segment) are **not** deleted or renamed (the "No FS Overwrites Without Ask" rule). They remain readable via `Grading.readEntry({ json })`, which fills missing loop fields with defaults (`iteration: 0`, `improvementHints: []`, `persona: 'neutral'`) — read-only.
 
 ---
 
-## Referenzen
+## References
 
-- Memo 082 REV-05 Kap 4.3 (Diagramm Save-Step), Kap 4.6 (Folder-Typen), Kap 7.4 (Persona-Anwendung), Kap 13 (Persona-Slug-Konvention)
-- PRD-20 (gradings-JSON Erweiterung: iteration, improvementHints, persona)
-- PRD-14 (Generator-Skills — apply-improvement verwendet diesen Helper)
-- Spec `19-folder-layout.md` §17 (Naming-Konvention `<gradingId>.json`)
+- Spec `19-folder-layout.md` §17 (naming convention `<gradingId>.json`)

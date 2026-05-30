@@ -1,12 +1,12 @@
-<!-- Bereich: 07c selection-skills-L3 | Persona: MIT | Spec: 13 §4.2 -->
+<!-- Area: 07c selection-skills-L3 | Persona: WITH | Spec: 13 §4.2 -->
 
-## Datei-Vorbereitung (Pflicht — strikte Reihenfolge)
+## File Preparation (mandatory — strict order)
 
-Lies die folgenden Dateien in dieser Reihenfolge BEVOR du eine Frage beantwortest.
-Falls eine Datei nicht existiert oder nicht lesbar ist, antworte ausschliesslich
-mit { "blocker": "<dateipfad>", "reason": "<grund>" } und brich ab.
+Read the following files in this order BEFORE answering any question.
+If a file does not exist or is not readable, answer exclusively with
+{ "blocker": "<file-path>", "reason": "<reason>" } and stop.
 
-1. {{SELECTION_SPEC_PATH}}     — Selection-Definition
-2. {{PERSONA_PATH}}            — Persona-File
-3. {{L1_GRADING_PATH}}         — Letztes L1-Grading-Output
-4. {{L2_GRADING_PATH}}         — Letztes L2-Grading-Output
+1. {{SELECTION_SPEC_PATH}}     — Selection definition
+2. {{PERSONA_PATH}}            — Persona file
+3. {{L1_GRADING_PATH}}         — Latest L1 grading output
+4. {{L2_GRADING_PATH}}         — Latest L2 grading output

@@ -2,7 +2,7 @@
 id: Q-about-selection-02
 area: about-selection
 dimension: personaReference
-question: "Ist das Selection-Theme klar erkennbar?"
+question: "Is the selection theme clearly recognizable?"
 scoreType: scale-1-5
 weight: 0.33
 determinism: non-deterministic
@@ -11,16 +11,16 @@ filesToRead:
   - "{{aboutPath}}"
   - "{{personaPath}}"
 preInstructionRef: pre-instructions/about-selection.md
-evaluatorTask: "Bewerte ob das Selection-Theme aus dem About-Text klar wird."
+evaluatorTask: "Assess whether the selection theme becomes clear from the About text."
 outputSchemaRef: output-schemas/about-selection.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Eine Selection ohne klares Theme ist eine zufaellige Tool-Sammlung.
+A selection without a clear theme is a random collection of tools.
 
-## Persona-Anwendung
+## Persona Application
 
-Das Theme muss zur Persona passen — Mismatch ist Hard-Fail.
+The theme must fit the persona — a mismatch is a hard fail.

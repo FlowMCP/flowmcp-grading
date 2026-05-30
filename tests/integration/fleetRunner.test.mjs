@@ -1,5 +1,5 @@
 /**
- * Integration tests for FleetRunner (PRD-25, Memo 082 Phase 5).
+ * Integration tests for FleetRunner.
  *
  * Eight required tests:
  *   1. Happy-path — 7 members × N areas, sequential order, output paths under outputBase.
@@ -125,7 +125,7 @@ const prepareCase = async ( { allStable } ) => {
 }
 
 
-describe( 'FleetRunner.run (PRD-25)', () => {
+describe( 'FleetRunner.run', () => {
     test( '1) happy-path: 7 members × N areas, sequential, outputs under outputBase', async () => {
         await prepareCase( { allStable: true } )
         const areas = [ 'single-test', 'tools-aggregate-schema' ]
@@ -335,7 +335,7 @@ describe( 'FleetRunner.run (PRD-25)', () => {
 } )
 
 
-// Sanity: known areas lists (helps maintain Kap 7.4 mapping)
+// Sanity: known areas lists (helps maintain the persona-application mapping)
 describe( 'FleetRunner area constants', () => {
     test( 'neutral and persona area sets are disjoint and complete', () => {
         const overlap = NEUTRAL_AREAS

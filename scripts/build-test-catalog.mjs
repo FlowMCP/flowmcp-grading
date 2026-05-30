@@ -90,16 +90,16 @@ class TestCatalogBuilder {
             : new Date().toISOString()
 
         const lines = [
-            '# Code-Test-Katalog (autogeneriert)',
+            '# Code Test Catalog (auto-generated)',
             '',
-            '> Quelle: `prompts/generated/questions.json` — generiert via `scripts/build-test-catalog.mjs`',
-            '> Beantwortete Frage F5 (REV-03) — Katalog wird aus Fragen abgeleitet, NICHT manuell.',
+            '> Source: `prompts/generated/questions.json` — generated via `scripts/build-test-catalog.mjs`',
+            '> The catalog is derived from the questions, NOT maintained manually.',
             `> generatedAt: ${generatedAt}`,
             '',
-            '## Mapping Frage → Code-Test-Bucket',
+            '## Mapping Question → Code-Test-Bucket',
             '',
-            '| Frage-ID | Area | Dimension | Determinism | Code-Test-Bucket |',
-            '|----------|------|-----------|-------------|------------------|'
+            '| Question-ID | Area | Dimension | Determinism | Code-Test-Bucket |',
+            '|-------------|------|-----------|-------------|------------------|'
         ]
 
         struct.mapping

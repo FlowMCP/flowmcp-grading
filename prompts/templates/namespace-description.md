@@ -20,16 +20,16 @@ version: 1.0.0
 
 ## Question(s)
 
-Bewerte die Klarheit der Namespace-Identitaet `{{NAMESPACE}}`. Pruefe ob die
-Beschreibung die Identitaet objektiv eindeutig macht — neutral, kein
-Persona-Bezug. Antworte nur auf Basis der gelesenen Files — keine
-Web-Recherche, keine Annahmen.
+Evaluate the clarity of the namespace identity `{{NAMESPACE}}`. Check whether
+the description makes the identity objectively unambiguous — neutral, with no
+persona reference. Answer only on the basis of the files you have read — no
+web research, no assumptions.
 
 {{QUESTIONS_BLOCK}}
 
 ## Output Schema
 
-Die Antwort MUSS exakt dem JSON-Schema unter `{{OUTPUT_SCHEMA_REF}}` entsprechen.
-Bei Datei-Lese-Fehler antworte ausschliesslich mit:
-`{ "blocker": "<dateipfad>", "reason": "<grund>" }`
-und brich ab.
+The answer MUST conform exactly to the JSON schema at `{{OUTPUT_SCHEMA_REF}}`.
+On a file-read error, answer exclusively with:
+`{ "blocker": "<file-path>", "reason": "<reason>" }`
+and stop.

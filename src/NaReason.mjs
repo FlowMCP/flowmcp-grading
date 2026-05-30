@@ -1,9 +1,8 @@
 /**
  * NaReason — closed-set validator for `gradings[i].naReason` fields.
  *
- * Memo 080 anchor:
- *   Kap 12 (Scope-Whitelist) — n/a-Konvention mit Standard-Reasons
- *   Spec 1.1.0 §5.3 (added by PRD-20)
+ * Per the grading spec:
+ *   - Scope whitelist defines the n/a convention with standard reasons.
  *
  * Closed set of six allowed `naReason` values. Any free-text reason is
  * rejected with NA-001. The validator is static, takes object params,

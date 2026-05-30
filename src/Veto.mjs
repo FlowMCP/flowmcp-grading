@@ -1,7 +1,7 @@
 /**
  * Veto — categorical-veto logic.
  *
- * Closed trigger list per Memo 076 Z. 279:
+ * Closed trigger list per the grading spec:
  *   1. malicious-module
  *   2. api-key-domain-mismatch
  *   3. illegal-content
@@ -9,11 +9,11 @@
  *
  * Static methods only, object params, object returns. NO SILENT DEFAULTS.
  *
- * Memo 076 anchors:
- *   Z. 279 — Closed trigger list
- *   Z. 281 — evidence required for categoricalVeto
- *   Z. 292 — REJECTED overrides aggregation; maxAttainableGrade stays cosmetic
- *   Z. 373 — reasoning required for ai-security-veto trigger
+ * Per the grading spec:
+ *   - The trigger list is closed.
+ *   - evidence is required for categoricalVeto.
+ *   - REJECTED overrides aggregation; maxAttainableGrade stays cosmetic.
+ *   - reasoning is required for the ai-security-veto trigger.
  */
 
 const VALID_TRIGGERS = Object.freeze( [

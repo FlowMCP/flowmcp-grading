@@ -2,7 +2,7 @@
 id: Q-tools-aggregate-schema-04
 area: tools-aggregate-schema
 dimension: requiredServerParamsConsistent
-question: "Sind die requiredServerParams ueber alle Routes konsistent identisch?"
+question: "Are the requiredServerParams consistently identical across all routes?"
 scoreType: scale-1-5
 weight: 0.25
 determinism: non-deterministic
@@ -10,13 +10,13 @@ tier: P4
 filesToRead:
   - "{{schemaPath}}"
 preInstructionRef: pre-instructions/tools-aggregate-schema.md
-evaluatorTask: "Pruefe ob alle Routes denselben Satz requiredServerParams nutzen."
+evaluatorTask: "Check whether all routes use the same set of requiredServerParams."
 outputSchemaRef: output-schemas/tools-aggregate-schema.schema.json
 personaRequired: false
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Wenn `route-A` `API_KEY` braucht, `route-B` aber `SECRET_KEY`, ist das ein
-Architektur-Indiz, dass die Routes nicht in dasselbe Schema gehoeren.
+If `route-A` needs `API_KEY` but `route-B` needs `SECRET_KEY`, that is an
+architectural sign that the routes do not belong in the same schema.

@@ -1,89 +1,89 @@
 ---
 name: namespace-description-evaluate
-description: Evaluator-Skill fuer Bereich namespace-description (Area 3, Memo 082 Kap 7.1). Empfaengt das vom Generator-Skill namespace-description-start-grade erzeugte Prompt-Artefakt und orchestriert einen frischen LLM-Sub-Agent in leerem Kontext. Erzwingt Strict-JSON-Output gemaess prompts/output-schemas/namespace-description.schema.json. Persona-Anwendung gemaess Kap 7.4 — Bereich 3 ist NEUTRAL (personaRequired: false).
+description: Evaluator skill for the namespace-description area. Receives the prompt artifact produced by the generator skill namespace-description-start-grade and orchestrates a fresh LLM sub-agent in an empty context. Enforces strict-JSON output per prompts/output-schemas/namespace-description.schema.json. The namespace-description area is graded neutrally (personaRequired: false).
 allowed-tools: Read, Grep, Glob
 model: inherit
 ---
 
 # namespace-description-evaluate
 
-## Zweck
+## Purpose
 
-Dieser Skill wird vom Generator-Skill `namespace-description-start-grade` aufgerufen. Er empfaengt das vom `PromptBuilder.build(...)` erzeugte Prompt-Artefakt per Tool-Result und orchestriert einen **frischen Sub-Agent** zur Bewertung.
+This skill is invoked by the generator skill `namespace-description-start-grade`. It receives the prompt artifact produced by `PromptBuilder.build(...)` via tool result and orchestrates a **fresh sub-agent** for the evaluation.
 
 ## Input
 
-Vom Aufrufer (`namespace-description-start-grade`) wird ein einziger String uebergeben:
+The caller (`namespace-description-start-grade`) passes a single string:
 
-| Parameter | Pflicht | Format | Quelle |
-|-----------|---------|--------|--------|
-| `promptArtifact` | ja | String | `PromptBuilder.build(...)` aus PRD-04 (Phase 2d) |
+| Parameter | Required | Format | Source |
+|-----------|----------|--------|--------|
+| `promptArtifact` | yes | String | `PromptBuilder.build(...)` |
 
-Quelle der Pflicht-Block-Logik: `prompts/pre-instructions/namespace-description.md` (PRD-09/10, Phase 2d).
+Source of the mandatory-block logic: `prompts/pre-instructions/namespace-description.md`.
 
-## Architektur-Rolle (Memo 082 Kap 4.2/4.3)
+## Architectural role
 
-- Generator-Skill `namespace-description-start-grade` kennt das Optimierungsziel und treibt den Loop.
-- Dieser Evaluator-Skill darf das Optimierungsziel **NICHT** in den Sub-Agent-Kontext einspeisen.
-- Der Sub-Agent sieht ausschliesslich:
-  1. Den Files-to-Read-Block aus dem Prompt-Artefakt
-  2. Die Eval-Fragen des Bereichs `namespace-description`
-  3. Das Output-Schema `prompts/output-schemas/namespace-description.schema.json`
-  4. Den Persona-Block (nur wenn `personaRequired: true`; bei `namespace-description` LEER)
+- The generator skill `namespace-description-start-grade` knows the optimization goal and drives the loop.
+- This evaluator skill must **NOT** feed the optimization goal into the sub-agent context.
+- The sub-agent sees only:
+  1. The files-to-read block from the prompt artifact
+  2. The eval questions for the `namespace-description` area
+  3. The output schema `prompts/output-schemas/namespace-description.schema.json`
+  4. The persona block (only when `personaRequired: true`; for `namespace-description` this is EMPTY)
 
-## Sub-Agent-Konfiguration (Memo 082 Kap 11)
+## Sub-agent configuration
 
-- **Kontext:** LEER. Keine Vor-Session-Memory, keine globale `CLAUDE.md`, keine laufende Optimierungs-History.
-- **Tools:** NUR `Read`, `Grep`, `Glob` (siehe `allowed-tools` Frontmatter). Kein `Write`, kein `Bash`, kein `Edit`.
-- **Output:** Strict-JSON gemaess `prompts/output-schemas/namespace-description.schema.json`.
-- **Persona-Anwendung (Kap 7.4):** `personaRequired: false`. Bereich `namespace-description` wird **neutral** bewertet. `persona`-Feld im Output ist `null`.
+- **Context:** EMPTY. No prior-session memory, no global `CLAUDE.md`, no running optimization history.
+- **Tools:** ONLY `Read`, `Grep`, `Glob` (see the `allowed-tools` frontmatter). No `Write`, no `Bash`, no `Edit`.
+- **Output:** Strict JSON per `prompts/output-schemas/namespace-description.schema.json`.
+- **Persona application:** `personaRequired: false`. The `namespace-description` area is graded **neutrally**. The `persona` field in the output is `null`.
 
-## Ablauf
+## Procedure
 
-1. **Empfangen** — Generator uebergibt das Prompt-Artefakt (String) per Tool-Result.
-2. **Pre-Check Files-to-Read** — Pruefe, ob alle gelisteten Pfade existieren. Bei Fehler **AUSSCHLIESSLICH**:
+1. **Receive** — the generator hands over the prompt artifact (string) via tool result.
+2. **Pre-check files-to-read** — check that all listed paths exist. On error return **ONLY**:
 
    ```json
-   { "blocker": "<pfad>", "reason": "<grund>" }
+   { "blocker": "<path>", "reason": "<reason>" }
    ```
 
-   und abbrechen (Kap 8).
-3. **Sub-Agent starten** — Frischer Sub-Agent mit leerem Kontext.
-4. **Files lesen** — Sub-Agent liest die Files-to-Read in **strikter Reihenfolge**.
-5. **Fragen beantworten** — Sub-Agent beantwortet jede Eval-Frage des Bereichs `namespace-description`.
-6. **HTTP-Status-Auswertung** — Falls relevant: 4xx = **NIEMALS** PASS (Memory `feedback_http_400_is_not_pass`).
-7. **Strict-JSON validieren** — Bei Verletzung: `{ "blocker": "schema-validation", "reason": "<details>" }`.
-8. **Rueckgabe** — Per Tool-Result an `namespace-description-apply-improvement` (PRD-16).
+   and abort.
+3. **Start sub-agent** — fresh sub-agent with empty context.
+4. **Read files** — the sub-agent reads the files-to-read in **strict order**.
+5. **Answer questions** — the sub-agent answers every eval question for the `namespace-description` area.
+6. **HTTP status evaluation** — where relevant: 4xx is **NEVER** PASS.
+7. **Validate strict JSON** — on violation: `{ "blocker": "schema-validation", "reason": "<details>" }`.
+8. **Return** — via tool result to `namespace-description-apply-improvement`.
 
-## Output-Format
+## Output format
 
-Strict-JSON gemaess `prompts/output-schemas/namespace-description.schema.json`. Pflichtfelder:
+Strict JSON per `prompts/output-schemas/namespace-description.schema.json`. Required fields:
 
-| Feld | Typ | Wert / Constraint |
-|------|-----|--------------------|
+| Field | Type | Value / constraint |
+|-------|------|--------------------|
 | `gradingId` | string | `<schemaHash>--<ISO timestamp>` |
 | `schemaHash` | string | 8-hex sha256 prefix |
 | `area` | const | `"namespace-description"` |
 | `iteration` | integer | 1..5 |
 | `timestamp` | string | ISO-8601 |
 | `persona` | null | `null` (NEUTRAL) |
-| `answers` | array | 4 Eintraege (Q-namespace-description-01..04) |
-| `improvementHints` | array | Optional |
+| `answers` | array | 4 entries (Q-namespace-description-01..04) |
+| `improvementHints` | array | optional |
 
-Bei Blocker:
+On blocker:
 
 ```json
-{ "blocker": "<dateipfad-oder-stufe>", "reason": "<klartext>" }
+{ "blocker": "<file-path-or-stage>", "reason": "<plain text>" }
 ```
 
-## Sicherheits-Assertions
+## Safety assertions
 
-1. Der Sub-Agent KENNT das Optimierungsziel NICHT.
-2. Keine stillen Defaults — fehlende Felder werden als `missing` markiert.
-3. HTTP 4xx = FAIL/DEFECT, niemals PASS.
+1. The sub-agent does NOT know the optimization goal.
+2. No silent defaults — missing fields are marked as `missing`.
+3. HTTP 4xx = FAIL/DEFECT, never PASS.
 
-## Verschaltung
+## Wiring
 
-- **Aufrufer:** `namespace-description-start-grade` (PRD-15, Phase 2f)
-- **Konsument:** `namespace-description-apply-improvement` (PRD-16)
-- **Spec-Bezug:** Spec 1.1.0 §3, §19
+- **Caller:** `namespace-description-start-grade`
+- **Consumer:** `namespace-description-apply-improvement`
+- **Spec reference:** the FlowMCP specification — validity rules and folder layout.

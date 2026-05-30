@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://flowmcp.org/grading/output-schemas/namespace-skills.schema.json",
     "title": "Evaluator-Response — namespace-skills",
-    "description": "Area 8 (Memo 082 Kap 7.1, Spec 13 §3) — Namespace-Skill. Persona Pflicht (Kap 7.4).",
+    "description": "Area 8 (Spec 13 §3) — namespace skill. Persona required.",
     "oneOf": [
         {
             "$ref": "_master.schema.json#/$defs/blocker"

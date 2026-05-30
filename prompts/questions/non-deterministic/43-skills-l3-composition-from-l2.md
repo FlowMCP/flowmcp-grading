@@ -2,7 +2,7 @@
 id: Q-selection-skills-L3-02
 area: selection-skills-L3
 dimension: skillAdequacy
-question: "Ist die L3-Composition aus L2-Skills logisch aufgebaut?"
+question: "Is the L3 composition built logically from L2 skills?"
 scoreType: scale-1-5
 weight: 0.33
 determinism: non-deterministic
@@ -11,16 +11,16 @@ filesToRead:
   - "{{skillPath}}"
   - "{{l2SkillsPath}}"
 preInstructionRef: pre-instructions/selection-skills-L3.md
-evaluatorTask: "Pruefe ob L3 sinnvoll auf L2-Skills aufbaut (nicht direkt L1)."
+evaluatorTask: "Check whether L3 builds sensibly on L2 skills (not directly on L1)."
 outputSchemaRef: output-schemas/selection-skills-L3.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Hierarchie ist Architektur-Prinzip; L3 ueberspringt L2 nur in Ausnahmen.
+The hierarchy is an architectural principle; L3 skips L2 only in exceptional cases.
 
-## Persona-Anwendung
+## Persona Application
 
-Persona-Workflow als Architektur-Begruendung.
+The persona workflow serves as the architectural justification.

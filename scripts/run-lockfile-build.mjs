@@ -1,8 +1,8 @@
 // Build (or refresh) selection.lock.json for crypto-domain-full.
 //
-// Memo 080 PRD-18 §4.2 — invokes SelectionLockfile.generate (PRD-13).
+// Invokes SelectionLockfile.generate.
 // Reports a clear PRE-CONDITION-BLOCK message when not all members are stable
-// (Memo 080 Kap 5 Voraussetzungen 1-6).
+// (see the selection pre-conditions).
 //
 // Flags:
 //   --strict   — exit code 2 if any member is not 'stable'
@@ -67,7 +67,7 @@ const main = async () => {
             .map( ( m ) => m.schemaId )
         console.error( '' )
         console.error( 'PRE-CONDITION-BLOCK — Cannot proceed with selection-grading:' )
-        console.error( `  ${totals.pending} of ${totals.total} members are NOT 'stable' (Memo 080 Kap 5 Voraussetzungen 1-6).` )
+        console.error( `  ${totals.pending} of ${totals.total} members are NOT 'stable' (see selection pre-conditions).` )
         console.error( '  pending namespaces:' )
         pendingList
             .slice( 0, 10 )
@@ -77,11 +77,11 @@ const main = async () => {
         }
         console.error( '' )
         console.error( 'Resolution:' )
-        console.error( '  1. Run Single-Full-Gradings (PRD-18):' )
+        console.error( '  1. Run the single full gradings:' )
         console.error( '     node scripts/batch-single-gradings-phase-4.mjs --mode=grade' )
         console.error( '     (or per member: --single=<schemaId>)' )
         console.error( '  2. Re-run this script to refresh the lockfile.' )
-        console.error( '  3. Then run PRD-19 selection-grading.' )
+        console.error( '  3. Then run the selection grading.' )
 
         // Update selection.json.selectionHash with the lockfile-computed value
         // so the data layer stays in sync (a no-op if hashes already match).
@@ -92,7 +92,7 @@ const main = async () => {
     }
 
     await syncSelectionHash( { lockfile, verbose } )
-    console.error( '[lockfile] OK — all members stable. PRD-19 selection-grading can proceed.' )
+    console.error( '[lockfile] OK — all members stable. Selection-grading can proceed.' )
 }
 
 

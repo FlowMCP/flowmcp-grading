@@ -2,7 +2,7 @@
 id: Q-about-namespace-01
 area: about-namespace
 dimension: aboutRouteExists
-question: "Existiert eine About-Route im Namespace und ist sie technisch erreichbar?"
+question: "Does an About route exist in the namespace and is it technically reachable?"
 scoreType: boolean
 weight: 0.34
 determinism: deterministic
@@ -10,19 +10,19 @@ tier: P6
 filesToRead:
   - "{{aboutPath}}"
 preInstructionRef: pre-instructions/about-namespace.md
-evaluatorTask: "Pruefe das Vorhandensein einer About-Route und ob sie HTTP 200 zurueckgibt."
+evaluatorTask: "Check for the presence of an About route and whether it returns HTTP 200."
 outputSchemaRef: output-schemas/about-namespace.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Eine fehlende About-Route bedeutet: Kein Persona-Reference-Content vorhanden.
-Spec 11 §4 verlangt About-Inhalt pro Namespace.
+A missing About route means no persona-reference content is present.
+The specification requires About content per namespace.
 
-## Persona-Anwendung
+## Persona Application
 
-Persona wird auf den About-Content angewendet (Inhalts-Bewertung erfolgt in non-det-Fragen).
-Diese deterministische Frage prueft nur die Existenz — bleibt aber im Persona-Bereich,
-weil der gesamte Bereich Persona-getrieben ist (Kap 7.4).
+The persona is applied to the About content (content evaluation happens in the
+non-deterministic questions). This deterministic question only checks existence,
+but it stays in the persona area because the entire area is persona-driven.

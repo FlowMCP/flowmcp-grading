@@ -5,39 +5,38 @@ enforced: true
 appliesTo: all (frontmatter-driven)
 ---
 
-## Regel
+## Rule
 
-Ein Persona-Block DARF nur in Templates eingesetzt werden, deren Frontmatter
-`personaRequired: true` setzt. Bei `personaRequired: false` wird der
-`{{PERSONA_BLOCK}}`-Placeholder durch eine **leere Sektion mit
-Marker-Kommentar** ersetzt — nicht still durch Leerstring.
+A persona block MAY only be used in templates whose frontmatter sets
+`personaRequired: true`. With `personaRequired: false`, the
+`{{PERSONA_BLOCK}}` placeholder is replaced by an **empty section with a
+marker comment** — not silently by an empty string.
 
-## Begruendung
+## Rationale
 
-Memo 082 Kap 7.4 Persona-Anwendungs-Tabelle. Tools (Bereiche 1, 2, 3, 4)
-werden neutral bewertet, Skills + About (Bereiche 5, 6, 7a/b/c, 8) mit
-Persona. Mischung verfaelscht Ergebnisse und macht Personas-Bedarf
-nicht-transparent.
+Per the persona-application table in the grading spec. Tools (areas 1, 2, 3, 4)
+are evaluated neutrally; skills + About (areas 5, 6, 7a/b/c, 8) are evaluated
+with a persona. Mixing them distorts the results and makes the persona
+requirement non-transparent.
 
-## Durchsetzung im PromptBuilder
+## Enforcement in the PromptBuilder
 
-PromptBuilder liest `personaRequired` aus dem Template-Frontmatter.
-Bei `false`: Persona-Block wird ersetzt durch:
+PromptBuilder reads `personaRequired` from the template frontmatter.
+With `false`: the persona block is replaced by:
 
 ```text
-<!-- Persona-Block bewusst leer: dieser Bereich wird neutral bewertet
-     (Memo 082 Kap 7.4). -->
+<!-- Persona block intentionally empty: this area is evaluated neutrally. -->
 ```
 
-Bei `true`: Builder verlangt `basePersona` und `lens` als Parameter; fehlt
-eines, Build-Fehler `PB-201: personaRequired=true, but persona|lens not
-provided`. Umgekehrte Verletzung (Persona uebergeben bei
+With `true`: the builder requires `basePersona` and `lens` as parameters; if
+one is missing, build error `PB-201: personaRequired=true, but persona|lens not
+provided`. Reverse violation (persona supplied with
 `personaRequired: false`): `PB-202: persona parameters supplied for neutral
 area`.
 
-## Verletzungs-Beispiele
+## Violation Examples
 
-- Bereich-1-Template (Neutral) wird mit Persona-Parametern aufgerufen
-- Bereich-5-Template (MIT Persona) wird ohne Persona aufgerufen
-- Persona-Block bleibt versehentlich als `{{PERSONA_BLOCK}}` im
-  final-Prompt
+- An area-1 template (neutral) is called with persona parameters
+- An area-5 template (with persona) is called without a persona
+- The persona block is accidentally left as `{{PERSONA_BLOCK}}` in the
+  final prompt

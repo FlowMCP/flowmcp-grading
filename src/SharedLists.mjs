@@ -1,13 +1,13 @@
 /**
  * SharedLists — loader + hash binding for shared-lists/.
  *
- * Memo 080 anchors:
- *   Kap 12 — Shared Lists "sekundaer in-scope"
- *   Kap 2  — Folder-Layout `shared-lists/<listname>/<hash>--v<X.Y.Z>.json`
- *   Spec 1.1.0 §17.3 (Naming-Konventionen) — `<hash>--v<X.Y.Z>.json`
+ * Per the grading spec:
+ *   - Shared lists are secondary in-scope.
+ *   - Folder layout: `shared-lists/<listname>/<hash>--v<X.Y.Z>.json`.
+ *   - Naming convention: `<hash>--v<X.Y.Z>.json`.
  *
- * Hash pipeline reuses HashGenerator (PRD-10): canonical JSON + sha256(8).
- * Bump rule: any list-entry change -> Patch bump (Spec §10 / Memo Kap 10).
+ * Hash pipeline reuses HashGenerator: canonical JSON + sha256(8).
+ * Bump rule: any list-entry change -> Patch bump.
  *
  * NO SILENT DEFAULTS. Static methods only, object params, object returns.
  */

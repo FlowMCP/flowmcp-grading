@@ -2,7 +2,7 @@
 /**
  * migrate-080-phase-5-shared-lists.mjs
  *
- * Memo 080 Phase 5 PRD-20 — migrate shared-lists from flowmcp-schemas-private
+ * Migrate shared-lists from flowmcp-schemas-private
  * into grading-data/shared-lists/<listname>/<hash>--v<X.Y.Z>.json.
  *
  * Sources (Phase 5 initial batch):
@@ -86,7 +86,7 @@ async function migrateOne( { target, gradingDataRoot, dryRun } ) {
         'frozen reference used by Grading-Pipelines and is hashed via',
         '`HashGenerator.computeHash` (sha256, 8-hex prefix).',
         '',
-        'Bump rule (Memo 080 Kap 10): any entry change = Patch bump.',
+        'Bump rule: any entry change = Patch bump.',
         ''
     ]
         .join( '\n' )

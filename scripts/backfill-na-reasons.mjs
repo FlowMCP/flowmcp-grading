@@ -2,12 +2,12 @@
 /**
  * backfill-na-reasons.mjs
  *
- * Memo 080 Phase 5 PRD-20 — backfill `naReason` on existing pilot gradings.
+ * Backfill `naReason` on existing pilot gradings.
  *
- * The three pilot gradings (Memo 076 PRD-25 stubs) carry `score: "n/a"` but
+ * The three pilot gradings (early stubs) carry `score: "n/a"` but
  * predate the closed-set `naReason` convention introduced in `gradingSpec/1.1.0`
  * §5.3. This script adds `naReason: "blocked-by-precondition"` to each `n/a`
- * dimension entry that lacks a `naReason` — pilots were blocked by Phase 7 scope
+ * dimension entry that lacks a `naReason` — pilots were blocked by scope
  * (no live LLM/ToS execution), which maps directly to that closed-set value.
  *
  * Idempotent: existing closed-set `naReason` values are preserved; free-text

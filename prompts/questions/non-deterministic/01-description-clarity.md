@@ -2,7 +2,7 @@
 id: Q-single-test-04
 area: single-test
 dimension: descriptionClarity
-question: "Ist die Tool-Description ohne Marketing-Begriffe?"
+question: "Is the tool description free of marketing terms?"
 scoreType: scale-1-5
 weight: 0.34
 determinism: non-deterministic
@@ -10,19 +10,19 @@ tier: P2
 filesToRead:
   - "{{schemaPath}}"
 preInstructionRef: pre-instructions/single-test.md
-evaluatorTask: "Bewerte die Description-Klarheit. Anti-Pattern: Buzzwords, Adjektive ohne Substanz, Superlative."
+evaluatorTask: "Assess the clarity of the description. Anti-patterns: buzzwords, adjectives without substance, superlatives."
 outputSchemaRef: output-schemas/single-test.schema.json
 personaRequired: false
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Marketing-Sprache verzerrt die User-Erwartung an das Tool. Eine Description sollte
-deskriptiv sein ("Returns contract metadata"), nicht werblich ("Powerful contract API").
+Marketing language distorts the user's expectation of the tool. A description should
+be descriptive ("Returns contract metadata"), not promotional ("Powerful contract API").
 
 ## Anti-Pattern
 
 - "Powerful", "Advanced", "Easy-to-use"
-- Superlative ohne Beleg
-- Adjektive ohne technische Information
+- Superlatives without evidence
+- Adjectives without technical information

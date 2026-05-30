@@ -1,6 +1,6 @@
 // Generate namespace-about pages for crypto-domain-full members.
 //
-// Memo 080 PRD-17:
+// Behavior:
 //   - reads each <namespace>'s schemas from flowmcp-schemas-private
 //   - extracts main.description, tools (name, description, required params)
 //   - emits canonical Markdown:

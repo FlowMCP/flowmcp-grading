@@ -5,31 +5,29 @@ enforced: true
 appliesTo: all
 ---
 
-## Regel
+## Rule
 
-Templates, Pre-Instructions und Persona-Blocks DUERFEN keine stillen Defaults
-enthalten (`x || "default"`, leere Placeholder-Fallbacks). Alle Parameter
-MUESSEN explizit gefuellt sein oder ein Build-Fehler ausgeloest werden.
+Templates, pre-instructions, and persona blocks MUST NOT contain silent
+defaults (`x || "default"`, empty placeholder fallbacks). All parameters MUST
+be filled explicitly, or a build error MUST be raised.
 
-## Begruendung
+## Rationale
 
-FlowMCP-Memory `feedback_no_hidden_defaults` + `feedback_no_silent_defaults`
-(Verweis aus CLAUDE.md). Stille Defaults verzerren Eval-Ergebnisse und sind
-nicht reproduzierbar. Die Persona-Optional-Logik (Memo 082 Kap 7.4) ist
-eine explizit deklarierte Variation, kein stiller Default.
+No-hidden-defaults and no-silent-defaults are project standards. Silent
+defaults distort eval results and are not reproducible. The persona-optional
+logic is an explicitly declared variation, not a silent default.
 
-## Durchsetzung im PromptBuilder
+## Enforcement in the PromptBuilder
 
-PromptBuilder wirft Fehler bei nicht-fuellbaren `{{...}}`-Placeholdern.
-Kein automatischer Leerstring-Ersatz. Persona-Block bei
-`personaRequired: false` wird durch eine **explizit deklarierte**
-Leerstring-Logik ersetzt (siehe Memo 082 Kap 7.4 Konsequenz-Absatz). Error-Code:
-`PB-104: placeholder unfilled — no silent default permitted`.
+PromptBuilder throws an error on `{{...}}` placeholders that cannot be filled.
+No automatic empty-string substitution. With `personaRequired: false`, the
+persona block is replaced by an **explicitly declared** empty-string logic.
+Error code: `PB-104: placeholder unfilled — no silent default permitted`.
 
-## Verletzungs-Beispiele
+## Violation Examples
 
-- `PromptBuilder` enthaelt `template.replace("{{X}}", value || "")` — still
-- Frontmatter `personaRequired: false` ohne explizite Leer-Block-Markierung
-  im Template-Body
-- Files-to-Read-Liste enthaelt optionalen Pfad ohne
-  `{{IF_PRESENT}}`-Marker
+- `PromptBuilder` contains `template.replace("{{X}}", value || "")` — silent
+- Frontmatter `personaRequired: false` without an explicit empty-block marker
+  in the template body
+- Files-to-read list contains an optional path without an
+  `{{IF_PRESENT}}` marker

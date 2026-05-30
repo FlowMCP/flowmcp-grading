@@ -1,6 +1,6 @@
 // Discover crypto-relevant namespaces from flowmcp-schemas-private.
 //
-// Memo 080 PRD-15 §4.1 — deterministic enumeration:
+// Deterministic enumeration:
 //   - reads `repos/flowmcp-schemas-private/schemas/v4.0.0/providers/`
 //   - filters by whitelisted crypto namespaces (4 categories)
 //   - sorts alphabetically

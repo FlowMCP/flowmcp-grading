@@ -2,7 +2,7 @@
 id: Q-tools-aggregate-schema-02
 area: tools-aggregate-schema
 dimension: namingConsistency
-question: "Ist das Route-Naming konsistent ueber alle Routes im Schema?"
+question: "Is the route naming consistent across all routes in the schema?"
 scoreType: scale-1-5
 weight: 0.25
 determinism: non-deterministic
@@ -10,13 +10,13 @@ tier: P4
 filesToRead:
   - "{{schemaPath}}"
 preInstructionRef: pre-instructions/tools-aggregate-schema.md
-evaluatorTask: "Pruefe ob alle Route-Namen demselben Naming-Pattern folgen (Praefix, Casing, Wortwahl)."
+evaluatorTask: "Check whether all route names follow the same naming pattern (prefix, casing, word choice)."
 outputSchemaRef: output-schemas/tools-aggregate-schema.schema.json
 personaRequired: false
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Inkonsistentes Naming (`getUser`, `list_accounts`, `searchTx`) zwingt den User zum
-Memorieren. Einheitliches Pattern macht das Schema vorhersagbar.
+Inconsistent naming (`getUser`, `list_accounts`, `searchTx`) forces the user to
+memorize. A uniform pattern makes the schema predictable.

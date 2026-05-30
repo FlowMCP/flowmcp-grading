@@ -3,82 +3,82 @@
 # flowmcp-grading
 
 Reference implementation of the FlowMCP Grading-Spec. The active spec is `gradingSpec/1.1.0`
-(Memo 076 base, extended by Memo 080 with the Source-of-Truth layout and the Pre-Condition rule).
+(extended with the Source-of-Truth layout and the Pre-Condition rule).
 The repository hosts the spec documents (`flowmcp-spec/grading/1.1.0/`), the source modules that implement Scoring,
 Grading, and Veto logic, LLM grader prompts, and the unit test suite. The spec is a **living
 document** and evolves with the FlowMCP schema corpus.
 
 ## Documentation
 
-Das Repo dokumentiert zwei strukturell verschiedene Test-Artefakte:
+This repo documents two structurally different test artifacts:
 
-- **[Code-Test-Katalog](./docs/test-catalog.md)** — Jest-Tests, die die Engine
-  selbst absichern. Laeuft via `npm test`. Statischer, manuell kuratierter Index.
-- **[Eval-Frage-Katalog](./docs/question-catalog.md)** — Fragen, die ein
-  LLM-Sub-Agent waehrend eines Gradings beantwortet. Autogeneriert aus
+- **[Code Test Catalog](./docs/test-catalog.md)** — Jest tests that protect the engine
+  itself. Runs via `npm test`. Static, manually curated index.
+- **[Eval Question Catalog](./docs/question-catalog.md)** — questions that an
+  LLM sub-agent answers during a grading. Auto-generated from
   `prompts/generated/questions.json` via `npm run build:question-catalog-doc`.
 
-Beide Artefakte sind komplementaer: Code-Tests pruefen die Engine, Eval-Fragen
-pruefen die Schemas. Verwechselt werden sie haeufig — die zwei Kataloge machen
-den Unterschied explizit (Memo 082, Kap 2 + 3).
+Both artifacts are complementary: code tests check the engine, eval questions
+check the schemas. They are frequently confused — the two catalogs make
+the difference explicit.
 
-## Grading starten
+## Starting a Grading
 
-Ein Grading wird in einem leeren LLM-Kontext durchgefuehrt. Die Empty-Context-Pflicht
-ist konventionell (siehe [Spec §3](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/02-eligibility.md) + [Spec §18](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/20-entry-point-prompt.md))
-und wird durch den folgenden Eintrittspunkt-Prompt sichergestellt.
+A grading is run in an empty LLM context. The empty-context requirement
+is conventional (see [Spec §3](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/02-eligibility.md) + [Spec §18](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/20-entry-point-prompt.md))
+and is ensured by the following entry-point prompt.
 
-### Eintrittspunkt-Prompt (verbindlich)
+### Entry-Point Prompt (binding)
 
 ```text
-Du fuehrst ein FlowMCP-Grading durch. Anweisungen:
+You are performing a FlowMCP grading. Instructions:
 
 1. Persona: crypto-trader-2026
-2. Selection: crypto-domain-full, Lockfile-Hash: <sha>
-3. Modus: Full (initial baseline)
-4. Spec-Version: gradingSpec/1.1.0
-5. Pre-Condition: alle Member-Schemas haben gradingStatus: stable
-6. Ausgabe-Format: gradings/<selection-hash>--<timestamp>.json
+2. Selection: crypto-domain-full, lockfile hash: <sha>
+3. Mode: Full (initial baseline)
+4. Spec version: gradingSpec/1.1.0
+5. Pre-Condition: all member schemas have gradingStatus: stable
+6. Output format: gradings/<selection-hash>--<timestamp>.json
 ```
 
-Dieser Prompt-Block ist **verbatim** zu uebernehmen. Anpassbar sind ausschliesslich:
+This prompt block must be adopted **verbatim**. Only the following are adjustable:
 
-- `Persona` — eine der im Repo registrierten Personas (Pflicht, siehe unten)
-- `Selection` — `<selectionId>`, plus `Lockfile-Hash` aus dem aktuellen `selection.lock.json`
-- `Modus` — `Full` (initial / Stable-Promotion) oder `Partial` (Iterations-Schritt)
-- `Spec-Version` — aktuell `gradingSpec/1.1.0`
+- `Persona` — one of the personas registered in the repo (mandatory, see below)
+- `Selection` — `<selectionId>`, plus `lockfile hash` from the current `selection.lock.json`
+- `Mode` — `Full` (initial / stable promotion) or `Partial` (iteration step)
+- `Spec version` — currently `gradingSpec/1.1.0`
 
-Fuer **Single-Gradings** ersetze Zeile 2 durch:
+For **single gradings**, replace line 2 with:
 
 ```text
-2. Schema: <namespace>.<tool>, Schema-Hash: <sha>, schemaVersion: <X.Y.Z>
+2. Schema: <namespace>.<tool>, schema hash: <sha>, schemaVersion: <X.Y.Z>
 ```
 
-Und Zeile 5 entfaellt (Single-Schemas haben keine Member-Pre-Condition).
+And line 5 is dropped (single schemas have no member pre-condition).
 
-### Personas-Pflicht
+### Persona Requirement
 
-Im Eintrittspunkt-Prompt ist **Persona Pflicht** — fuer Single und Selection (Memo 080 Kap 9).
-Ein Grading ohne Persona-Eintrag wird vom Schema-Validator zurueckgewiesen.
+In the entry-point prompt, **persona is mandatory** — for single and selection alike.
+A grading without a persona entry is rejected by the schema validator.
 
-Registrierte Personas liegen unter `grading-data/personas/<persona-id>.md`.
+Registered personas live under `grading-data/personas/<persona-id>.md`.
 
 ## Quick-Start
 
-Fuer einen sauberen Grading-Lauf:
+For a clean grading run:
 
-1. Im LLM-Client `/clear` ausfuehren (Empty-Context herstellen)
-2. Den Eintrittspunkt-Prompt aus der Sektion oben **vollstaendig kopieren**
-3. Im kopierten Prompt die Felder einsetzen:
-   - **Persona** (Pflicht) — aus `grading-data/personas/`
-   - **Selection** + **Lockfile-Hash** — aus `selection/<id>/selection.lock.json`
-   - **Modus** — `Full` (Standard) oder `Partial`
-4. Prompt absenden — der Agent fuehrt die Grading-Sequenz aus
-5. Ergebnis landet unter `grading-data/{single,selection}/.../gradings/<hash>--<timestamp>.json`
+1. Run `/clear` in the LLM client (establish an empty context)
+2. Copy the entry-point prompt from the section above **in full**
+3. Fill in the fields in the copied prompt:
+   - **Persona** (mandatory) — from `grading-data/personas/`
+   - **Selection** + **lockfile hash** — from `selection/<id>/selection.lock.json`
+   - **Mode** — `Full` (default) or `Partial`
+4. Send the prompt — the agent runs the grading sequence
+5. The result lands under `grading-data/{single,selection}/.../gradings/<hash>--<timestamp>.json`
 
-Siehe [Spec §18](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/20-entry-point-prompt.md) (Eintrittspunkt-Prompt) und [Spec §20](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/21-pre-conditions.md) (Pre-Conditions) fuer die formale Definition. Empty-Context-Konvention ist in [Spec §3](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/02-eligibility.md) verankert.
+See [Spec §18](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/20-entry-point-prompt.md) (entry-point prompt) and [Spec §20](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/21-pre-conditions.md) (pre-conditions) for the formal definition. The empty-context convention is anchored in [Spec §3](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/02-eligibility.md).
 
-## Status — Phase 2 of Memo 080 complete
+## Status — Phase 2 complete
 
 Three pilot gradings have been migrated to the new Source-of-Truth layout:
 
@@ -89,9 +89,9 @@ Three pilot gradings have been migrated to the new Source-of-Truth layout:
 Each pilot now has:
 
 - A frozen schema snapshot under `grading-data/schemas/<namespace>/PLACEHOLDER###--v1.0.0.mjs`
-  (placeholder hashes will be replaced by deterministic sha256 values in Phase 3, PRD-10).
+  (placeholder hashes will be replaced by deterministic sha256 values in a later phase).
 - A namespace payload at `grading-data/schemas/<namespace>/namespace.json` with `namespaceHash`
-  and `aboutHash: "PENDING"` (about pages arrive in Phase 4).
+  and `aboutHash: "PENDING"` (about pages arrive in a later phase).
 - A grading entry under `grading-data/single/<namespace>--<tool>/gradings/<schemaHash>--<timestamp>.json`.
 - A phase-status file at `grading-data/phase-status/single/<namespace>--<tool>.json`.
 
@@ -103,18 +103,7 @@ Migration scripts that produced this state:
 
 All scripts are idempotent and support `--dry-run`.
 
-## Relationship to neighbouring memos
-
-| Memo | Status               | Relationship                                    |
-|------|----------------------|-------------------------------------------------|
-| 076  | finalized (REV-05)   | Spec basis for the grading model                |
-| 077  | stub                 | waiting on Memo 080                             |
-| 078  | stub                 | waiting on Memo 080                             |
-| 080  | conditionally final  | this repo, iteration 2                          |
-
-**Conflict resolver:** Memo 080 takes priority over 077 and 078 while both remain stubs.
-
-## NICHT-PUSH Convention for `grading-data/`
+## Do-Not-Push Convention for `grading-data/`
 
 > **WARNING — DO NOT PUSH `grading-data/`.**
 >
@@ -130,7 +119,7 @@ The red line that prevents writing data under `~/.flowmcp/` is documented in `AG
 
 ## Architecture
 
-Two skill families per Memo 076 F13 — one shared data model, two evaluation paths with different tier ceilings.
+Two skill families (F13) — one shared data model, two evaluation paths with different tier ceilings.
 
 ```mermaid
 flowchart TD
@@ -167,7 +156,7 @@ const { grading, errors } = gradeSingleSchema( {
 console.log( grading.aggregateGrade )
 ```
 
-Results are written to `grading-data/single/<namespace>--<tool>/gradings/<schemaHash>--<timestamp>.json` (Memo 080 Source-of-Truth layout) — never pushed.
+Results are written to `grading-data/single/<namespace>--<tool>/gradings/<schemaHash>--<timestamp>.json` (Source-of-Truth layout) — never pushed.
 
 ## Features
 
@@ -175,14 +164,14 @@ Results are written to `grading-data/single/<namespace>--<tool>/gradings/<schema
 - **Versioned namespaces** — `gradingSpec/1.1.0`, `scoringSystem/1.0.0`, `gradingSystem/1.0.0` evolve independently
 - **Categorical-Veto** — closed list of four triggers (`malicious-module`, `api-key-domain-mismatch`, `illegal-content`, `ai-security-veto`) halts the pipeline
 - **Aging-aware** — defaults at 14/30/180 days, gradings turn `stale` (never `fail`) when aged
-- **`n/a`-Pragma** — dimensions that cannot be evaluated are ignored in the weighted sum (Memo 054)
+- **`n/a`-Pragma** — dimensions that cannot be evaluated are ignored in the weighted sum
 - **Structured error codes** — `GRD-`, `SCO-`, `VET-` prefixes per `node-error-codes` pattern
 - **Pilot gradings included** — three reference gradings (Brightsky, Etherscan, Abgeordnetenwatch) under `grading-data/`
 
 ## Table of Contents
 
 - [flowmcp-grading](#flowmcp-grading)
-  - [NICHT-PUSH Convention for grading-data/](#nicht-push-convention-for-grading-data)
+  - [Do-Not-Push Convention for grading-data/](#do-not-push-convention-for-grading-data)
   - [Architecture](#architecture)
   - [Quickstart](#quickstart)
   - [Features](#features)
@@ -359,8 +348,8 @@ See `flowmcp-spec/grading/1.1.0/08-grading-model.md` for the full data model and
 
 ```
 flowmcp-grading/
-├── README.md                 # This file (NICHT-PUSH note for grading-data/)
-├── AGENTS.md                 # Convention for AI tools (red line "no data under ~/.flowmcp/")
+├── README.md                 # This file (Do-Not-Push note for grading-data/)
+├── AGENTS.md                 # Convention for AI tools (hard line "no data under ~/.flowmcp/")
 ├── .gitignore                # With commented grading-data/ entry
 ├── package.json              # ES Modules, Node 22
 ├── src/
@@ -373,18 +362,18 @@ flowmcp-grading/
 │       ├── SingleSchema.mjs  # P1-P7 (Skill-Family 1, autonomous)
 │       └── Selection.mjs     # S1-S4 (Skill-Family 2, group-bound)
 ├── scripts/
-│   ├── migrate-080-phase-2.mjs       # Memo 080 SoT migration
+│   ├── migrate-080-phase-2.mjs       # Source-of-Truth migration
 │   ├── generate-namespace-json.mjs   # namespace.json generator
 │   └── separate-phase-status.mjs     # phase-status split (single/selection)
 ├── spec/
 │   ├── 1.0.0/                # Grading-Spec chapters 00-overview .. 14-kanban + JSON-Schemas
-│   └── 1.1.0/                # Active spec (Memo 080 additions: SoT, Pre-Condition, namespace.json)
+│   └── 1.1.0/                # Active spec (additions: SoT, Pre-Condition, namespace.json)
 ├── prompts/                  # Versioned LLM grader prompts
 ├── tests/
 │   ├── unit/                 # Jest unit tests
 │   ├── integration/
 │   └── helpers/              # Shared fixtures
-└── grading-data/             # .gitignored — Source-of-Truth layout (Memo 080 Kap 2)
+└── grading-data/             # .gitignored — Source-of-Truth layout
     ├── schemas/<namespace>/<schemaHash>--v<X.Y.Z>.mjs
     ├── schemas/<namespace>/namespace.json
     ├── schemas/<namespace>/about/<aboutHash>--about.md   # Phase 4
@@ -396,7 +385,7 @@ flowmcp-grading/
     └── .migration-backup/pre-080-phase-2*                # Pre-migration originals
 ```
 
-## Migration notes — Phase 2 of Memo 080
+## Migration notes — Phase 2
 
 Phase 2 moved the pilot gradings from a flat layout into the Source-of-Truth layout:
 
@@ -412,15 +401,15 @@ Pre-migration originals are preserved byte-identical under `grading-data/.migrat
 and `grading-data/.migration-backup/pre-080-phase-2-status/`.
 
 Hashes in filenames currently use `PLACEHOLDER###` markers — they will be replaced by deterministic
-sha256(8) values in Phase 3 (PRD-10 HashGenerator). The placeholders are explicit so any future
+sha256(8) values in a later phase via the HashGenerator. The placeholders are explicit so any future
 diff highlights the replacement clearly.
 
 ## Versioning
 
-Three independent namespaces (Memo 076 F5):
+Three independent namespaces (F5):
 
 - `gradingSpec/1.1.0` — the active specification documents under `flowmcp-spec/grading/1.1.0/`
-  (Memo 080 additions: Source-of-Truth layout, Pre-Condition rule, namespace payload, partial-mode).
+  (additions: Source-of-Truth layout, Pre-Condition rule, namespace payload, partial-mode).
   The previous `gradingSpec/1.0.0` under `flowmcp-spec/grading/1.0.0/` is preserved read-only for traceability.
 - `scoringSystem/1.0.0` — the scoring rules and dimensions
 - `gradingSystem/1.0.0` — the grading rules, veto logic, and tier mapping

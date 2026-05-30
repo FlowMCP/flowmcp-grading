@@ -1,8 +1,7 @@
 /**
- * PartialGrading — Partial vs Full grading-mode + Pflicht-Sequenz validator.
+ * PartialGrading — Partial vs Full grading-mode + mandatory-sequence validator.
  *
- * Memo 080 anchors:
- *   Kap 4 — gradingMode field, Pflicht-Sequenz (Z. 226-237)
+ * Per the grading spec (gradingMode field, mandatory sequence):
  *   - First entry MUST be full
  *   - Last-before-stable MUST be full
  *   - Partial entries MUST NOT change aggregateGrade

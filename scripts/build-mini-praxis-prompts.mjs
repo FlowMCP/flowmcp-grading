@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * build-mini-praxis-prompts.mjs — Mini-Praxis Phase 6 prompt builder (Memo 082 PRD-27).
+ * build-mini-praxis-prompts.mjs — mini-practice prompt builder.
  *
  * Builds self-contained evaluator prompt files for each (schema, area) combo of the
  * crypto-mini selection. Output: /tmp/mini-praxis-prompts/<area>--<schemaId-or-selection>.prompt.md
@@ -184,7 +184,7 @@ const buildPromptForSchemaArea = async ( { schemaId, area, questions, preInstruc
         : 'null'
 
     const sections = [
-        `# Mini-Praxis Evaluator Prompt — area=${area}, schema=${schemaId}`,
+        `# Mini-Practice Evaluator Prompt — area=${area}, schema=${schemaId}`,
         '',
         '## Role',
         'You are an evaluator producing a Strict-JSON grading per FlowMCP grading spec.',
@@ -212,7 +212,7 @@ const buildPromptForSchemaArea = async ( { schemaId, area, questions, preInstruc
         '## Output Instructions (CRITICAL)',
         '',
         '- Return ONLY valid JSON conforming to the schema above. No markdown fences. No commentary.',
-        '- If a required file is missing or unreadable, return ONLY: { "blocker": "<path>", "reason": "<grund>" }',
+        '- If a required file is missing or unreadable, return ONLY: { "blocker": "<path>", "reason": "<reason>" }',
         `- Use schemaHash: compute the 8-hex sha256 prefix of the canonical schema source (use placeholder "00000001" if unknown — caller will overwrite).`,
         `- Use gradingId pattern: "<schemaHash>--<ISO timestamp with dashes>"  e.g. "abc12345--2026-05-30T12-00-00Z".`,
         `- Use iteration: 1`,
@@ -257,7 +257,7 @@ const buildPromptForSelectionArea = async ( { area, questions, preInstructionsMa
         : ''
 
     const sections = [
-        `# Mini-Praxis Evaluator Prompt — area=${area}, selection=crypto-mini`,
+        `# Mini-Practice Evaluator Prompt — area=${area}, selection=crypto-mini`,
         '',
         '## Role',
         'You are an evaluator producing a Strict-JSON grading per FlowMCP grading spec.',
@@ -297,7 +297,7 @@ const buildPromptForSelectionArea = async ( { area, questions, preInstructionsMa
         '## Output Instructions (CRITICAL)',
         '',
         '- Return ONLY valid JSON conforming to the schema above. No markdown fences. No commentary.',
-        '- If a required file is missing or unreadable, return ONLY: { "blocker": "<path>", "reason": "<grund>" }',
+        '- If a required file is missing or unreadable, return ONLY: { "blocker": "<path>", "reason": "<reason>" }',
         `- schemaHash: use the placeholder "00000001" (selection-level grading — caller resolves).`,
         `- gradingId pattern: "<schemaHash>--<ISO timestamp with dashes>"  e.g. "00000001--2026-05-30T12-00-00Z".`,
         `- iteration: 1`,

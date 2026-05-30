@@ -7,24 +7,24 @@
  * aggregate-grade computation, re-grading triggers).
  * Static methods only, object params, object returns. NO SILENT DEFAULTS.
  *
- * Memo 076 anchors:
- *   Z. 254 — A grading is an array of sub-grades; carries veto right
- *   Z. 263 — selectionId required when gradingTier=group-bound
- *   Z. 273 — llmModel required when graderIdentity.kind=llm
- *   Z. 289-292 — aggregateGrade computation incl. REJECTED + maxAttainableGrade
- *   Z. 292 — maxAttainableGrade: autonomous → B, group-bound → A
- *   Z. 302 — Aging defaults (14 days API, 30 days ToS, 180 days retention)
- *   Z. 305 — Multi-grader rule: no automatic consolidation
- *   Z. 307 — Re-grading preserves old via previousGradingId
- *   Z. 309 — n/a pragma: ignored, not zero
- *   Z. 311 — personaIds required when determinism=non-deterministic
+ * Grading-model rules per the grading spec:
+ *   - A grading is an array of sub-grades; it carries a veto right.
+ *   - selectionId is required when gradingTier=group-bound.
+ *   - llmModel is required when graderIdentity.kind=llm.
+ *   - aggregateGrade computation includes REJECTED + maxAttainableGrade.
+ *   - maxAttainableGrade: autonomous → B, group-bound → A.
+ *   - Aging defaults: 14 days API, 30 days ToS, 180 days retention.
+ *   - Multi-grader rule: no automatic consolidation.
+ *   - Re-grading preserves the old entry via previousGradingId.
+ *   - n/a pragma: ignored, not zero.
+ *   - personaIds required when determinism=non-deterministic.
  *
- * Memo 082 Phase 2h additions (PRD-20, PRD-21):
- *   Kap 12 — Recursive Feedback Loop fields: iteration, improvementHints[]
- *   Kap 13 — persona slug: 'neutral' | '<basePersona>--<lens>'
- *   Kap 4.3 — Save-Step filename pattern via formatGradingFilename helper
+ * Recursive-feedback-loop additions:
+ *   - Loop fields: iteration, improvementHints[].
+ *   - persona slug: 'neutral' | '<basePersona>--<lens>'.
+ *   - Save-step filename pattern via formatGradingFilename helper.
  *
- * Loop-field policy (PRD-20):
+ * Loop-field policy:
  *   - createEntry: iteration/improvementHints/persona are OPTIONAL params.
  *     When passed they are validated strictly (no silent defaults).
  *     When omitted, the resulting entry simply lacks the field — caller
@@ -40,11 +40,11 @@ import { Scoring } from './Scoring.mjs'
 const GRADING_SYSTEM_VERSION = 'gradingSystem/1.0.0'
 
 
-// Aging defaults per Memo Z. 302 — concrete numbers, no hidden defaults.
+// Aging defaults per the grading spec — concrete numbers, no hidden defaults.
 const AGING_DEFAULTS = Object.freeze( {
-    apiDays: 14,           // Memo Z. 302 — API responses stale after 14 days
-    tosDays: 30,           // Memo Z. 302 — ToS check stale after 30 days
-    retentionDays: 180     // Memo Z. 302 — retention threshold, warning after 180 days
+    apiDays: 14,           // API responses stale after 14 days
+    tosDays: 30,           // ToS check stale after 30 days
+    retentionDays: 180     // retention threshold, warning after 180 days
 } )
 
 
@@ -86,7 +86,7 @@ class Grading {
             options: options === undefined || options === null ? {} : options
         }
 
-        // PRD-20: loop fields only present when caller passes them — no silent defaults.
+        // Loop fields only present when caller passes them — no silent defaults.
         if( iteration !== undefined && iteration !== null ) {
             entry.iteration = iteration
         }
@@ -115,7 +115,7 @@ class Grading {
             }
         }
 
-        // PRD-20 §3.3 — backward-compat for legacy pilot files (Memo 080).
+        // Backward-compat for legacy pilot files.
         // Defaults are applied ONLY on read, never on write (createEntry).
         const entry = Object.assign( {}, parsed )
         if( !( 'iteration' in entry ) )         { entry.iteration         = 0          }
@@ -141,7 +141,7 @@ class Grading {
         const { status, messages } = Grading.#validationAddGrading( { entry, grading } )
         if( !status ) { return { entry, errors: messages } }
 
-        // No consolidation — Memo Z. 305: every grading > no grading
+        // No consolidation per the grading spec: every grading > no grading
         const updatedGradings = entry.gradings.concat( [ grading ] )
         const updated = Object.assign( {}, entry, {
             gradings: updatedGradings,
@@ -195,7 +195,7 @@ class Grading {
         if( !status ) { return { newEntry: null, errors: messages } }
 
         const now = new Date().toISOString()
-        // Old entry is NOT mutated — Memo Z. 307
+        // Old entry is NOT mutated per the grading spec
         const previousGradingId = `${entry.schemaId}@${entry.createdAt}`
         const newEntry = {
             schemaId: entry.schemaId,
@@ -302,7 +302,7 @@ class Grading {
 
         if( messages.length > 0 ) { return struct }
 
-        // Tier-specific selectionId requirement — Memo Z. 263
+        // Tier-specific selectionId requirement per the grading spec
         if( gradingTier === 'group-bound' ) {
             if( selectionId === undefined || selectionId === null || typeof selectionId !== 'string' ) {
                 messages.push( 'GRD-004: selectionId required when gradingTier=group-bound' )
@@ -322,30 +322,30 @@ class Grading {
             }
         }
 
-        // PRD-20 — optional loop fields. When passed, validate strictly.
+        // Optional loop fields. When passed, validate strictly.
         if( iteration !== undefined && iteration !== null ) {
             if( typeof iteration !== 'number' || !Number.isInteger( iteration ) ) {
-                messages.push( `GRD-030: createEntry: iteration muss integer >= 0 sein, war: ${iteration}` )
+                messages.push( `GRD-030: createEntry: iteration must be an integer >= 0, was: ${iteration}` )
                 return struct
             }
             if( iteration < 0 || iteration > 10 ) {
-                messages.push( `GRD-030: createEntry: iteration muss integer >= 0 sein, war: ${iteration}` )
+                messages.push( `GRD-030: createEntry: iteration must be an integer >= 0, was: ${iteration}` )
                 return struct
             }
         }
 
         if( improvementHints !== undefined && improvementHints !== null ) {
             if( !Array.isArray( improvementHints ) ) {
-                messages.push( `GRD-031: createEntry: improvementHints muss Array of string sein, war: ${typeof improvementHints}` )
+                messages.push( `GRD-031: createEntry: improvementHints must be an array of string, was: ${typeof improvementHints}` )
                 return struct
             }
             const invalidHint = improvementHints
                 .map( ( hint, index ) => {
                     if( typeof hint !== 'string' ) {
-                        return `GRD-031: createEntry: improvementHints[${index}] muss nicht-leerer string sein, war: ${typeof hint}`
+                        return `GRD-031: createEntry: improvementHints[${index}] must be a non-empty string, was: ${typeof hint}`
                     }
                     if( hint.length === 0 ) {
-                        return `GRD-031: createEntry: improvementHints[${index}] muss nicht-leerer string sein, war: ''`
+                        return `GRD-031: createEntry: improvementHints[${index}] must be a non-empty string, was: ''`
                     }
                     return null
                 } )
@@ -358,13 +358,13 @@ class Grading {
 
         if( persona !== undefined && persona !== null ) {
             if( typeof persona !== 'string' ) {
-                messages.push( `GRD-032: createEntry: persona muss 'neutral' oder '<base>--<lens>' sein, war: '${persona}'` )
+                messages.push( `GRD-032: createEntry: persona must be 'neutral' or '<base>--<lens>', was: '${persona}'` )
                 return struct
             }
             const isNeutral = persona === 'neutral'
             const personaPattern = /^[a-z][a-z0-9-]*--[a-z][a-z0-9-]*$/
             if( !isNeutral && !personaPattern.test( persona ) ) {
-                messages.push( `GRD-032: createEntry: persona muss 'neutral' oder '<base>--<lens>' sein, war: '${persona}'` )
+                messages.push( `GRD-032: createEntry: persona must be 'neutral' or '<base>--<lens>', was: '${persona}'` )
                 return struct
             }
         }
@@ -417,20 +417,20 @@ class Grading {
         const hashHexPattern = /^[a-f0-9]{6,16}$/
         const hashPlaceholderPattern = /^PLACEHOLDER[0-9]{3}$/
         if( !hashHexPattern.test( hash ) && !hashPlaceholderPattern.test( hash ) ) {
-            messages.push( `GRD-040: formatGradingFilename: hash muss 6-16 hex Zeichen sein, war: '${hash}'` )
+            messages.push( `GRD-040: formatGradingFilename: hash must be 6-16 hex characters, was: '${hash}'` )
             return struct
         }
 
         const tsPattern = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z$/
         if( !tsPattern.test( ts ) ) {
-            messages.push( `GRD-041: formatGradingFilename: ts muss ISO 8601 mit '-' statt ':' sein (z.B. 2026-05-30T10-15-00Z), war: '${ts}'` )
+            messages.push( `GRD-041: formatGradingFilename: ts must be ISO 8601 with '-' instead of ':' (e.g. 2026-05-30T10-15-00Z), was: '${ts}'` )
             return struct
         }
 
         const isNeutral = persona === 'neutral'
         const personaPattern = /^[a-z][a-z0-9-]*--[a-z][a-z0-9-]*$/
         if( !isNeutral && !personaPattern.test( persona ) ) {
-            messages.push( `GRD-042: formatGradingFilename: persona muss 'neutral' oder '<base>--<lens>' sein, war: '${persona}'` )
+            messages.push( `GRD-042: formatGradingFilename: persona must be 'neutral' or '<base>--<lens>', was: '${persona}'` )
             return struct
         }
 
@@ -479,7 +479,7 @@ class Grading {
 
         if( messages.length > 0 ) { return struct }
 
-        // personaIds required when non-deterministic — Memo Z. 311
+        // personaIds required when non-deterministic per the grading spec
         if( grading.determinism === 'non-deterministic' ) {
             const sc = grading.selectionContext
             const hasPersonaIds = sc !== undefined && sc !== null && Array.isArray( sc.personaIds ) && sc.personaIds.length > 0

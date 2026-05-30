@@ -2,7 +2,7 @@
 id: Q-selection-skills-L3-04
 area: selection-skills-L3
 dimension: domainAlignment
-question: "Ist der L3-Output Persona-Action-Ready?"
+question: "Is the L3 output action-ready for the persona?"
 scoreType: scale-1-5
 weight: 0.34
 determinism: non-deterministic
@@ -12,17 +12,16 @@ filesToRead:
   - "{{personaPath}}"
   - "{{lensPath}}"
 preInstructionRef: pre-instructions/selection-skills-L3.md
-evaluatorTask: "Bewerte ob die Persona aus dem L3-Output direkt handeln kann."
+evaluatorTask: "Assess whether the persona can act directly on the L3 output."
 outputSchemaRef: output-schemas/selection-skills-L3.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Action-Ready heisst: Output enthaelt Empfehlungen + Begruendung, nicht nur
-Rohdaten.
+Action-ready means the output contains recommendations plus rationale, not just raw data.
 
-## Persona-Anwendung
+## Persona Application
 
-Action-Definition variiert: Trader handelt am Markt, Decision-Maker entscheidet.
+The definition of action varies: a trader acts on the market, a decision-maker makes a decision.

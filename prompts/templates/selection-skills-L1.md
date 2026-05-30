@@ -16,37 +16,34 @@ skillLevel: L1
 Persona: {{BASE_PERSONA_NAME}} ({{BASE_PERSONA_FILE}})
 Lens: {{LENS_NAME}} ({{LENS_FILE}})
 
-Spec 13 §4.2 verlangt Persona-Focus auf ALLEN drei Skill-Levels (Pflicht).
-Du bewertest den L1-Skill aus dieser Persona- + Lens-Perspektive.
+Spec 13 §4.2 requires a persona focus on ALL three skill levels (mandatory).
+You evaluate the L1 skill from this persona + lens perspective.
 
 ## Files to Read
 
-1. {{SPEC_13_PATH}}                    — Skills-Spec, §4 Selection-Skill-Pyramide
-2. {{BASE_PERSONA_FILE}}               — Base-Persona (Source-of-Truth, flowmcp-spec/personas/)
-3. {{LENS_FILE}}                       — Domain-Lens (Helper-File aus grading-data/personas/)
-4. {{SELECTION_SKILL_L1_FILE}}         — Der zu bewertende L1-Skill
+1. {{SPEC_13_PATH}}                    — Skills spec, §4 selection-skill pyramid
+2. {{BASE_PERSONA_FILE}}               — Base persona (source of truth, flowmcp-spec/personas/)
+3. {{LENS_FILE}}                       — Domain lens (helper file from grading-data/personas/)
+4. {{SELECTION_SKILL_L1_FILE}}         — The L1 skill to be evaluated
 
 ## Question(s)
 
-Bewerte den atomaren L1-Skill `{{SKILL_NAME}}` der Selection `{{SELECTION_NAME}}` aus
-Persona- + Lens-Perspektive nach Spec 13 §4. Pruefe ob er ein Tool atomar
-aufruft, ohne State zu halten, und ob er fuer die Persona ohne versteckte
-Defaults nutzbar ist (Memory: no-hidden-defaults).
+Evaluate the atomic L1 skill `{{SKILL_NAME}}` of the selection `{{SELECTION_NAME}}`
+from the persona + lens perspective per Spec 13 §4. Check whether it calls a
+tool atomically, holds no state, and is usable by the persona without hidden
+defaults (no-hidden-defaults).
 
 {{QUESTIONS_BLOCK}}
 
 ## Output Schema
 
-Die Antwort MUSS exakt dem JSON-Schema unter `{{OUTPUT_SCHEMA_REF}}` entsprechen.
-Bei Datei-Lese-Fehler antworte ausschliesslich mit:
-`{ "blocker": "<dateipfad>", "reason": "<grund>" }`
-und brich ab.
+The answer MUST conform exactly to the JSON schema at `{{OUTPUT_SCHEMA_REF}}`.
+On a file-read error, answer exclusively with:
+`{ "blocker": "<file-path>", "reason": "<reason>" }`
+and stop.
 
 <!--
-Caveat (Memo 082 REV-04 + Kap 10.1):
-„Bei Selection-Skills aufpassen wegen Komplexitaet" — 9 Skills (3 pro Sub-Bereich x 3 Levels)
-sind moeglicherweise zu viele. Der Mini-Praxis-Test in Phase 6 verifiziert,
-ob die Konsolidierung haelt. Lessons werden in
-`grading-data/mini-praxis-2026-MM.md` ODER
-`.memo/082-.../execution/mini-praxis-lessons.md` festgehalten.
+Caveat: watch out for selection-skill complexity — 9 skills (3 per sub-area x 3 levels)
+may be too many. A small practical test should verify whether the consolidation
+holds, with lessons recorded in the gitignored working folder.
 -->

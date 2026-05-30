@@ -2,7 +2,7 @@
 id: Q-selection-skills-L3-06
 area: selection-skills-L3
 dimension: domainAlignment
-question: "Deckt der L3-Skill Cross-Namespace-Use-Cases ab?"
+question: "Does the L3 skill cover cross-namespace use cases?"
 scoreType: scale-1-5
 weight: 0.33
 determinism: non-deterministic
@@ -10,16 +10,16 @@ tier: S4
 filesToRead:
   - "{{skillPath}}"
 preInstructionRef: pre-instructions/selection-skills-L3.md
-evaluatorTask: "Pruefe ob L3 Tools aus mehreren Namespaces sinnvoll kombiniert."
+evaluatorTask: "Check whether L3 sensibly combines tools from multiple namespaces."
 outputSchemaRef: output-schemas/selection-skills-L3.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-L3 ist der typische Ort fuer Cross-Namespace-Workflows (z.B. Price + News).
+L3 is the typical place for cross-namespace workflows (e.g. price + news).
 
-## Persona-Anwendung
+## Persona Application
 
-Cross-Namespace-Logik muss dem Persona-Workflow folgen.
+The cross-namespace logic must follow the persona workflow.

@@ -1,15 +1,15 @@
 /**
- * Integration tests for PRD-17 evaluator skills (Memo 082 Phase 2g).
+ * Integration tests for the evaluator skills.
  *
  * Verifies:
  *  - SKILL.md frontmatter (name, description, allowed-tools, model)
  *  - allowed-tools is Read-only (Read/Grep/Glob) — no Write/Bash/Edit
- *  - Persona-Flag per area matches Kap 7.4
- *  - Mock-response-pass conforms to per-area output-schema (ajv 2020-12)
- *  - Blocker-shape per Kap 8: { blocker, reason }
- *  - HTTP-4xx-never-PASS rule per memory feedback_http_400_is_not_pass
+ *  - persona flag per area matches the persona-application table
+ *  - mock-response-pass conforms to per-area output-schema (ajv 2020-12)
+ *  - blocker shape: { blocker, reason }
+ *  - HTTP-4xx-never-PASS rule
  *
- * Sub-Agent calls are mocked via fixture files — no real LLM/network.
+ * Sub-agent calls are mocked via fixture files — no real LLM/network.
  */
 
 import { describe, it, expect, beforeAll } from '@jest/globals'
@@ -84,7 +84,7 @@ const buildAjv = () => {
 }
 
 
-describe( 'Evaluator Skills — Integration (Memo 082 PRD-17 + PRD-18)', () => {
+describe( 'Evaluator Skills — Integration', () => {
 
     AREAS
         .forEach( ( spec ) => {
@@ -144,14 +144,14 @@ describe( 'Evaluator Skills — Integration (Memo 082 PRD-17 + PRD-18)', () => {
                 } )
 
 
-                it( 'body contains neutrality assertion (Optimierungsziel NICHT)', () => {
-                    expect( skillContent ).toMatch( /KENNT das Optimierungsziel NICHT/ )
+                it( 'body contains neutrality assertion (does NOT know the optimization goal)', () => {
+                    expect( skillContent ).toMatch( /NOT know the optimization goal/i )
                 } )
 
 
                 it( 'body contains HTTP-4xx rule', () => {
                     expect( skillContent ).toMatch( /4xx/ )
-                    expect( skillContent ).toMatch( /niemals PASS|never PASS/i )
+                    expect( skillContent ).toMatch( /never PASS/i )
                 } )
 
 
@@ -179,7 +179,7 @@ describe( 'Evaluator Skills — Integration (Memo 082 PRD-17 + PRD-18)', () => {
                 } )
 
 
-                it( 'persona-required flag matches Kap 7.4 (via prompt-artifact)', () => {
+                it( 'persona-required flag matches the persona-application table (via prompt-artifact)', () => {
                     const promptArtifact = readFileSync(
                         join( fixtureDir, 'prompt-artifact.txt' ),
                         'utf-8'
@@ -229,7 +229,7 @@ describe( 'Evaluator Skills — Integration (Memo 082 PRD-17 + PRD-18)', () => {
                 } )
 
 
-                it( 'mock-response-blocker shape matches Kap 8 ({ blocker, reason })', () => {
+                it( 'mock-response-blocker shape matches ({ blocker, reason })', () => {
                     const blockerResponse = JSON.parse(
                         readFileSync( join( fixtureDir, 'mock-response-blocker.json' ), 'utf-8' )
                     )
@@ -258,11 +258,10 @@ describe( 'Evaluator Skills — Integration (Memo 082 PRD-17 + PRD-18)', () => {
         } )
 
 
-    describe( 'HTTP-4xx-Regel (memory feedback_http_400_is_not_pass / Memo 033 REV-12)', () => {
+    describe( 'HTTP-4xx rule (4xx is never PASS)', () => {
 
-        // All 10 areas have an http-4xx fixture, but PRD-18 §5 explicitly requires
-        // coverage for at least 2 (single-test + tools-aggregate-schema). We cover all 10
-        // because the memory rule applies universally — never PASS on 4xx.
+        // All 10 areas have an http-4xx fixture. We cover all 10
+        // because the rule applies universally — never PASS on 4xx.
 
         AREAS
             .forEach( ( { area } ) => {
@@ -299,7 +298,7 @@ describe( 'Evaluator Skills — Integration (Memo 082 PRD-17 + PRD-18)', () => {
 
 
         it( 'HTTP-4xx fixture validates against per-area schema (FAIL-shape)', () => {
-            // Spot-check single-test + tools-aggregate-schema per PRD-18 §5.
+            // Spot-check single-test + tools-aggregate-schema.
             const httpAreas = [ 'single-test', 'tools-aggregate-schema' ]
             const ajv = buildAjv()
             httpAreas
@@ -348,7 +347,7 @@ describe( 'Evaluator Skills — Integration (Memo 082 PRD-17 + PRD-18)', () => {
         } )
 
 
-        it( 'persona-required flag distribution: 4 neutral + 6 persona (Kap 7.4)', () => {
+        it( 'persona-required flag distribution: 4 neutral + 6 persona', () => {
             const neutralCount = AREAS
                 .filter( ( a ) => a.personaRequired === false ).length
             const personaCount = AREAS

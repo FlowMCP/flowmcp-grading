@@ -5,31 +5,30 @@ enforced: true
 appliesTo: all
 ---
 
-## Regel
+## Rule
 
-Kein Prompt-Artefakt DARF API-Keys, Secrets, Tokens, Passwoerter oder
-`.env`-Inhalte enthalten. Auch keine Dummy-/Mock-Credentials, die im
-Prompt-Stream als „Beispiel" landen koennten.
+No prompt artifact MAY contain API keys, secrets, tokens, passwords, or
+`.env` contents. No dummy/mock credentials either, which could end up in the
+prompt stream as an "example".
 
-## Begruendung
+## Rationale
 
-Open-Source-Standard (FlowMCP CLAUDE.md GitHub Upload-Regeln). Prompts werden
-potentiell geloggt, gespeichert, geteilt. Selbst Mock-Credentials senden
-eine falsche Botschaft (CLAUDE.md repo-quality). FlowMCP-Memory
-`feedback_never_read_env_files_with_values` — Incident 2026-05-15 mit 7
-exponierten Keys durch direkte Datei-Operationen.
+Open-source standard (FlowMCP GitHub upload rules). Prompts are potentially
+logged, stored, and shared. Even mock credentials send the wrong message
+(repo-quality standard). A prior incident exposed seven keys through direct
+file operations on env files — never read env files with values.
 
-## Durchsetzung im PromptBuilder
+## Enforcement in the PromptBuilder
 
-PromptBuilder scannt den finalen Prompt-String mit Regex
-`(API_KEY|SECRET|TOKEN|PASSWORD)\s*[:=]` und Pattern fuer haeufige
-Key-Praefixe (`sk-`, `pk_`, `eth_`). Bei Treffer: Build-Fehler
+PromptBuilder scans the final prompt string with the regex
+`(API_KEY|SECRET|TOKEN|PASSWORD)\s*[:=]` and patterns for common key prefixes
+(`sk-`, `pk_`, `eth_`). On a match: build error
 `PB-101: secret pattern detected — refuse to emit`.
 
-## Verletzungs-Beispiele
+## Violation Examples
 
-- Template enthaelt einen Placeholder, der direkt mit einem echten Key
-  gefuellt wuerde (statt mit einem Boolean-Praesenz-Flag wie
+- Template contains a placeholder that would be filled directly with a real
+  key (instead of a boolean presence flag such as
   `{{<PROVIDER>_KEY_PRESENT}}`)
-- Files-to-Read-Pfad zeigt auf `~/.flowmcp/.env`
-- Persona-Lens-File enthaelt eingebettete Beispiel-Schluessel
+- Files-to-read path points to `~/.flowmcp/.env`
+- Persona lens file contains embedded example keys

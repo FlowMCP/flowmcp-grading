@@ -2,7 +2,7 @@
 id: Q-about-namespace-02
 area: about-namespace
 dimension: personaReference
-question: "Ist die Persona-Reference im About-Content vorhanden und matched die uebergebene Persona?"
+question: "Is the persona reference present in the About content and does it match the supplied persona?"
 scoreType: scale-1-5
 weight: 0.33
 determinism: non-deterministic
@@ -12,18 +12,18 @@ filesToRead:
   - "{{personaPath}}"
   - "{{lensPath}}"
 preInstructionRef: pre-instructions/about-namespace.md
-evaluatorTask: "Pruefe ob About-Content explizit auf die Persona referenziert (Spec 11 §4). Bewerte Fit gegen Persona + Lens."
+evaluatorTask: "Check whether the About content explicitly references the persona. Assess the fit against persona and lens."
 outputSchemaRef: output-schemas/about-namespace.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Spec 11 §4 verlangt Persona-Reference im About-Content. Ohne Reference ist About
-generisch und nicht decision-maker-tauglich.
+The specification requires a persona reference in the About content. Without a
+reference, the About content is generic and not suitable for decision-makers.
 
-## Persona-Anwendung
+## Persona Application
 
-Wird vom PromptBuilder mit Base-Persona (z.B. `decision-maker`) + Lens
-(z.B. `crypto-trader`) befuellt — siehe Memo 082 Kap 7.4.
+Filled by the PromptBuilder with a base persona (e.g. `decision-maker`) plus a lens
+(e.g. `crypto-trader`).

@@ -1,7 +1,7 @@
 /**
  * flowmcp-grading — public API entry point.
  *
- * Single entry point per Memo 076 Z. 597. Consumers MUST program against this
+ * Single entry point per the grading spec. Consumers MUST program against this
  * module only — internal modules are not exposed via package.json#exports.
  *
  * Public API inventory:
@@ -28,10 +28,10 @@
  * | validateGradingEntry    | function | ( { entry } ) → { valid, errors }                                                          | GRD-001, GRD-002          |
  * | getVersion              | function | () → { scoringSystem, gradingSystem, repoVersion }                                         | —                         |
  *
- * Memo 076 anchors:
- *   Z. 587 — Agent-Probe pattern (entry point, named exports, error codes)
- *   Z. 597 — src/index.mjs entry point
- *   Z. 619 — Documented public API
+ * Per the grading spec:
+ *   - Follows the Agent-Probe pattern (entry point, named exports, error codes).
+ *   - src/index.mjs is the single entry point.
+ *   - The public API is documented here.
  */
 
 import { Grading } from './Grading.mjs'

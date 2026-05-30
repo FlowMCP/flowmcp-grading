@@ -2,7 +2,7 @@
 id: Q-selection-skills-L3-05
 area: selection-skills-L3
 dimension: domainAlignment
-question: "Vermeidet L3 die Wiederholung der Domain-Doku?"
+question: "Does L3 avoid repeating the domain documentation?"
 scoreType: scale-1-5
 weight: 0.33
 determinism: non-deterministic
@@ -11,16 +11,16 @@ filesToRead:
   - "{{skillPath}}"
   - "{{domainKnowledgePath}}"
 preInstructionRef: pre-instructions/selection-skills-L3.md
-evaluatorTask: "Pruefe ob L3 die Domain-Doku ergaenzt, nicht 1:1 wiederholt."
+evaluatorTask: "Check whether L3 complements the domain documentation rather than repeating it one-to-one."
 outputSchemaRef: output-schemas/selection-skills-L3.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Domain-Doku gehoert in `domain-knowledge/`; L3 fokussiert auf den Persona-Workflow.
+Domain documentation belongs in `domain-knowledge/`; L3 focuses on the persona workflow.
 
-## Persona-Anwendung
+## Persona Application
 
-Persona-Workflow als Differenzierungs-Linie.
+The persona workflow serves as the line of differentiation.

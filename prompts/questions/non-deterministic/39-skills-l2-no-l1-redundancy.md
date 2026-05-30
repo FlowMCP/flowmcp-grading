@@ -2,7 +2,7 @@
 id: Q-selection-skills-L2-03
 area: selection-skills-L2
 dimension: skillAdequacy
-question: "Vermeidet L2 Redundanz zu L1-Skills?"
+question: "Does L2 avoid redundancy with L1 skills?"
 scoreType: scale-1-5
 weight: 0.34
 determinism: non-deterministic
@@ -11,17 +11,16 @@ filesToRead:
   - "{{skillPath}}"
   - "{{l1SkillsPath}}"
 preInstructionRef: pre-instructions/selection-skills-L2.md
-evaluatorTask: "Pruefe ob L2 nicht 1:1 einen L1-Skill wiederholt."
+evaluatorTask: "Check whether L2 does not repeat an L1 skill one-to-one."
 outputSchemaRef: output-schemas/selection-skills-L2.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Redundante L2-Skills verwirren den User; jedes Level muss eigenstaendige
-Komposition liefern.
+Redundant L2 skills confuse the user; each level must provide its own composition.
 
-## Persona-Anwendung
+## Persona Application
 
-Persona-Workflow-Beurteilung als Grundlage.
+The persona workflow assessment serves as the basis.

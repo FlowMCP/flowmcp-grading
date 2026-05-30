@@ -2,7 +2,7 @@
 id: Q-about-selection-05
 area: about-selection
 dimension: useCaseClarity
-question: "Wird die Skill-Komposition (L1/L2/L3) auf der About-Page erklaert?"
+question: "Is the skill composition (L1/L2/L3) explained on the About page?"
 scoreType: scale-1-5
 weight: 0.25
 determinism: non-deterministic
@@ -10,17 +10,17 @@ tier: P7
 filesToRead:
   - "{{aboutPath}}"
 preInstructionRef: pre-instructions/about-selection.md
-evaluatorTask: "Pruefe ob die About-Page die Skill-Levels und ihren Zusammenhang erklaert."
+evaluatorTask: "Check whether the About page explains the skill levels and how they relate."
 outputSchemaRef: output-schemas/about-selection.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Skills sind das User-Faceing Konzept. Ohne Erklaerung versteht die Persona die
-Selection-Power nicht.
+Skills are the user-facing concept. Without an explanation, the persona does not
+understand the power of the selection.
 
-## Persona-Anwendung
+## Persona Application
 
-AI-Engineer braucht die L1-L3-Hierarchie; Decision-Maker reicht ein Skill-Summary.
+An AI engineer needs the L1-L3 hierarchy; for a decision-maker a skill summary is enough.

@@ -1,8 +1,8 @@
 /**
  * SelectionLockfile — generate + read + diff selection.lock.json files.
  *
- * Memo 080 anchors:
- *   Kap 11 — selection.lock.json (Z. 476-491)
+ * Per the grading spec:
+ *   - Defines the selection.lock.json lockfile contract.
  *
  * Layout:
  *   grading-data/

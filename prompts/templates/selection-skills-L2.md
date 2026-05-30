@@ -16,42 +16,39 @@ skillLevel: L2
 Persona: {{BASE_PERSONA_NAME}} ({{BASE_PERSONA_FILE}})
 Lens: {{LENS_NAME}} ({{LENS_FILE}})
 
-Spec 13 §4.2 verlangt Persona-Focus auf ALLEN drei Skill-Levels (Pflicht).
-Du bewertest den L2-Skill aus dieser Persona- + Lens-Perspektive.
+Spec 13 §4.2 requires a persona focus on ALL three skill levels (mandatory).
+You evaluate the L2 skill from this persona + lens perspective.
 
 ## Files to Read
 
-1. {{SPEC_13_PATH}}                    — Skills-Spec, §4
-2. {{BASE_PERSONA_FILE}}               — Base-Persona
-3. {{LENS_FILE}}                       — Domain-Lens
-4. {{SELECTION_SKILL_L2_FILE}}         — Der zu bewertende L2-Skill (Komposition)
-5. {{L1_GRADING_RESULT_FILE}}          — Ergebnis-JSON aus dem L1-Grading der gleichen Selection
+1. {{SPEC_13_PATH}}                    — Skills spec, §4
+2. {{BASE_PERSONA_FILE}}               — Base persona
+3. {{LENS_FILE}}                       — Domain lens
+4. {{SELECTION_SKILL_L2_FILE}}         — The L2 skill to be evaluated (composition)
+5. {{L1_GRADING_RESULT_FILE}}          — Result JSON from the L1 grading of the same selection
 
-Falls `{{L1_GRADING_RESULT_FILE}}` fehlt, antworte ausschliesslich mit
-`{ "blocker": "<pfad>", "reason": "L1-Grading-Voraussetzung fehlt" }`
-und brich ab.
+If `{{L1_GRADING_RESULT_FILE}}` is missing, answer exclusively with
+`{ "blocker": "<path>", "reason": "L1 grading prerequisite missing" }`
+and stop.
 
 ## Question(s)
 
-Bewerte den L2-Komposition-Skill `{{SKILL_NAME}}` der Selection `{{SELECTION_NAME}}`.
-L2 = mehrere L1-Skills komponiert. Pruefe ob die Komposition auf den im
-L1-Grading bewerteten Sub-Skills aufbaut, ob die Persona die Komposition
-durchschaut, und ob Komposition ohne versteckte Defaults erfolgt.
+Evaluate the L2 composition skill `{{SKILL_NAME}}` of the selection `{{SELECTION_NAME}}`.
+L2 = several L1 skills composed together. Check whether the composition builds
+on the sub-skills evaluated in the L1 grading, whether the persona can follow
+the composition, and whether the composition happens without hidden defaults.
 
 {{QUESTIONS_BLOCK}}
 
 ## Output Schema
 
-Die Antwort MUSS exakt dem JSON-Schema unter `{{OUTPUT_SCHEMA_REF}}` entsprechen.
-Bei Datei-Lese-Fehler antworte ausschliesslich mit:
-`{ "blocker": "<dateipfad>", "reason": "<grund>" }`
-und brich ab.
+The answer MUST conform exactly to the JSON schema at `{{OUTPUT_SCHEMA_REF}}`.
+On a file-read error, answer exclusively with:
+`{ "blocker": "<file-path>", "reason": "<reason>" }`
+and stop.
 
 <!--
-Caveat (Memo 082 REV-04 + Kap 10.1):
-„Bei Selection-Skills aufpassen wegen Komplexitaet" — 9 Skills (3 pro Sub-Bereich x 3 Levels)
-sind moeglicherweise zu viele. Der Mini-Praxis-Test in Phase 6 verifiziert,
-ob die Konsolidierung haelt. Lessons werden in
-`grading-data/mini-praxis-2026-MM.md` ODER
-`.memo/082-.../execution/mini-praxis-lessons.md` festgehalten.
+Caveat: watch out for selection-skill complexity — 9 skills (3 per sub-area x 3 levels)
+may be too many. A small practical test should verify whether the consolidation
+holds, with lessons recorded in the gitignored working folder.
 -->

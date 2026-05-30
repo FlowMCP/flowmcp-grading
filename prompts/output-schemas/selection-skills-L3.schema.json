@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://flowmcp.org/grading/output-schemas/selection-skills-L3.schema.json",
     "title": "Evaluator-Response — selection-skills-L3",
-    "description": "Area 7c (Memo 082 Kap 7.1, Spec 13 §4) — Selection-Skill Level 3 (Multi-Schritt-Workflows mit Domain-Knowledge). Persona Pflicht.",
+    "description": "Area 7c (Spec 13 §4) — selection skill Level 3 (multi-step workflows with domain knowledge). Persona required.",
     "oneOf": [
         {
             "$ref": "_master.schema.json#/$defs/blocker"

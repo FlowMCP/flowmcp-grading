@@ -2,7 +2,7 @@
 id: Q-selection-skills-L2-02
 area: selection-skills-L2
 dimension: personaFit
-question: "Erklaert die L2-Description den Persona-Mehrwert ueber L1 hinaus?"
+question: "Does the L2 description explain the persona value beyond L1?"
 scoreType: scale-1-5
 weight: 0.5
 determinism: non-deterministic
@@ -11,16 +11,16 @@ filesToRead:
   - "{{skillPath}}"
   - "{{personaPath}}"
 preInstructionRef: pre-instructions/selection-skills-L2.md
-evaluatorTask: "Bewerte ob die L2-Description den Persona-Mehrwert vs. L1 klar macht."
+evaluatorTask: "Assess whether the L2 description makes the persona value over L1 clear."
 outputSchemaRef: output-schemas/selection-skills-L2.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Wenn L2 gegenueber L1 nichts Neues bringt, ist die Komposition unnoetig.
+If L2 brings nothing new over L1, the composition is unnecessary.
 
-## Persona-Anwendung
+## Persona Application
 
-Mehrwert wird gegen die Persona-Workflow-Effizienz gemessen.
+The added value is measured against the efficiency of the persona workflow.

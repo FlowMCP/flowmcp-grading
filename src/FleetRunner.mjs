@@ -1,5 +1,5 @@
 /**
- * FleetRunner — sequential orchestrator for the mini-praxis-fleet (Memo 082 Phase 5).
+ * FleetRunner — sequential orchestrator for the mini practice fleet.
  *
  * Engine code only. NO LLM calls. Delegates to skills via a caller-supplied
  * `skillInvoker` callback (production: Claude Code skill engine; tests: mock).
@@ -17,17 +17,17 @@
  *      `<outputBase>/selection/<selectionId>/gradings/<filename>.json`.
  *   6. Return structured summary.
  *
- * No batch-state-file (Memo 082 Kap 15.1 P5 explicit override of F4 recovery).
+ * No batch-state-file (explicit override of the batch-recovery rule for this fleet).
  * For the 7-schema mini-run a crash means "run again from scratch" — individual
  * gradings remain on disk under stable paths.
  *
- * Memo anchors:
- *   Kap 4.5  — Folder layout (Spec 19 §17.1)
- *   Kap 4.6  — Three folder types (public / gitignored grading-data / .memo)
- *   Kap 7.4  — Persona application per area
- *   Kap 12   — Recursive feedback loop (handed off to <area>-start-grade skills)
- *   Kap 15.1 — Phases and Phase 5 override
- *   Kap 15.2 — Mini-praxis scope (7 schemas)
+ * Per the grading spec:
+ *   - Defines the folder layout.
+ *   - Three folder types (public / gitignored grading-data / .memo).
+ *   - Persona application per area.
+ *   - Recursive feedback loop (handed off to <area>-start-grade skills).
+ *   - Phase ordering and this fleet's override of batch recovery.
+ *   - Mini practice scope (7 schemas).
  *
  * NO SILENT DEFAULTS. Static methods only, object params, object returns.
  */
@@ -127,7 +127,7 @@ class FleetRunner {
         }, Promise.resolve() )
 
         // Selection-Grading only runs when persona is provided — all selection areas
-        // (about-selection, selection-skills-L1/L2/L3) require persona per Kap 7.4.
+        // (about-selection, selection-skills-L1/L2/L3) require persona per the persona-application rule.
         // When persona is null the caller explicitly wants neutral-only grading,
         // so the selection step is skipped (no silent fallback to 'neutral').
         let selectionGradingSummary = null
@@ -219,7 +219,7 @@ class FleetRunner {
             return struct
         }
 
-        // Persona-required check — no silent fallback (Kap 7.4)
+        // Persona-required check — no silent fallback (per the persona-application rule)
         const personaMissingFor = areas
             .map( ( a, i ) => ( { area: a, index: i } ) )
             .filter( ( pair ) => AREAS_WITH_PERSONA.includes( pair.area ) && persona === null )

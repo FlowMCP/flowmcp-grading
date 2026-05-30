@@ -18,7 +18,8 @@
         "build:test-catalog": "node scripts/build-test-catalog.mjs",
         "build:question-catalog-doc": "node scripts/build-question-catalog-doc.mjs",
         "build:all": "npm run build:questions && npm run build:test-catalog && npm run build:question-catalog-doc",
-        "validate:output-schemas": "node scripts/validate-output-schemas.mjs"
+        "validate:output-schemas": "node scripts/validate-output-schemas.mjs",
+        "lint:hygiene": "node scripts/lint-repo-hygiene.mjs"
     },
     "repository": {
         "type": "git",

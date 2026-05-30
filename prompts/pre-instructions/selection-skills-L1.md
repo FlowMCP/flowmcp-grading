@@ -1,10 +1,10 @@
-<!-- Bereich: 07a selection-skills-L1 | Persona: MIT | Spec: 13 §4.2 -->
+<!-- Area: 07a selection-skills-L1 | Persona: WITH | Spec: 13 §4.2 -->
 
-## Datei-Vorbereitung (Pflicht — strikte Reihenfolge)
+## File Preparation (mandatory — strict order)
 
-Lies die folgenden Dateien in dieser Reihenfolge BEVOR du eine Frage beantwortest.
-Falls eine Datei nicht existiert oder nicht lesbar ist, antworte ausschliesslich
-mit { "blocker": "<dateipfad>", "reason": "<grund>" } und brich ab.
+Read the following files in this order BEFORE answering any question.
+If a file does not exist or is not readable, answer exclusively with
+{ "blocker": "<file-path>", "reason": "<reason>" } and stop.
 
-1. {{SELECTION_SPEC_PATH}}     — Selection-Definition (selection.json + selection.lock.json)
-2. {{PERSONA_PATH}}            — Persona-File fuer L1-Fokus (Spec 13 §4.2)
+1. {{SELECTION_SPEC_PATH}}     — Selection definition (selection.json + selection.lock.json)
+2. {{PERSONA_PATH}}            — Persona file for the L1 focus (Spec 13 §4.2)

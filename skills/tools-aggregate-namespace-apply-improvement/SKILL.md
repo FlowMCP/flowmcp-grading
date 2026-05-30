@@ -1,95 +1,95 @@
 ---
 name: tools-aggregate-namespace-apply-improvement
-description: Konsumiert die JSON-Response von tools-aggregate-namespace-start-grade. Liest improvementHints[], entscheidet ob ein naechster Iterations-Lauf startet (Default maxIterations=3) oder ob die finale Grading-Datei nach grading-data/namespace/<ns>/gradings/<hash>--<ts>--neutral.json (gitignored, Kap 4.6) geschrieben wird. Erzeugt bei Re-Iteration den Re-Invocation-Aufruf von tools-aggregate-namespace-start-grade mit iteration+1 + previousGradingPath. Decision-Matrix gemaess Memo 082 Kap 12. Persona-Anwendung Bereich 4 = neutral (Kap 7.4).
+description: Consumes the JSON response from tools-aggregate-namespace-start-grade. Reads improvementHints[], decides whether a next iteration starts (default maxIterations=3) or whether the final grading file is written to grading-data/namespace/<ns>/gradings/<hash>--<ts>--neutral.json (gitignored). On re-iteration, produces the re-invocation call of tools-aggregate-namespace-start-grade with iteration+1 + previousGradingPath. The decision matrix follows the grading spec. Per the grading spec, the tools-aggregate-namespace area uses a neutral persona.
 allowed-tools: Read, Write, Bash
 model: inherit
 ---
 
 ## Input
 
-Parameter (vom `tools-aggregate-namespace-start-grade`-Skill via Hand-off uebergeben):
+Parameters (passed by the `tools-aggregate-namespace-start-grade` skill via hand-off):
 
-| Parameter | Pflicht | Format | Beispiel |
-|-----------|---------|--------|----------|
-| `responseJson` | ja | Strict-JSON gemaess `tools-aggregate-namespace.schema.json` | `{ area: "tools-aggregate-namespace", iteration: 1, gradings: [...], improvementHints: [...] }` |
-| `iteration` | ja | Integer 1..N | `1` |
-| `namespacePath` | ja | Absoluter Pfad zum Namespace-Ordner | `/.../etherscan/` |
-| `personaSlug` | ja | `"neutral"` (Bereich 4 ist neutral, Kap 7.4) | `neutral` |
-| `maxIterations` | nein (Default 3, Kap 12) | Integer 1..N | `3` |
+| Parameter | Required | Format | Example |
+|-----------|----------|--------|---------|
+| `responseJson` | yes | Strict JSON per `tools-aggregate-namespace.schema.json` | `{ area: "tools-aggregate-namespace", iteration: 1, gradings: [...], improvementHints: [...] }` |
+| `iteration` | yes | Integer 1..N | `1` |
+| `namespacePath` | yes | Absolute path to the namespace folder | `/.../etherscan/` |
+| `personaSlug` | yes | `"neutral"` (the tools-aggregate-namespace area is neutral) | `neutral` |
+| `maxIterations` | no (default 3) | Integer 1..N | `3` |
 
-## Ablauf
+## Process
 
-1. **Validate Input** — `responseJson` ist valid. `iteration >= 1`. `namespacePath` existiert.
-2. **Extract improvementHints** — `responseJson.improvementHints[]`. Bei leer: Finalisieren.
-3. **Decide next iteration** — Decision-Matrix (siehe unten).
-4a. **Wenn Re-Iteration:**
-    - Optional: Zwischen-State nach `grading-data/_tmp/<hash>--iteration-<n>.json` (gitignored).
-    - Re-invoke `tools-aggregate-namespace-start-grade` mit `iteration + 1`, `previousGradingPath`, `personaSlug="neutral"`.
-    - Skill endet.
-4b. **Wenn Finalisieren:**
-    - Berechne `<schemaHash>` (8-Zeichen sha256-Truncate, Spec 08 §5).
-    - Berechne `<ISO-ts>` (`2026-MM-DDTHH-MM-SSZ`).
-    - Berechne Zielpfad: `grading-data/namespace/<namespace>/gradings/<schemaHash>--<ISO-ts>--neutral.json`.
-    - `mkdir -p` Zielordner.
-    - Write finale JSON via `Write`-Tool.
-    - Output: `{ finalPath: "<absoluter-Pfad>", iteration: <n>, status: "done" }`.
+1. **Validate Input** — `responseJson` is valid. `iteration >= 1`. `namespacePath` exists.
+2. **Extract improvementHints** — `responseJson.improvementHints[]`. If empty: finalize.
+3. **Decide next iteration** — Decision matrix (see below).
+4a. **If re-iteration:**
+    - Optional: write interim state to `grading-data/_tmp/<hash>--iteration-<n>.json` (gitignored).
+    - Re-invoke `tools-aggregate-namespace-start-grade` with `iteration + 1`, `previousGradingPath`, `personaSlug="neutral"`.
+    - Skill ends.
+4b. **If finalizing:**
+    - Compute `<schemaHash>` (8-character sha256 truncate).
+    - Compute `<ISO-ts>` (`2026-MM-DDTHH-MM-SSZ`).
+    - Compute the target path: `grading-data/namespace/<namespace>/gradings/<schemaHash>--<ISO-ts>--neutral.json`.
+    - `mkdir -p` the target folder.
+    - Write the final JSON via the `Write` tool.
+    - Output: `{ finalPath: "<absolute-path>", iteration: <n>, status: "done" }`.
 
-## Recursive-Loop-Mechanik
+## Recursive-Loop Mechanics
 
-**Decision-Matrix (Kap 12):**
+**Decision matrix:**
 
-| Bedingung | Aktion |
+| Condition | Action |
 |-----------|--------|
-| `iteration >= maxIterations` | Finalisieren |
-| `improvementHints[]` ist leer | Finalisieren |
-| `responseJson.confidence == "high"` | Finalisieren |
-| `responseJson.blocker` gesetzt | Finalisieren (mit Blocker-Status) |
-| sonst | Re-Iteration mit `iteration + 1` |
+| `iteration >= maxIterations` | Finalize |
+| `improvementHints[]` is empty | Finalize |
+| `responseJson.confidence == "high"` | Finalize |
+| `responseJson.blocker` set | Finalize (with blocker status) |
+| otherwise | Re-iterate with `iteration + 1` |
 
-**Default `maxIterations = 3`** (Kap 12 Empfehlung).
+**Default `maxIterations = 3`.**
 
-**Re-Invocation:** Hand-off an `tools-aggregate-namespace-start-grade` mit:
+**Re-Invocation:** Hand off to `tools-aggregate-namespace-start-grade` with:
 
 ```json
 {
-  "namespacePath": "<unveraendert>",
+  "namespacePath": "<unchanged>",
   "personaSlug": "neutral",
   "iteration": "<iteration + 1>",
-  "previousGradingPath": "<Pfad oder Inline-Daten>"
+  "previousGradingPath": "<path or inline data>"
 }
 ```
 
 ## Output
 
-Bei Re-Iteration: keine Datei.
+On re-iteration: no file.
 
-Bei Finalisieren:
+On finalizing:
 
 ```json
-{ "finalPath": "<absoluter-Pfad>", "iteration": "<n>", "status": "done" }
+{ "finalPath": "<absolute-path>", "iteration": "<n>", "status": "done" }
 ```
 
-## Folder-Garantie (Kap 4.6)
+## Folder Guarantee
 
-Write-Target IMMER im **gitignored `grading-data/`-Folder** (Kap 4.6 — `.gitignore:1`). Niemals in Public-Repo-Pfade.
+The write target is ALWAYS inside the **gitignored `grading-data/` folder** (see `.gitignore:1`). Never write into public-repo paths.
 
-**Pfad-Template:**
+**Path template:**
 
 ```
 grading-data/namespace/<namespace>/gradings/<schemaHash>--<ISO-ts>--<personaSlug>.json
 ```
 
-Mit `<personaSlug> = neutral` (Bereich 4, Kap 7.4).
+With `<personaSlug> = neutral` (tools-aggregate-namespace area).
 
-**Beispiel:**
+**Example:**
 
 ```
 grading-data/namespace/etherscan/gradings/a1b2c3d4--2026-05-30T15-34-12Z--neutral.json
 ```
 
-## Filename-Helper (PRD-21)
+## Filename Helper
 
-Filename-Bildung darf nur via `Grading.formatGradingFilename({ hash, ts, persona })` aus `src/Grading.mjs` laufen — **kein** String-Concat im Save-Step.
+Filename construction may run ONLY via `Grading.formatGradingFilename({ hash, ts, persona })` from `src/Grading.mjs` — **no** string concatenation in the save step.
 
 ```javascript
 import { Grading } from 'flowmcp-grading'
@@ -97,9 +97,9 @@ import { Grading } from 'flowmcp-grading'
 const { filename } = Grading.formatGradingFilename( {
     hash: schemaHash,
     ts: isoTs,
-    persona: personaSlug          // 'neutral' (Bereich 4)
+    persona: personaSlug          // 'neutral' (tools-aggregate-namespace area)
 } )
 const targetPath = `grading-data/namespace/${namespace}/gradings/${filename}`
 ```
 
-Validierung im Helper (GRD-040/041/042) faengt fehlerhafte Slugs, Hashes und Timestamps ab. Vollstaendige Konvention: `docs/grading-filename-convention.md`.
+Validation in the helper (GRD-040/041/042) catches malformed slugs, hashes, and timestamps. Full convention: `docs/grading-filename-convention.md`.

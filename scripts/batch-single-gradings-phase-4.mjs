@@ -1,9 +1,9 @@
 // Batch-runner for Single-Full-Gradings of all 64 crypto-domain-full members.
 //
-// Memo 080 PRD-18 §4.1 — sequential batch with crash-recovery + state file.
+// Sequential batch with crash-recovery + state file.
 //
 // REALITY-CHECK (2026-05-29):
-//   The CLI command `flowmcp dev grade single` referenced in PRD-18 is a stub
+//   The CLI command `flowmcp dev grade single` is a stub
 //   in src/Phases/SingleSchema.mjs (P1, P2, P7 currently report
 //   `stub: true, todo: 'follow-up memo'`). A full LLM-grading of 64 members
 //   would take hours and cannot be completed inside one subagent invocation.
@@ -166,7 +166,7 @@ const writePhaseStatus = async ( { namespace, tool, gradingStatus, dryRun } ) =>
 
 
 const writeNamespaceLevelStatus = async ( { namespace, tool, gradingStatus, dryRun } ) => {
-    // PRD-15 selection.json uses namespace-level schemaIds (e.g. "alchemy").
+    // selection.json uses namespace-level schemaIds (e.g. "alchemy").
     // SelectionLockfile reads phase-status/single/<schemaId>.json, where schemaId
     // matches lockfile member entry. We also write the namespace-level alias so
     // SelectionLockfile can find an aggregate status without enumerating tools.

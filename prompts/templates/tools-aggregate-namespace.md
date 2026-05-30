@@ -20,16 +20,16 @@ version: 1.0.0
 
 ## Question(s)
 
-Bewerte die Coverage der Tools im Namespace `{{NAMESPACE}}` gegen die in
-`{{DOMAIN_KNOWLEDGE_DOC}}` dokumentierten Use-Cases. Die Bewertung ist
-neutral und vergleicht Tool-Liste vs. Domain-Erwartung. Antworte nur auf
-Basis der gelesenen Files — keine Web-Recherche, keine Annahmen.
+Evaluate the coverage of the tools in the namespace `{{NAMESPACE}}` against the
+use cases documented in `{{DOMAIN_KNOWLEDGE_DOC}}`. The evaluation is neutral
+and compares the tool list vs. the domain expectation. Answer only on the
+basis of the files you have read — no web research, no assumptions.
 
 {{QUESTIONS_BLOCK}}
 
 ## Output Schema
 
-Die Antwort MUSS exakt dem JSON-Schema unter `{{OUTPUT_SCHEMA_REF}}` entsprechen.
-Bei Datei-Lese-Fehler antworte ausschliesslich mit:
-`{ "blocker": "<dateipfad>", "reason": "<grund>" }`
-und brich ab.
+The answer MUST conform exactly to the JSON schema at `{{OUTPUT_SCHEMA_REF}}`.
+On a file-read error, answer exclusively with:
+`{ "blocker": "<file-path>", "reason": "<reason>" }`
+and stop.

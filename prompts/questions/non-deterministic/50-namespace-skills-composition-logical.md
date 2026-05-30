@@ -2,7 +2,7 @@
 id: Q-namespace-skills-03
 area: namespace-skills
 dimension: skillAdequacy
-question: "Ist die Composition aus Namespace-Tools logisch?"
+question: "Is the composition of namespace tools logical?"
 scoreType: scale-1-5
 weight: 0.33
 determinism: non-deterministic
@@ -11,17 +11,16 @@ filesToRead:
   - "{{skillPath}}"
   - "{{namespacePath}}"
 preInstructionRef: pre-instructions/namespace-skills.md
-evaluatorTask: "Bewerte die Tool-Composition des Namespace-Skills auf Logik und Reihenfolge."
+evaluatorTask: "Assess the tool composition of the namespace skill for logic and ordering."
 outputSchemaRef: output-schemas/namespace-skills.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Logische Reihenfolge (z.B. erst Lookup, dann Aggregation) macht den Skill
-nachvollziehbar.
+A logical order (e.g. lookup first, then aggregation) makes the skill traceable.
 
-## Persona-Anwendung
+## Persona Application
 
-Persona-Workflow-Logik als Massstab.
+The logic of the persona workflow serves as the yardstick.

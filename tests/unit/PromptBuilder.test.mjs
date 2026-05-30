@@ -122,10 +122,10 @@ describe( 'PromptBuilder.build — neutral areas (persona-optional)', () => {
         expect( result.prompt ).not.toContain( 'Persona: ' )
         expect( result.prompt ).not.toContain( 'Base-Persona: ' )
         // Pre-Instructions, Files and Question blocks remain.
-        expect( result.prompt ).toContain( 'Datei-Vorbereitung (Pflicht — strikte Reihenfolge)' )
+        expect( result.prompt ).toContain( 'File preparation (mandatory — strict order)' )
         expect( result.prompt ).toContain( '{{SCHEMA_PATH}}' )
         expect( result.prompt ).toContain( 'Q-001' )
-        expect( result.prompt ).toContain( 'Output-Schema (verbindlich)' )
+        expect( result.prompt ).toContain( 'Output schema (binding)' )
     } )
 
     test( 'all 4 neutral areas accept persona=null', () => {
@@ -395,7 +395,7 @@ describe( 'PromptBuilder.build — smoke + metadata integrity', () => {
         expect( result.prompt ).toContain( 'Ist die Tool-Beschreibung praezise?' )
     } )
 
-    test( 'pre-instruction block contains pflicht-header and numbered files', () => {
+    test( 'pre-instruction block contains mandatory header and numbered files', () => {
         const result = PromptBuilder.build( {
             template: sampleTemplate,
             persona: null,
@@ -405,8 +405,8 @@ describe( 'PromptBuilder.build — smoke + metadata integrity', () => {
             policies: samplePolicies,
             area: 'single-test'
         } )
-        expect( result.prompt ).toContain( '## Datei-Vorbereitung (Pflicht — strikte Reihenfolge)' )
-        expect( result.prompt ).toContain( '"blocker": "<dateipfad>"' )
+        expect( result.prompt ).toContain( '## File preparation (mandatory — strict order)' )
+        expect( result.prompt ).toContain( '"blocker": "<filepath>"' )
         expect( result.prompt ).toContain( '1. {{SCHEMA_PATH}}' )
         expect( result.prompt ).toContain( '2. {{TEST_RESPONSE_PATH}}' )
     } )

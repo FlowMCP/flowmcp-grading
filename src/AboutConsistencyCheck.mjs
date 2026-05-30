@@ -1,8 +1,8 @@
 /**
  * AboutConsistencyCheck — text-vs-schema validator for About-Pages.
  *
- * Memo 080 anchors:
- *   Kap 13 — Schritt 0 (Pre-Condition) + Schritt 1 (Konsistenz-Check)
+ * Per the grading spec:
+ *   - Step 0 (pre-condition) + Step 1 (consistency check).
  *
  * Checks:
  *   - Every tool-name from schemas is mentioned in About-Text
@@ -176,7 +176,7 @@ class AboutConsistencyCheck {
             }
         }
 
-        // Schritt 0 — Pre-Condition (only when a lockfile is supplied; namespace-level pre-condition is via lockfile)
+        // Step 0 — pre-condition (only when a lockfile is supplied; namespace-level pre-condition is via lockfile)
         let preConditionPassed = true
         let preIssues = []
         if( typeof lockfilePath === 'string' && lockfilePath.length > 0 ) {
@@ -193,7 +193,7 @@ class AboutConsistencyCheck {
             }
         }
 
-        // Schritt 1 — Consistency check
+        // Step 1 — consistency check
         const consResult = await AboutConsistencyCheck.checkNamespaceAbout( { gradingDataRoot, namespace } )
         const consistencyPassed = consResult.passed
 

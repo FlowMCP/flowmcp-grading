@@ -1,9 +1,9 @@
-<!-- Bereich: 02 tools-aggregate-schema | Persona: Neutral | Spec: 06 §4 -->
+<!-- Area: 02 tools-aggregate-schema | Persona: Neutral | Spec: 06 §4 -->
 
-## Datei-Vorbereitung (Pflicht — strikte Reihenfolge)
+## File Preparation (mandatory — strict order)
 
-Lies die folgenden Dateien in dieser Reihenfolge BEVOR du eine Frage beantwortest.
-Falls eine Datei nicht existiert oder nicht lesbar ist, antworte ausschliesslich
-mit { "blocker": "<dateipfad>", "reason": "<grund>" } und brich ab.
+Read the following files in this order BEFORE answering any question.
+If a file does not exist or is not readable, answer exclusively with
+{ "blocker": "<file-path>", "reason": "<reason>" } and stop.
 
-1. {{SCHEMA_PATH}}        — Schema-Definition mit allen Routes des Tool-Bundles
+1. {{SCHEMA_PATH}}        — Schema definition with all routes of the tool bundle

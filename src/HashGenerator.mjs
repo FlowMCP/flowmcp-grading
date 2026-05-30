@@ -1,9 +1,9 @@
 /**
- * HashGenerator — deterministic canonical-JSON + sha256-Praefix hashing.
+ * HashGenerator — deterministic canonical-JSON + sha256-prefix hashing.
  *
- * Memo 080 anchors:
- *   Kap 3 — Hash als stabiler Schema-Identifier (REV-05 Z. 211)
- *   Kap 11 — selectionHash, namespaceHash
+ * Per the grading spec:
+ *   - The hash is the stable schema identifier.
+ *   - Defines selectionHash and namespaceHash.
  *
  * Algorithm:
  *   1. canonicalize(value) — sorted-key, no-whitespace JSON, undefined removed

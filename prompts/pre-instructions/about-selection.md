@@ -1,11 +1,11 @@
-<!-- Bereich: 06 about-selection | Persona: MIT | Spec: 11 §4 -->
+<!-- Area: 06 about-selection | Persona: WITH | Spec: 11 §4 -->
 
-## Datei-Vorbereitung (Pflicht — strikte Reihenfolge)
+## File Preparation (mandatory — strict order)
 
-Lies die folgenden Dateien in dieser Reihenfolge BEVOR du eine Frage beantwortest.
-Falls eine Datei nicht existiert oder nicht lesbar ist, antworte ausschliesslich
-mit { "blocker": "<dateipfad>", "reason": "<grund>" } und brich ab.
+Read the following files in this order BEFORE answering any question.
+If a file does not exist or is not readable, answer exclusively with
+{ "blocker": "<file-path>", "reason": "<reason>" } and stop.
 
-1. {{SELECTION_ABOUT_PATH}}    — About-Page der Selection (Spec 11 §4)
-2. {{DOMAIN_KNOWLEDGE_PATH}}   — Domain-Knowledge-Doc (Spec 10 §3)
-3. {{PERSONA_PATH}}            — Persona-File (Base + Lens)
+1. {{SELECTION_ABOUT_PATH}}    — Selection About page (Spec 11 §4)
+2. {{DOMAIN_KNOWLEDGE_PATH}}   — Domain knowledge doc (Spec 10 §3)
+3. {{PERSONA_PATH}}            — Persona file (base + lens)

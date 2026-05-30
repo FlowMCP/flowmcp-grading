@@ -2,7 +2,7 @@
 id: Q-selection-skills-L2-05
 area: selection-skills-L2
 dimension: skillAdequacy
-question: "Bildet der L2-Use-Case einen echten Persona-Workflow ab?"
+question: "Does the L2 use case represent a genuine persona workflow?"
 scoreType: scale-1-5
 weight: 0.33
 determinism: non-deterministic
@@ -12,16 +12,16 @@ filesToRead:
   - "{{personaPath}}"
   - "{{lensPath}}"
 preInstructionRef: pre-instructions/selection-skills-L2.md
-evaluatorTask: "Pruefe ob der L2-Use-Case einem typischen Persona-Workflow entspricht."
+evaluatorTask: "Check whether the L2 use case corresponds to a typical persona workflow."
 outputSchemaRef: output-schemas/selection-skills-L2.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Workflow-Bezug ist der eigentliche L2-Mehrwert.
+The connection to a workflow is the actual added value of L2.
 
-## Persona-Anwendung
+## Persona Application
 
-Lens-spezifische Workflow-Liste als Ground-Truth.
+The lens-specific workflow list serves as ground truth.

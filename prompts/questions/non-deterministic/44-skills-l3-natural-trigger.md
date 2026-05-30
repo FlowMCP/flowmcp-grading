@@ -2,7 +2,7 @@
 id: Q-selection-skills-L3-03
 area: selection-skills-L3
 dimension: skillAdequacy
-question: "Ist der L3-Trigger natuerlich in der Persona-Sprache formuliert?"
+question: "Is the L3 trigger phrased naturally in the persona's language?"
 scoreType: scale-1-5
 weight: 0.33
 determinism: non-deterministic
@@ -11,16 +11,16 @@ filesToRead:
   - "{{skillPath}}"
   - "{{personaPath}}"
 preInstructionRef: pre-instructions/selection-skills-L3.md
-evaluatorTask: "Pruefe ob der L3-Trigger einer natuerlichen Persona-Anfrage entspricht."
+evaluatorTask: "Check whether the L3 trigger corresponds to a natural persona request."
 outputSchemaRef: output-schemas/selection-skills-L3.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Trigger wie "morning-portfolio-update" sind natuerlich; "exec_l3_skill_42" sind es nicht.
+Triggers like "morning-portfolio-update" are natural; "exec_l3_skill_42" is not.
 
-## Persona-Anwendung
+## Persona Application
 
-Trigger-Sprache muss zur Persona-Lens passen.
+The trigger language must fit the persona lens.

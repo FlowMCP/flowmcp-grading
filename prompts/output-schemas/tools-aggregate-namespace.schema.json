@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://flowmcp.org/grading/output-schemas/tools-aggregate-namespace.schema.json",
     "title": "Evaluator-Response — tools-aggregate-namespace",
-    "description": "Area 4 (Memo 082 Kap 7.1) — Coverage der Namespace-Tools. Persona = null (neutral, Kap 7.4).",
+    "description": "Area 4 — coverage of the namespace tools. Persona = null (neutral area per the grading spec).",
     "oneOf": [
         {
             "$ref": "_master.schema.json#/$defs/blocker"

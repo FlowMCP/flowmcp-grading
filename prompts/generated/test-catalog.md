@@ -1,13 +1,13 @@
-# Code-Test-Katalog (autogeneriert)
+# Code Test Catalog (auto-generated)
 
-> Quelle: `prompts/generated/questions.json` — generiert via `scripts/build-test-catalog.mjs`
-> Beantwortete Frage F5 (REV-03) — Katalog wird aus Fragen abgeleitet, NICHT manuell.
-> generatedAt: 2026-05-29T22:46:36.154Z
+> Source: `prompts/generated/questions.json` — generated via `scripts/build-test-catalog.mjs`
+> The catalog is derived from the questions, NOT maintained manually.
+> generatedAt: 2026-05-30T08:43:30.433Z
 
-## Mapping Frage → Code-Test-Bucket
+## Mapping Question → Code-Test-Bucket
 
-| Frage-ID | Area | Dimension | Determinism | Code-Test-Bucket |
-|----------|------|-----------|-------------|------------------|
+| Question-ID | Area | Dimension | Determinism | Code-Test-Bucket |
+|-------------|------|-----------|-------------|------------------|
 | Q-single-test-01 | single-test | docsUrlReachable | deterministic | tests/unit/v1/validation.test.mjs (route-level) |
 | Q-single-test-02 | single-test | outputSchemaMatch | deterministic | tests/unit/v1/validation.test.mjs (route-level) |
 | Q-single-test-03 | single-test | apiKeyDomainMatch | deterministic | tests/unit/v1/validation.test.mjs (route-level) |

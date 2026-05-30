@@ -2,7 +2,7 @@
 id: Q-tools-aggregate-namespace-05
 area: tools-aggregate-namespace
 dimension: domainCoverage
-question: "Sind Coverage-Gaps explizit dokumentiert (oder bewusst absent)?"
+question: "Are coverage gaps explicitly documented (or deliberately absent)?"
 scoreType: boolean
 weight: 0.2
 determinism: non-deterministic
@@ -11,12 +11,12 @@ filesToRead:
   - "{{namespacePath}}"
   - "{{domainKnowledgePath}}"
 preInstructionRef: pre-instructions/tools-aggregate-namespace.md
-evaluatorTask: "Pruefe ob fehlende Funktionen dokumentiert sind oder bewusst draussen bleiben."
+evaluatorTask: "Check whether missing functions are documented or deliberately left out."
 outputSchemaRef: output-schemas/tools-aggregate-namespace.schema.json
 personaRequired: false
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Ein dokumentierter Gap ist klar; ein impliziter Gap ist Verwirrung.
+A documented gap is clear; an implicit gap is confusing.

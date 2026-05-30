@@ -15,8 +15,8 @@ version: 1.0.0
 Persona: {{BASE_PERSONA_NAME}} ({{BASE_PERSONA_FILE}})
 Lens: {{LENS_NAME}} ({{LENS_FILE}})
 
-Sieh die About-Page durch die Brille dieser Persona + Lens.
-Spec 11 §4 verlangt Persona-Reference im About-Content.
+View the About page through the lens of this persona + lens.
+Spec 11 §4 requires a persona reference in the About content.
 
 ## Files to Read
 
@@ -24,16 +24,16 @@ Spec 11 §4 verlangt Persona-Reference im About-Content.
 
 ## Question(s)
 
-Bewerte die About-Page des Namespaces `{{NAMESPACE}}` aus Persona-Perspektive
-nach Spec 11 §4. Die Personas-Reference im About-Content ist Pflicht —
-pruefe ihre Praesenz und Qualitaet. Antworte nur auf Basis der gelesenen
-Files — keine Web-Recherche, keine Annahmen.
+Evaluate the About page of the namespace `{{NAMESPACE}}` from the persona's
+perspective per Spec 11 §4. The persona reference in the About content is
+mandatory — check for its presence and quality. Answer only on the basis of
+the files you have read — no web research, no assumptions.
 
 {{QUESTIONS_BLOCK}}
 
 ## Output Schema
 
-Die Antwort MUSS exakt dem JSON-Schema unter `{{OUTPUT_SCHEMA_REF}}` entsprechen.
-Bei Datei-Lese-Fehler antworte ausschliesslich mit:
-`{ "blocker": "<dateipfad>", "reason": "<grund>" }`
-und brich ab.
+The answer MUST conform exactly to the JSON schema at `{{OUTPUT_SCHEMA_REF}}`.
+On a file-read error, answer exclusively with:
+`{ "blocker": "<file-path>", "reason": "<reason>" }`
+and stop.

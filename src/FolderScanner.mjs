@@ -1,9 +1,9 @@
 /**
- * FolderScanner — validates the grading-data/ folder layout against Soll-Form.
+ * FolderScanner — validates the grading-data/ folder layout against the expected layout.
  *
- * Memo 080 anchors:
- *   Kap 2 — Folder layout
- *   Kap 17 — Folder-Scanner SCN-001..010
+ * Per the grading spec:
+ *   - Defines the canonical folder layout.
+ *   - Defines the folder-scanner checks SCN-001..010.
  *
  * Layout checks:
  *   - schemas/<ns>/namespace.json MUST exist
@@ -205,7 +205,7 @@ class FolderScanner {
             return { issues, errors: [] }
         }
 
-        // Lockfile-Consistency-Check is delegated to PRD-13. Here we only assert the file existence.
+        // Lockfile-consistency check is delegated to the selection validator. Here we only assert the file existence.
         const lockfilePath = join( selectionPath, 'selection.lock.json' )
         const lockExists = await FolderScanner.#fileExists( { path: lockfilePath } )
         if( !lockExists ) {

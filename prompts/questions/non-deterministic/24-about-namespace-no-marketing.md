@@ -2,7 +2,7 @@
 id: Q-about-namespace-05
 area: about-namespace
 dimension: useCaseClarity
-question: "Ist die About-Page frei von Marketing-Sprache?"
+question: "Is the About page free of marketing language?"
 scoreType: scale-1-5
 weight: 0.25
 determinism: non-deterministic
@@ -10,18 +10,18 @@ tier: P7
 filesToRead:
   - "{{aboutPath}}"
 preInstructionRef: pre-instructions/about-namespace.md
-evaluatorTask: "Bewerte die Sprache der About-Page: deskriptiv vs. werblich."
+evaluatorTask: "Assess the language of the About page: descriptive vs. promotional."
 outputSchemaRef: output-schemas/about-namespace.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Marketing-Sprache verschleiert die echte Faehigkeit des Namespace und mindert
-das Vertrauen technischer Personas.
+Marketing language obscures the namespace's real capability and reduces the trust
+of technical personas.
 
-## Persona-Anwendung
+## Persona Application
 
-Decision-Maker und AI-Engineer haben unterschiedliche Toleranz fuer Marketing —
-Lens-Kontext entscheidet ueber Hard/Soft-Fail.
+Decision-makers and AI engineers have different tolerance for marketing — the lens
+context decides between a hard and a soft fail.

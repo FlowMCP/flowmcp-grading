@@ -2,7 +2,7 @@
 id: Q-about-namespace-06
 area: about-namespace
 dimension: useCaseClarity
-question: "Ist ein ToS- oder Pricing-Verweis vorhanden?"
+question: "Is a ToS or pricing reference present?"
 scoreType: boolean
 weight: 0.25
 determinism: non-deterministic
@@ -10,16 +10,16 @@ tier: P7
 filesToRead:
   - "{{aboutPath}}"
 preInstructionRef: pre-instructions/about-namespace.md
-evaluatorTask: "Pruefe ob die About-Page auf ToS und/oder Pricing verlinkt."
+evaluatorTask: "Check whether the About page links to ToS and/or pricing."
 outputSchemaRef: output-schemas/about-namespace.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Decision-Maker brauchen ToS/Pricing-Info, um Adoption zu rechtfertigen.
+Decision-makers need ToS/pricing information to justify adoption.
 
-## Persona-Anwendung
+## Persona Application
 
-Wichtig fuer Decision-Maker, weniger fuer Hackathon-Builder — Lens steuert Score-Gewichtung.
+Important for decision-makers, less so for hackathon builders — the lens drives the score weighting.

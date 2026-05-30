@@ -1,95 +1,95 @@
 ---
 name: selection-skills-L1-apply-improvement
-description: Konsumiert die JSON-Response von selection-skills-L1-start-grade. Liest improvementHints[], entscheidet ob ein naechster Iterations-Lauf startet (Default maxIterations=3) oder ob die finale Grading-Datei nach grading-data/selection/<sel>/gradings/<hash>--<ts>--<basePersona>--<lens>--L1.json (gitignored, Kap 4.6) geschrieben wird. Erzeugt bei Re-Iteration den Re-Invocation-Aufruf von selection-skills-L1-start-grade mit iteration+1 + previousGradingPath. Decision-Matrix gemaess Memo 082 Kap 12. Persona-Anwendung Bereich 7a = Pflicht (Kap 7.4, Spec 13 §4.2). User-Caveat REV-04 — Selection-Skill-Komplexitaet (Mini-Praxis-Test P6 verifiziert Token-Budget).
+description: Consumes the JSON response from selection-skills-L1-start-grade. Reads improvementHints[], decides whether to start a next iteration run (default maxIterations=3) or to write the final grading file to grading-data/selection/<sel>/gradings/<hash>--<ts>--<basePersona>--<lens>--L1.json (gitignored). On re-iteration it builds the re-invocation call to selection-skills-L1-start-grade with iteration+1 and previousGradingPath. The decision matrix follows the grading spec. Persona application for the selection-skills L1 sub-area is mandatory (persona required). Note — selection skills are more complex, so a practical mini-test verifies the token budget.
 allowed-tools: Read, Write, Bash
 model: inherit
 ---
 
 ## Input
 
-Parameter (vom `selection-skills-L1-start-grade`-Skill via Hand-off uebergeben):
+Parameters (handed off from the `selection-skills-L1-start-grade` skill):
 
-| Parameter | Pflicht | Format | Beispiel |
-|-----------|---------|--------|----------|
-| `responseJson` | ja | Strict-JSON gemaess `selection-skills-L1.schema.json` | `{ area: "selection-skills", tier: "L1", iteration: 1, gradings: [...], improvementHints: [...] }` |
-| `iteration` | ja | Integer 1..N | `1` |
-| `selectionPath` | ja | Absoluter Pfad zur Selection | `/.../grading-data/selection/crypto-mini/` |
-| `personaSlug` | **ja (Pflicht, Spec 13 §4.2)** | `<basePersona>--<lens>` | `decision-maker--crypto-trader` |
-| `maxIterations` | nein (Default 3, Kap 12) | Integer 1..N | `3` |
+| Parameter | Required | Format | Example |
+|-----------|----------|--------|---------|
+| `responseJson` | yes | Strict JSON per `selection-skills-L1.schema.json` | `{ area: "selection-skills", tier: "L1", iteration: 1, gradings: [...], improvementHints: [...] }` |
+| `iteration` | yes | Integer 1..N | `1` |
+| `selectionPath` | yes | Absolute path to the selection | `/.../grading-data/selection/crypto-mini/` |
+| `personaSlug` | **yes (persona required)** | `<basePersona>--<lens>` | `decision-maker--crypto-trader` |
+| `maxIterations` | no (default 3) | Integer 1..N | `3` |
 
-## Ablauf
+## Procedure
 
-1. **Validate Input** — `responseJson` ist valid (`tier == "L1"`). `iteration >= 1`. `selectionPath` existiert. `personaSlug` matcht Pattern `<basePersona>--<lens>`.
-2. **Extract improvementHints** — `responseJson.improvementHints[]`. Bei leer: Finalisieren.
-3. **Decide next iteration** — Decision-Matrix (siehe unten).
-4a. **Wenn Re-Iteration:**
-    - Optional: Zwischen-State nach `grading-data/_tmp/<hash>--iteration-<n>--L1.json` (gitignored).
-    - Re-invoke `selection-skills-L1-start-grade` mit `iteration + 1`, `previousGradingPath`, `personaSlug` unveraendert.
-    - Skill endet.
-4b. **Wenn Finalisieren:**
-    - Berechne `<schemaHash>` (8-Zeichen sha256-Truncate, Spec 08 §5).
-    - Berechne `<ISO-ts>` (`2026-MM-DDTHH-MM-SSZ`).
-    - Berechne Zielpfad: `grading-data/selection/<selectionId>/gradings/<schemaHash>--<ISO-ts>--<personaSlug>--L1.json` (Tier-Suffix `--L1` optional fuer Klarheit).
-    - `mkdir -p` Zielordner.
-    - Write finale JSON via `Write`-Tool.
-    - Output: `{ finalPath: "<absoluter-Pfad>", iteration: <n>, status: "done" }`.
+1. **Validate input** — `responseJson` is valid (`tier == "L1"`). `iteration >= 1`. `selectionPath` exists. `personaSlug` matches the pattern `<basePersona>--<lens>`.
+2. **Extract improvementHints** — `responseJson.improvementHints[]`. If empty: finalize.
+3. **Decide next iteration** — see the decision matrix below.
+4a. **If re-iterating:**
+    - Optional: write intermediate state to `grading-data/_tmp/<hash>--iteration-<n>--L1.json` (gitignored).
+    - Re-invoke `selection-skills-L1-start-grade` with `iteration + 1`, `previousGradingPath`, and `personaSlug` unchanged.
+    - The skill ends.
+4b. **If finalizing:**
+    - Compute `<schemaHash>` (8-character sha256 truncate).
+    - Compute `<ISO-ts>` (`2026-MM-DDTHH-MM-SSZ`).
+    - Compute the target path: `grading-data/selection/<selectionId>/gradings/<schemaHash>--<ISO-ts>--<personaSlug>--L1.json` (the tier suffix `--L1` is optional, for clarity).
+    - `mkdir -p` the target folder.
+    - Write the final JSON via the `Write` tool.
+    - Output: `{ finalPath: "<absolute-path>", iteration: <n>, status: "done" }`.
 
-## Recursive-Loop-Mechanik
+## Recursive loop mechanics
 
-**Decision-Matrix (Kap 12):**
+**Decision matrix:**
 
-| Bedingung | Aktion |
+| Condition | Action |
 |-----------|--------|
-| `iteration >= maxIterations` | Finalisieren |
-| `improvementHints[]` ist leer | Finalisieren |
-| `responseJson.confidence == "high"` | Finalisieren |
-| `responseJson.blocker` gesetzt | Finalisieren (mit Blocker-Status) |
-| sonst | Re-Iteration mit `iteration + 1` |
+| `iteration >= maxIterations` | Finalize |
+| `improvementHints[]` is empty | Finalize |
+| `responseJson.confidence == "high"` | Finalize |
+| `responseJson.blocker` set | Finalize (with blocker status) |
+| otherwise | Re-iterate with `iteration + 1` |
 
-**Default `maxIterations = 3`** (Kap 12 Empfehlung). **User-Caveat REV-04:** Selection-Skills sind komplexer — Mini-Praxis-Test (Phase 6) verifiziert Token-/Zeit-Verbrauch besonders fuer L1/L2/L3.
+**Default `maxIterations = 3`** (recommended). **Note:** selection skills are more complex — a practical mini-test verifies token/time consumption, especially for L1/L2/L3.
 
-**Re-Invocation:** Hand-off an `selection-skills-L1-start-grade` mit:
+**Re-invocation:** Hand off to `selection-skills-L1-start-grade` with:
 
 ```json
 {
-  "selectionPath": "<unveraendert>",
-  "personaSlug": "<basePersona>--<lens> (unveraendert)",
+  "selectionPath": "<unchanged>",
+  "personaSlug": "<basePersona>--<lens> (unchanged)",
   "iteration": "<iteration + 1>",
-  "previousGradingPath": "<Pfad oder Inline-Daten>"
+  "previousGradingPath": "<path or inline data>"
 }
 ```
 
 ## Output
 
-Bei Re-Iteration: keine Datei.
+On re-iteration: no file.
 
-Bei Finalisieren:
+On finalize:
 
 ```json
-{ "finalPath": "<absoluter-Pfad>", "iteration": "<n>", "status": "done" }
+{ "finalPath": "<absolute-path>", "iteration": "<n>", "status": "done" }
 ```
 
-## Folder-Garantie (Kap 4.6)
+## Folder guarantee
 
-Write-Target IMMER im **gitignored `grading-data/`-Folder** (Kap 4.6 — `.gitignore:1`). Niemals in Public-Repo-Pfade.
+The write target is ALWAYS inside the gitignored `grading-data/` folder (see `.gitignore`). Never inside public-repo paths.
 
-**Pfad-Template (Kap 13 Persona-Slug-Konvention + Tier-Suffix):**
+**Path template (persona-slug convention + tier suffix):**
 
 ```
 grading-data/selection/<selectionId>/gradings/<schemaHash>--<ISO-ts>--<personaSlug>--L1.json
 ```
 
-Mit `<personaSlug> = <basePersona>--<lens>` (Bereich 7a Persona-Pflicht, Spec 13 §4.2 + Kap 13).
+With `<personaSlug> = <basePersona>--<lens>` (the L1 sub-area requires a persona).
 
-**Beispiel:**
+**Example:**
 
 ```
 grading-data/selection/crypto-mini/gradings/f9e8d7c6--2026-05-30T16-02-44Z--decision-maker--crypto-trader--L1.json
 ```
 
-## Filename-Helper (PRD-21)
+## Filename helper
 
-Filename-Bildung darf nur via `Grading.formatGradingFilename({ hash, ts, persona })` aus `src/Grading.mjs` laufen — **kein** String-Concat im Save-Step. Der `--L1`-Tier-Suffix wird im Aufrufer nach dem Helper-Ergebnis angehaengt (Helper liefert das Basis-Filename, Tier ist L-spezifischer Suffix).
+Filename construction may only run through `Grading.formatGradingFilename({ hash, ts, persona })` from `src/Grading.mjs` — **no** string concatenation in the save step. The `--L1` tier suffix is appended in the caller after the helper result (the helper returns the base filename; the tier is an L-specific suffix).
 
 ```javascript
 import { Grading } from 'flowmcp-grading'
@@ -97,11 +97,11 @@ import { Grading } from 'flowmcp-grading'
 const { filename } = Grading.formatGradingFilename( {
     hash: schemaHash,
     ts: isoTs,
-    persona: personaSlug          // '<basePersona>--<lens>' (Bereich 7a Persona-Pflicht)
+    persona: personaSlug          // '<basePersona>--<lens>' (L1 sub-area requires a persona)
 } )
-// Tier-Suffix `--L1` nachtraeglich angehaengt fuer Selection-Skills-Tier (Spec 13 §4.2):
+// Tier suffix `--L1` appended afterward for the selection-skills tier:
 const tieredFilename = filename.replace( /\.json$/, '--L1.json' )
 const targetPath = `grading-data/selection/${selectionId}/gradings/${tieredFilename}`
 ```
 
-Validierung im Helper (GRD-040/041/042) faengt fehlerhafte Slugs, Hashes und Timestamps ab. Vollstaendige Konvention: `docs/grading-filename-convention.md`.
+Validation in the helper (GRD-040/041/042) catches malformed slugs, hashes, and timestamps. Full convention: `docs/grading-filename-convention.md`.

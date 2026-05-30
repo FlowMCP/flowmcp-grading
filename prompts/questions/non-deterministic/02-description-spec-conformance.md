@@ -2,7 +2,7 @@
 id: Q-single-test-05
 area: single-test
 dimension: descriptionSpecConformance
-question: "Folgt die Description den Spec-06-§4-Konventionen (3rd-Person, kein Werbespruch)?"
+question: "Does the description follow the specification's conventions (third person, no promotional copy)?"
 scoreType: scale-1-5
 weight: 0.33
 determinism: non-deterministic
@@ -10,13 +10,13 @@ tier: P2
 filesToRead:
   - "{{schemaPath}}"
 preInstructionRef: pre-instructions/single-test.md
-evaluatorTask: "Pruefe Spec-06-§4-Konformitaet der Description: 3rd-Person, deskriptiv, ohne Buzzwords."
+evaluatorTask: "Check the description for conformance with the specification: third person, descriptive, free of buzzwords."
 outputSchemaRef: output-schemas/single-test.schema.json
 personaRequired: false
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Spec 06 §4 definiert das Description-Format. Abweichung fuehrt zu inkonsistenten
-Tool-Beschreibungen ueber das gesamte Schemas-Repo.
+The specification defines the description format. Deviation leads to inconsistent
+tool descriptions across the entire schemas repository.

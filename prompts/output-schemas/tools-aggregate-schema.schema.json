@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://flowmcp.org/grading/output-schemas/tools-aggregate-schema.schema.json",
     "title": "Evaluator-Response — tools-aggregate-schema",
-    "description": "Area 2 (Memo 082 Kap 7.1) — Kohaerenz aller Routes innerhalb eines Schemas. Persona = null (neutral, Kap 7.4).",
+    "description": "Area 2 — coherence of all routes within a single schema. Persona = null (neutral area per the grading spec).",
     "oneOf": [
         {
             "$ref": "_master.schema.json#/$defs/blocker"

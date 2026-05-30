@@ -2,7 +2,7 @@
 id: Q-tools-aggregate-schema-01
 area: tools-aggregate-schema
 dimension: routesUniqueNames
-question: "Sind alle Route-Namen innerhalb des Schemas eindeutig?"
+question: "Are all route names within the schema unique?"
 scoreType: boolean
 weight: 0.25
 determinism: deterministic
@@ -10,17 +10,17 @@ tier: P4
 filesToRead:
   - "{{schemaPath}}"
 preInstructionRef: pre-instructions/tools-aggregate-schema.md
-evaluatorTask: "Sammle alle route.name-Werte und pruefe auf Duplikate."
+evaluatorTask: "Collect all route.name values and check for duplicates."
 outputSchemaRef: output-schemas/tools-aggregate-schema.schema.json
 personaRequired: false
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Duplikate fuehren zu Tool-Aufruf-Konflikten im MCP-Client. Pruefung deterministisch
-ueber Set-Vergleich.
+Duplicates cause tool-call conflicts in the MCP client. The check is deterministic
+via a set comparison.
 
-## Doppelung-Check (Memo 082 Kap 6)
+## Duplication Check
 
-`flowmcp-core` validiert Route-Schema, aber Duplikat-Check auf Aggregat-Ebene fehlt — Frage bleibt.
+`flowmcp-core` validates the route schema, but a duplicate check at the aggregate level is missing, so this question remains.

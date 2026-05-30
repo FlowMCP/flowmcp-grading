@@ -1,132 +1,131 @@
 ---
 name: selection-skills-L1-start-grade
-description: Startet eine Grading-Iteration fuer Bereich 7a (selection-skills-L1) — Persona-basierte Bewertung der L1-Skills einer Selection (Spec 13 §4.2). Laedt L1-Template, Pre-Instructions, gefilterte Fragen (area=selection-skills, tier=L1), das Output-Schema und die Persona (Pflicht). Ruft PromptBuilder.build auf, spawnt einen frischen Sub-Agent (Read-only, leerer Kontext, Strict-JSON) und validiert die Response gegen prompts/output-schemas/selection-skills-L1.schema.json. Initialisiert den Iterations-Counter und uebergibt an selection-skills-L1-apply-improvement (PRD-16). User-Caveat REV-04 — Bei Selection-Skills auf Komplexitaet achten (Mini-Praxis-Test P6 verifiziert Token-Budget).
+description: Starts a grading iteration for the selection-skills-L1 sub-area — persona-based assessment of a selection's L1 skills. Loads the L1 template, pre-instructions, filtered questions (area=selection-skills, tier=L1), the output schema, and the persona (mandatory). Calls PromptBuilder.build, spawns a fresh sub-agent (read-only, empty context, strict JSON), and validates the response against prompts/output-schemas/selection-skills-L1.schema.json. Initializes the iteration counter and hands off to selection-skills-L1-apply-improvement. Note — selection skills are more complex, so a practical mini-test verifies the token budget.
 allowed-tools: Read, Bash, Grep
 model: inherit
 ---
 
 ## Input
 
-Parameter (vom Aufrufer per Tool-Call uebergeben):
+Parameters (passed by the caller via tool call):
 
-| Parameter | Pflicht | Format | Beispiel |
-|-----------|---------|--------|----------|
-| `selectionPath` | ja | Absoluter Pfad zur Selection (mit Selection-Lock + L1-Skill-Datei) | `/.../grading-data/selection/crypto-mini/` |
-| `personaSlug` | **ja (Pflicht, Spec 13 §4.2)** | `<basePersona>--<lens>` | `decision-maker--crypto-trader` |
-| `iteration` | nein (Default 1) | Integer 1..N | `1` |
-| `previousGradingPath` | nur ab Iteration 2 | Absoluter Pfad | `/.../grading-data/selection/.../gradings/abc--ts--decision-maker--crypto-trader.json` |
+| Parameter | Required | Format | Example |
+|-----------|----------|--------|---------|
+| `selectionPath` | yes | Absolute path to the selection (with selection lock + L1 skill file) | `/.../grading-data/selection/crypto-mini/` |
+| `personaSlug` | **yes (persona required)** | `<basePersona>--<lens>` | `decision-maker--crypto-trader` |
+| `iteration` | no (default 1) | Integer 1..N | `1` |
+| `previousGradingPath` | only from iteration 2 onward | Absolute path | `/.../grading-data/selection/.../gradings/abc--ts--decision-maker--crypto-trader.json` |
 
-**Persona-Anwendung (Kap 7.4):** `personaRequired: true` — Pflicht laut Spec 13 §4.2 (Persona-Focus auf ALLEN drei Levels MUST).
+**Persona application:** `personaRequired: true` — mandatory; the persona focus applies to all three levels.
 
-## Ablauf
+## Procedure
 
-1. **Validate Inputs** — `selectionPath` existiert. `personaSlug` ist gesetzt. Bei Fehler: `{ "blocker": "personaSlug", "reason": "missing — personaRequired: true (Spec 13 §4.2)" }`.
-2. **Load Template** — Read `prompts/templates/selection-skills-L1.md`.
-3. **Load Pre-Instructions** — Read `prompts/pre-instructions/selection-skills-L1.md` (Files-to-Read = Selection-Lock + Domain-Knowledge-Doc + Base-Persona).
-4. **Load Output-Schema** — Read `prompts/output-schemas/selection-skills-L1.schema.json`.
-5. **Filter Questions** — Read `prompts/generated/questions.json`, filtere `area == "selection-skills" && tier == "L1"`.
-6. **Load Persona (Pflicht)** — Splitte `personaSlug` in `<basePersona>--<lens>`. Read Base-Persona aus `repos/flowmcp-spec/personas/<basePersona>.md`. Read Lens-Helper aus `flowmcp-grading/grading-data/personas/<lens>-<YYYY>.md`.
-7. **Load previous Grading (optional)** — Wenn `iteration > 1`: Lies `previousGradingPath`, extrahiere `improvementHints[]`.
-8. **Build Prompt** — Rufe `PromptBuilder.build({ template, preInstructions, outputSchema, questions, persona: { base, lens }, previousHints, selectionPath, iteration, tier: "L1" })` auf (PRD-04/P2d).
-9. **Spawn Sub-Agent** — Per Bash: `claude --print --model inherit --max-turns 1 --output-format json --append-system-prompt "Sub-Agent: Strict-JSON only. No prose." -- <prompt>`. Read-only Tools. Frischer leerer Kontext.
-10. **Validate Response** — Parse JSON. Validiere gegen `selection-skills-L1.schema.json`. Bei Schema-Fail: `{ "blocker": "schema-validation", "reason": "<details>" }`.
-11. **Hand-off** — Rufe `selection-skills-L1-apply-improvement` (PRD-16) mit JSON + `iteration` + `selectionPath` + `personaSlug` auf.
+1. **Validate inputs** — `selectionPath` exists. `personaSlug` is set. On error: `{ "blocker": "personaSlug", "reason": "missing — personaRequired: true" }`.
+2. **Load template** — read `prompts/templates/selection-skills-L1.md`.
+3. **Load pre-instructions** — read `prompts/pre-instructions/selection-skills-L1.md` (files-to-read = selection lock + domain-knowledge doc + base persona).
+4. **Load output schema** — read `prompts/output-schemas/selection-skills-L1.schema.json`.
+5. **Filter questions** — read `prompts/generated/questions.json`, filter `area == "selection-skills" && tier == "L1"`.
+6. **Load persona (mandatory)** — split `personaSlug` into `<basePersona>--<lens>`. Read the base persona from `repos/flowmcp-spec/personas/<basePersona>.md`. Read the lens helper from `flowmcp-grading/grading-data/personas/<lens>-<YYYY>.md`.
+7. **Load previous grading (optional)** — if `iteration > 1`: read `previousGradingPath`, extract `improvementHints[]`.
+8. **Build prompt** — call `PromptBuilder.build({ template, preInstructions, outputSchema, questions, persona: { base, lens }, previousHints, selectionPath, iteration, tier: "L1" })`.
+9. **Spawn sub-agent** — via Bash: `claude --print --model inherit --max-turns 1 --output-format json --append-system-prompt "Sub-Agent: Strict-JSON only. No prose." -- <prompt>`. Read-only tools. Fresh empty context.
+10. **Validate response** — parse JSON. Validate against `selection-skills-L1.schema.json`. On schema failure: `{ "blocker": "schema-validation", "reason": "<details>" }`.
+11. **Hand-off** — call `selection-skills-L1-apply-improvement` with the JSON + `iteration` + `selectionPath` + `personaSlug`.
 
 ## Output
 
-Strict-JSON gemaess `prompts/output-schemas/selection-skills-L1.schema.json` mit Pflichtfeldern:
+Strict JSON per `prompts/output-schemas/selection-skills-L1.schema.json` with required fields:
 
-- `area: "selection-skills"` (literal-match) + `tier: "L1"`
-- `iteration`: Integer
-- `personaSlug`: `<basePersona>--<lens>` (Kap 13)
-- `gradings[]`: Persona-spezifische L1-Skill-Bewertungen
-- `improvementHints[]`: Hinweise fuer die naechste Iteration
+- `area: "selection-skills"` (literal match) + `tier: "L1"`
+- `iteration`: integer
+- `personaSlug`: `<basePersona>--<lens>`
+- `gradings[]`: persona-specific L1-skill assessments
+- `improvementHints[]`: hints for the next iteration
 
-Bei Blocker:
+On blocker:
 
 ```json
-{ "blocker": "<dateipfad-oder-stufe>", "reason": "<klartext>" }
+{ "blocker": "<file-path-or-stage>", "reason": "<plain text>" }
 ```
 
-## Recursive-Loop-Hand-off
+## Recursive loop hand-off
 
-Nach erfolgreicher Validierung Hand-off an `selection-skills-L1-apply-improvement` (PRD-16) mit:
+After successful validation, hand off to `selection-skills-L1-apply-improvement` with:
 
-- `responseJson` — validierte JSON aus Schritt 10
-- `iteration` — aktuelle Iteration (Default Start = 1)
-- `selectionPath` — unveraendert
-- `personaSlug` — unveraendert (`<basePersona>--<lens>`)
+- `responseJson` — the validated JSON from step 10
+- `iteration` — current iteration (default start = 1)
+- `selectionPath` — unchanged
+- `personaSlug` — unchanged (`<basePersona>--<lens>`)
 
-`apply-improvement` entscheidet, ob eine naechste Iteration laeuft (`iteration < maxIterations`, Default 3, Kap 12) oder ob die finale Grading-Datei geschrieben wird. **User-Caveat REV-04:** Selection-Skills sind komplexer — Mini-Praxis-Test (Phase 6) verifiziert Token-/Zeit-Verbrauch.
+`apply-improvement` decides whether a next iteration runs (`iteration < maxIterations`, default 3) or whether the final grading file is written. **Note:** selection skills are more complex — a practical mini-test verifies token/time consumption.
 
-## Recursive-Feedback-Loop (Mikro-Loop, Kap 12)
+## Recursive feedback loop (micro loop)
 
-Nach dem ersten Evaluator-Call laeuft die Schleife:
+After the first evaluator call, the loop runs:
 
-1. **Parse JSON-Response** des Evaluator-Skills strikt gegen
-   `prompts/output-schemas/selection-skills-L1.schema.json`. Bei Parse-Fehler ODER
-   gesetztem `blocker`-Feld: Loop sofort beenden, finale Antwort
-   speichern (PRD-20), `iteration` auf Wert des letzten Calls setzen.
-2. **Abbruch-Check** (vor jeder neuen Iteration):
-   - `improvementHints` leer? -> Loop fertig.
-   - `iteration >= N`? -> Loop fertig.
-   - sonst: weiter mit Schritt 3.
-3. **Re-Invoke** `evaluate` mit Zusatz-Kontext:
-   - Vorherige Evaluator-Antwort wird in einem `## Previous Response`-Block
-     in den Prompt eingefuegt (Volltext, nicht zusammengefasst).
-   - `improvementHints[]` werden in einem `## Improvement Hints`-Block
-     vorangestellt mit der expliziten Aufforderung „adressiere jeden Hint
-     und verbessere die Antwort entsprechend".
-   - Fragen-Set, Files-to-Read, Persona-Block (falls vorhanden),
-     Output-Schema bleiben **unveraendert** — Partial-Konsistenz
-     (Kap 12.6): pro Call IMMER alle Fragen des Bereichs/Sub-Bereichs.
-4. **Iteration erhoehen** (`iteration += 1`), zurueck zu Schritt 1.
+1. **Parse the JSON response** of the evaluator skill strictly against
+   `prompts/output-schemas/selection-skills-L1.schema.json`. On parse error OR
+   a set `blocker` field: end the loop immediately, save the final answer,
+   set `iteration` to the value of the last call.
+2. **Stop check** (before each new iteration):
+   - `improvementHints` empty? -> loop done.
+   - `iteration >= N`? -> loop done.
+   - otherwise: continue with step 3.
+3. **Re-invoke** `evaluate` with additional context:
+   - The previous evaluator answer is inserted into the prompt in a
+     `## Previous Response` block (full text, not summarized).
+   - The `improvementHints[]` are prepended in an `## Improvement Hints`
+     block with the explicit instruction to "address every hint and
+     improve the answer accordingly".
+   - The question set, files-to-read, persona block (if present), and
+     output schema stay **unchanged** — partial consistency: every call
+     ALWAYS covers all questions of the area/sub-area.
+4. **Increment iteration** (`iteration += 1`), back to step 1.
 
-### Iterations-Default
+### Iteration default
 
-`N = 3` (Default). Begruendung: Kap 12 (Recommended 2-3x). Real-World-
-Kosten (Token/Zeit) werden in Phase 6 (Mini-Praxis-Test) verifiziert —
-**Caveat F15** (Kap 4.4). Override moeglich via Aufruf-Parameter
-`maxIterations` (falls vom Caller gesetzt, sonst Default greift).
+`N = 3` (default). Rationale: recommended 2–3 runs. Real-world cost
+(token/time) is verified in a practical mini-test. Override possible via
+the call parameter `maxIterations` (if set by the caller, otherwise the
+default applies).
 
-### Abbruch-Bedingungen
+### Stop conditions
 
-| Bedingung | Aktion |
+| Condition | Action |
 |-----------|--------|
-| `improvementHints[]` leer | Save finale Antwort, Loop fertig |
-| `iteration >= N` | Save aktuelle Antwort, Loop fertig |
-| `blocker`-Feld gesetzt | Save Blocker-Antwort, Loop fertig |
-| Parse-Fehler | Save Roh-Antwort, Loop fertig |
+| `improvementHints[]` empty | Save final answer, loop done |
+| `iteration >= N` | Save current answer, loop done |
+| `blocker` field set | Save blocker answer, loop done |
+| Parse error | Save raw answer, loop done |
 
-## Partial vs. Full (Kap 12.6)
+## Partial vs. full
 
-Pro Sub-Agent-Call werden IMMER alle Fragen eines Bereichs (oder bei
-Bereich 7 alle Fragen eines Sub-Bereichs L1/L2/L3) beantwortet. Partial-
-Grading ist eine Teilmenge der **Bereiche** auf Aufruf-Ebene, niemals
-eine Teilmenge der Fragen innerhalb eines Bereichs. Der Loop aendert
-diese Invariante nicht — jede Iteration beantwortet erneut alle Fragen
-des Bereichs.
+Each sub-agent call ALWAYS answers all questions of an area (or, for the
+skills area, all questions of one sub-area L1/L2/L3). Partial grading is a
+subset of the **areas** at the call level, never a subset of the questions
+within an area. The loop does not change this invariant — every iteration
+re-answers all questions of the area.
 
-## Save (Hinweis auf PRD-20 + PRD-21)
+## Save
 
-Die finale Antwort wird via `src/Grading.mjs#createEntry({...})` persistiert. Pflichtfelder fuer Phase-2h-Eintraege:
+The final answer is persisted via `src/Grading.mjs#createEntry({...})`. Required fields for entries:
 
-- `iteration` (integer, 0-basiert beim ersten Call, erhoeht pro Loop-Durchgang)
-- `improvementHints` (string[], aus der letzten Evaluator-Antwort)
-- `persona` (string, `<basePersona>--<lens>` oder `'neutral'`)
+- `iteration` (integer, 0-based on the first call, incremented per loop pass)
+- `improvementHints` (string[], from the last evaluator answer)
+- `persona` (string, `<basePersona>--<lens>` or `'neutral'`)
 
-Filename folgt der Konvention aus PRD-21:
-`<schemaHash>--<timestamp>--<persona-slug>.json` — gebildet via
-`Grading.formatGradingFilename({ hash, ts, persona })`, NIE per
-String-Concat.
+The filename follows the convention
+`<schemaHash>--<timestamp>--<persona-slug>.json` — built via
+`Grading.formatGradingFilename({ hash, ts, persona })`, NEVER by
+string concatenation.
 
-Speicherort (gitignored, Kap 4.6):
+Storage location (gitignored):
 `grading-data/selection/<sel>/gradings/...`
 
-## Cross-Refs
+## Cross-refs
 
-- **PRD-14** — Generator-Skill-Familie (Basis-Struktur)
-- **PRD-15** — Evaluator-Skill (`selection-skills-L1-evaluate`), wird hier orchestriert
-- **PRD-20** — `gradings/*.json` Eintrags-Schema (`iteration`, `improvementHints`, `persona`)
-- **PRD-21** — Persona-Slug-Filename-Konvention (`Grading.formatGradingFilename`)
-- **Caveat F15** — Token/Zeit-Verbrauch wird in Phase 6 (Mini-Praxis-Test) verifiziert
+- Generator skill family (base structure)
+- Evaluator skill (`selection-skills-L1-evaluate`), orchestrated here
+- `gradings/*.json` entry schema (`iteration`, `improvementHints`, `persona`)
+- Persona-slug filename convention (`Grading.formatGradingFilename`)
+- Token/time consumption is verified in a practical mini-test

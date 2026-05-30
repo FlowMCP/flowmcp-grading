@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://flowmcp.org/grading/output-schemas/about-namespace.schema.json",
     "title": "Evaluator-Response — about-namespace",
-    "description": "Area 5 (Memo 082 Kap 7.1) — About-Page Namespace. Persona Pflicht (Kap 7.4 + Spec 11 §4).",
+    "description": "Area 5 — namespace About page. Persona required (per the grading spec + Spec 11 §4).",
     "oneOf": [
         {
             "$ref": "_master.schema.json#/$defs/blocker"

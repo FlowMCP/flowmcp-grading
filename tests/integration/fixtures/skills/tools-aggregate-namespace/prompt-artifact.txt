@@ -1,14 +1,14 @@
-## Datei-Vorbereitung (Pflicht — strikte Reihenfolge)
+## File preparation (mandatory — strict order)
 
-Lies die folgenden Dateien in dieser Reihenfolge BEVOR du eine Frage beantwortest.
-Falls eine Datei nicht existiert oder nicht lesbar ist, antworte ausschliesslich
-mit { "blocker": "<dateipfad>", "reason": "<grund>" } und brich ab.
+Read the following files in this order BEFORE answering any question.
+If a file does not exist or is not readable, respond exclusively
+with { "blocker": "<filepath>", "reason": "<reason>" } and abort.
 
-1. /tmp/tools-aggregate-namespace/source.md  — Source-Artefakt fuer tools-aggregate-namespace
+1. /tmp/tools-aggregate-namespace/source.md  — source artifact for tools-aggregate-namespace
 
-## Fragen (Area: tools-aggregate-namespace)
+## Questions (Area: tools-aggregate-namespace)
 
-1. Erste Eval-Frage des Bereichs.
-2. Zweite Eval-Frage des Bereichs.
+1. First eval question of the area.
+2. Second eval question of the area.
 
-## Output-Schema: prompts/output-schemas/tools-aggregate-namespace.schema.json
+## Output schema: prompts/output-schemas/tools-aggregate-namespace.schema.json

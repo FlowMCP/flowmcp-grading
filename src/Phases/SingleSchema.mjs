@@ -1,9 +1,9 @@
 /**
- * SingleSchemaPhases — Skill-Familie 1 (autonom pro Schema).
+ * SingleSchemaPhases — skill family 1 (autonomous per schema).
  *
  * Phases P1-P7 write dimensions for a single schema and emit gradingTier=autonomous.
  *
- * | Phase | Dimension(s)                                | Determinismus       | Tier       |
+ * | Phase | Dimension(s)                                | Determinism         | Tier       |
  * |-------|---------------------------------------------|---------------------|------------|
  * | P1    | (stub)                                      | deterministic       | autonomous |
  * | P2    | (stub)                                      | deterministic       | autonomous |
@@ -15,11 +15,11 @@
  * |       | namespaceSkillValidity                      |                     |            |
  * | P7    | (stub)                                      | deterministic       | autonomous |
  *
- * Memo 076 anchors:
- *   Z. 258 — Two skill families, shared data model
- *   Z. 294-297 — Single-Schema-Validator writes P1-P7, autonomous
- *   Z. 311 — personaIds required for non-deterministic dimensions
- *   feedback_http_400_is_not_pass — P4 only HTTP 200 is pass
+ * Per the grading spec:
+ *   - There are two skill families sharing one data model.
+ *   - The single-schema validator writes P1-P7 and is autonomous.
+ *   - personaIds are required for non-deterministic dimensions.
+ *   - For P4, only HTTP 200 counts as pass (4xx is never pass).
  */
 
 import { Grading } from '../Grading.mjs'

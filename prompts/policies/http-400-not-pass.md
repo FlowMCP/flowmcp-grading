@@ -5,35 +5,33 @@ enforced: true
 appliesTo: areas with tool-executable or response-status dimensions
 ---
 
-## Regel
+## Rule
 
-HTTP-Responses mit Status-Codes 4xx (insbesondere 400, 401, 403, 422)
-DUERFEN NICHT als PASS klassifiziert werden — auch nicht mit
-„auth-pass"-Heuristik. PASS = HTTP 200 (oder explizit als PASS
-spezifizierte Erfolgs-Codes der API).
+HTTP responses with 4xx status codes (in particular 400, 401, 403, 422)
+MUST NOT be classified as PASS — not even with an "auth-pass" heuristic.
+PASS = HTTP 200 (or success codes explicitly specified as PASS by the API).
 
-## Begruendung
+## Rationale
 
-FlowMCP-Memory `feedback_http_400_is_not_pass` — Incident in Memo 033 REV-12
-mit Fehlklassifikation. Spec 06 §4 (Determinism) verlangt streng
-deterministische Response-Bewertung. Auth-pass-Heuristik ist verboten.
+Grading spec: a prior incident misclassified a 4xx response as PASS. Spec 06 §4
+(determinism) requires strictly deterministic response evaluation. The
+auth-pass heuristic is forbidden.
 
-## Durchsetzung im PromptBuilder
+## Enforcement in the PromptBuilder
 
-Pre-Instructions enthalten den Block:
+The pre-instructions contain this block:
 
 ```text
-Bei HTTP-Response-Bewertung: PASS = Status 200 (oder explizit als Erfolg
-spezifizierter Code). Status 4xx ist FAIL/DEFECT, auch wenn der
-Response-Body „Auth missing" oder „Bad Request" enthaelt. Keine
-Auth-pass-Heuristik.
+When evaluating an HTTP response: PASS = status 200 (or a code explicitly
+specified as success). Status 4xx is FAIL/DEFECT, even if the response body
+contains "Auth missing" or "Bad Request". No auth-pass heuristic.
 ```
 
-Builder fuegt diesen Block automatisch ein, wenn das Template die
-Frage-Dimension `tool-executable` oder `response-status` enthaelt.
-Verletzung zur Build-/Eval-Zeit: `PB-103: http 4xx classified as PASS`.
+The builder inserts this block automatically when the template contains the
+question dimension `tool-executable` or `response-status`.
+Violation at build/eval time: `PB-103: http 4xx classified as PASS`.
 
-## Verletzungs-Beispiele
+## Violation Examples
 
-- Evaluator antwortet `score: PASS, note: "401 ist auth-pass, Key fehlt nur"`
-- Output-Schema erlaubt `{ "httpStatus": 422, "verdict": "PASS" }`
+- Evaluator answers `score: PASS, note: "401 is auth-pass, key is just missing"`
+- Output schema allows `{ "httpStatus": 422, "verdict": "PASS" }`

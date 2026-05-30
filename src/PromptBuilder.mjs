@@ -1,15 +1,15 @@
 /**
  * PromptBuilder — code-only prompt composer for the Generator-Evaluator loop.
  *
- * Memo 082 REV-05 references:
- *   Kap 4.2 — Pre-Instructions + Persona-Anwendung as named concepts
- *   Kap 4.3 — Architecture diagram (builder is a code-only node)
- *   Kap 4.4 — Vier Bausteine (Baustein 3 PromptBuilder, NO LLM call)
- *   Kap 7.4 — Persona-Anwendungs-Tabelle (10 areas: 4 neutral, 6 with persona)
- *   Kap 8   — Pre-Instructions Pflicht-Block (verbatim Datei-Vorbereitung)
- *   Kap 9   — Output-Schema location and verbindlich-Hinweis
+ * Per the grading spec:
+ *   - Pre-instructions and persona application are named concepts.
+ *   - In the architecture, the builder is a code-only node.
+ *   - The builder is the prompt-composition building block and makes NO LLM call.
+ *   - The persona-application table covers 10 areas (4 neutral, 6 with persona).
+ *   - The pre-instructions block is a mandatory verbatim file-preparation block.
+ *   - The output schema has a defined location and is marked as binding.
  *
- * Hard rules (verbindlich):
+ * Hard rules (binding):
  *   - static methods only, object parameters, object returns
  *   - private-by-default (# prefix) for all helpers
  *   - NO silent defaults — every required parameter validated explicitly
@@ -40,7 +40,7 @@ const VALID_AREAS = [
 ]
 
 
-// Persona-Anwendungs-Tabelle aus Memo 082 Kap 7.4 — 4 neutral, 6 mit Persona.
+// Persona-application table per the grading spec — 4 neutral, 6 with persona.
 const PERSONA_REQUIRED_BY_AREA = Object.freeze( {
     'single-test': false,
     'tools-aggregate-schema': false,
@@ -55,17 +55,17 @@ const PERSONA_REQUIRED_BY_AREA = Object.freeze( {
 } )
 
 
-// Pflicht-Block aus Memo 082 Kap 8 — Wortlaut verbatim, kein Drift.
-const PRE_INSTRUCTION_HEADER = '## Datei-Vorbereitung (Pflicht — strikte Reihenfolge)\n\n'
-    + 'Lies die folgenden Dateien in dieser Reihenfolge BEVOR du eine Frage beantwortest.\n'
-    + 'Falls eine Datei nicht existiert oder nicht lesbar ist, antworte ausschliesslich\n'
-    + 'mit { "blocker": "<dateipfad>", "reason": "<grund>" } und brich ab.\n'
+// Mandatory file-preparation block — wording verbatim, no drift.
+const PRE_INSTRUCTION_HEADER = '## File preparation (mandatory — strict order)\n\n'
+    + 'Read the following files in this order BEFORE answering any question.\n'
+    + 'If a file does not exist or is not readable, respond only\n'
+    + 'with { "blocker": "<filepath>", "reason": "<reason>" } and abort.\n'
 
 
-// Output-Schema-Hinweis aus Memo 082 Kap 9.
-const OUTPUT_SCHEMA_HEADER = '## Output-Schema (verbindlich)\n\n'
-    + 'Antworte ausschliesslich mit JSON gemaess dem folgenden Schema. Kein Markdown,\n'
-    + 'keine Vorrede, kein Trailing-Kommentar.\n'
+// Output-schema notice.
+const OUTPUT_SCHEMA_HEADER = '## Output schema (binding)\n\n'
+    + 'Respond only with JSON matching the following schema. No Markdown,\n'
+    + 'no preamble, no trailing comment.\n'
 
 
 // Template placeholders that the builder replaces.
@@ -171,7 +171,7 @@ class PromptBuilder {
     static #buildFilesBlock( { files } ) {
         // Mirrors the pre-instruction block — kept as a separate render so
         // templates with {{FILES_TO_READ_BLOCK}} render the same list without
-        // the pflicht-header (which already lives in {{PRE_INSTRUCTIONS_BLOCK}}).
+        // the mandatory header (which already lives in {{PRE_INSTRUCTIONS_BLOCK}}).
         const lines = files
             .map( ( entry, index ) => {
                 const position = index + 1
@@ -195,7 +195,7 @@ class PromptBuilder {
             } )
             .join( '\n' )
 
-        return `## Policies (verbindlich)\n\n${lines}\n`
+        return `## Policies (binding)\n\n${lines}\n`
     }
 
 
@@ -209,7 +209,7 @@ class PromptBuilder {
             } )
             .join( '\n' )
 
-        return `## Fragen\n\n${lines}\n`
+        return `## Questions\n\n${lines}\n`
     }
 
 

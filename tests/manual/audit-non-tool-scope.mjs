@@ -2,10 +2,10 @@
 /**
  * audit-non-tool-scope.mjs
  *
- * Memo 080 Phase 5 PRD-21 — Code-Audit Non-Tool-Bereiche + Public-only-Prinzip.
+ * Code audit for non-tool areas + the public-only principle.
  *
- * Scans `src/` for traces of Resource/Prompt/Procedure handling (Memo 080
- * Kap 12 out-of-scope, on-hold) and Public-only-Prinzip violations (private
+ * Scans `src/` for traces of Resource/Prompt/Procedure handling (out-of-scope,
+ * on-hold) and public-only-principle violations (private
  * data sources). Walks pilot + crypto-domain-full grading-data references for
  * schemaIds that point at non-public sources (localhost, sqlite, file://,
  * *_PRIVATE_* server params).
@@ -46,7 +46,7 @@ const PUBLIC_ONLY_PATTERNS = [
     { id: 'private-marker', label: 'Private-endpoint marker', regex: /(requiresAuth.*private|privateEndpoint|_PRIVATE_)/i }
 ]
 
-// Identifiers that are unambiguously Memo-080-marked or third-party APIs (false positives).
+// Identifiers that are unambiguously on-hold-marked or third-party APIs (false positives).
 function shouldIgnoreLine( { line } ) {
     if( line.includes( 'Memo-080 Kap 12' ) ) { return true }
     if( line.includes( 'Memo 080 Kap 12' ) ) { return true }
@@ -120,8 +120,8 @@ async function scanFile( { absPath } ) {
 
 
 function classify( { hit, file } ) {
-    // Memo-080-Kap-12-marked code = explicit on-hold, no new TODO needed.
-    // Comments that already reference Memo 080 Kap 12 are pre-marked.
+    // on-hold-marked code = explicit on-hold, no new TODO needed.
+    // Comments that already carry the on-hold marker are pre-marked.
     if( hit.snippet.includes( 'Memo-080 Kap 12' ) || hit.snippet.includes( 'Memo 080 Kap 12' ) ) {
         return 'pre-marked'
     }
@@ -242,26 +242,26 @@ async function checkSchemaPublicOnly( { schemaId } ) {
 
 function buildReport( { findings, schemaChecks, summary, repoState } ) {
     const lines = []
-    lines.push( '# Audit: Non-Tool-Scope + Public-only-Prinzip' )
+    lines.push( '# Audit: Non-Tool-Scope + Public-only Principle' )
     lines.push( '' )
     lines.push( '| Field | Value |' )
     lines.push( '|-------|-------|' )
-    lines.push( `| Datum | ${AUDIT_DATE} |` )
-    lines.push( '| Auditor | flowmcp-grading.audit (Phase 5 PRD-21) |' )
+    lines.push( `| Date | ${AUDIT_DATE} |` )
+    lines.push( '| Auditor | flowmcp-grading.audit |' )
     lines.push( `| Repo-State | ${repoState} |` )
-    lines.push( '| Scanner-Skript | tests/manual/audit-non-tool-scope.mjs |' )
+    lines.push( '| Scanner script | tests/manual/audit-non-tool-scope.mjs |' )
     lines.push( '' )
-    lines.push( '## Zusammenfassung' )
+    lines.push( '## Summary' )
     lines.push( '' )
-    lines.push( `- Treffer total: ${summary.total}` )
-    lines.push( `- pre-marked (Memo-080 Kap 12 Kommentar bereits vorhanden): ${summary.preMarked}` )
-    lines.push( `- on-hold-Kandidaten (neuer TODO erforderlich): ${summary.onHoldCandidates}` )
-    lines.push( `- Dead-Code (entfernt): ${summary.deadCode}` )
-    lines.push( `- Public-only-Verstoesse (Code): ${summary.publicOnlyCode}` )
-    lines.push( `- Public-only-Verstoesse (Schemas referenced): ${summary.publicOnlySchemas}` )
+    lines.push( `- Total hits: ${summary.total}` )
+    lines.push( `- pre-marked (on-hold marker comment already present): ${summary.preMarked}` )
+    lines.push( `- on-hold candidates (new TODO required): ${summary.onHoldCandidates}` )
+    lines.push( `- dead code (removed): ${summary.deadCode}` )
+    lines.push( `- public-only violations (code): ${summary.publicOnlyCode}` )
+    lines.push( `- public-only violations (schemas referenced): ${summary.publicOnlySchemas}` )
     lines.push( '' )
 
-    lines.push( '## Befunde' )
+    lines.push( '## Findings' )
     lines.push( '' )
 
     const groups = [
@@ -275,11 +275,11 @@ function buildReport( { findings, schemaChecks, summary, repoState } ) {
             lines.push( '' )
             const slice = findings.filter( ( f ) => f.hit.kind === 'non-tool' && f.hit.patternId === g.id )
             if( slice.length === 0 ) {
-                lines.push( '_keine Treffer ausserhalb pre-marked Kommentare._' )
+                lines.push( '_no hits outside pre-marked comments._' )
                 lines.push( '' )
                 return
             }
-            lines.push( '| # | Datei | Zeile | Snippet | Klassifikation | Aktion |' )
+            lines.push( '| # | File | Line | Snippet | Classification | Action |' )
             lines.push( '|---|-------|-------|---------|----------------|--------|' )
             let k = 0
             while( k < slice.length ) {
@@ -290,14 +290,14 @@ function buildReport( { findings, schemaChecks, summary, repoState } ) {
             lines.push( '' )
         } )
 
-    lines.push( '### Public-only-Verstoesse (Code)' )
+    lines.push( '### Public-only violations (code)' )
     lines.push( '' )
     const codeViolations = findings.filter( ( f ) => f.hit.kind === 'public-only' )
     if( codeViolations.length === 0 ) {
-        lines.push( '_keine Public-only-Verstoesse in `src/` gefunden._' )
+        lines.push( '_no public-only violations found in `src/`._' )
         lines.push( '' )
     } else {
-        lines.push( '| # | Datei | Zeile | Pattern | Snippet | Aktion |' )
+        lines.push( '| # | File | Line | Pattern | Snippet | Action |' )
         lines.push( '|---|-------|-------|---------|---------|--------|' )
         let k = 0
         while( k < codeViolations.length ) {
@@ -308,43 +308,43 @@ function buildReport( { findings, schemaChecks, summary, repoState } ) {
         lines.push( '' )
     }
 
-    lines.push( '### Public-only-Verstoesse (referenzierte Schemas)' )
+    lines.push( '### Public-only violations (referenced schemas)' )
     lines.push( '' )
     if( schemaChecks.length === 0 ) {
-        lines.push( '_keine Pilot-/Selection-Schemas zur Pruefung referenziert._' )
+        lines.push( '_no pilot/selection schemas referenced for checking._' )
         lines.push( '' )
     } else {
-        lines.push( '| # | schemaId | gefunden | private-Markers | Aktion |' )
-        lines.push( '|---|----------|----------|-----------------|--------|' )
+        lines.push( '| # | schemaId | found | private markers | Action |' )
+        lines.push( '|---|----------|-------|-----------------|--------|' )
         let k = 0
         while( k < schemaChecks.length ) {
             const s = schemaChecks[ k ]
             const action = s.markers.length === 0
-                ? 'kein Verstoss'
-                : `Issue-Vorschlag im Schemas-Repo (\`${s.markers.join( ', ' )}\`)`
-            lines.push( `| ${k + 1} | \`${s.schemaId}\` | ${s.found ? 'ja' : 'nein'} | ${s.markers.length === 0 ? '—' : s.markers.join( ', ' )} | ${action} |` )
+                ? 'no violation'
+                : `issue proposal in the schemas repo (\`${s.markers.join( ', ' )}\`)`
+            lines.push( `| ${k + 1} | \`${s.schemaId}\` | ${s.found ? 'yes' : 'no'} | ${s.markers.length === 0 ? '—' : s.markers.join( ', ' )} | ${action} |` )
             k = k + 1
         }
         lines.push( '' )
     }
 
-    lines.push( '## Entscheidungen' )
+    lines.push( '## Decisions' )
     lines.push( '' )
-    lines.push( '- Nicht-Tool-Treffer ohne Memo-080-Kap-12-Kommentar werden mit einem TODO-Kommentar versehen, wenn semantisch relevant. Dead Code wird entfernt, wenn nachweislich ungenutzt.' )
-    lines.push( '- Public-only-Verstoesse in `src/` werden in diesem Bericht aufgelistet; Code-Aenderungen erfolgen nur dort, wo der Verstoss kein dokumentierter Verweis ist.' )
-    lines.push( '- Public-only-Verstoesse in referenzierten Schemas erzeugen einen Issue-Vorschlag im Schemas-Repo — **keine** automatische Aenderung von Schema-Dateien.' )
+    lines.push( '- Non-tool hits without an on-hold marker comment get a TODO comment when semantically relevant. Dead code is removed when provably unused.' )
+    lines.push( '- Public-only violations in `src/` are listed in this report; code changes happen only where the violation is not a documented reference.' )
+    lines.push( '- Public-only violations in referenced schemas produce an issue proposal in the schemas repo — **no** automatic change of schema files.' )
     lines.push( '' )
-    lines.push( '## Folgearbeiten' )
+    lines.push( '## Follow-up work' )
     lines.push( '' )
     if( summary.publicOnlySchemas > 0 ) {
-        lines.push( '- Issue-Vorschlaege im Schemas-Repo fuer die oben gelisteten Schemas mit private-Markers.' )
+        lines.push( '- Issue proposals in the schemas repo for the schemas listed above with private markers.' )
     } else {
-        lines.push( '- _keine — alle referenzierten Schemas sind public-only-konform._' )
+        lines.push( '- _none — all referenced schemas are public-only conformant._' )
     }
     lines.push( '' )
     lines.push( '---' )
     lines.push( '' )
-    lines.push( 'Reproduzierbar via `node tests/manual/audit-non-tool-scope.mjs`. Spaeter aktualisieren durch Re-Run und Datum im Dateinamen anpassen.' )
+    lines.push( 'Reproducible via `node tests/manual/audit-non-tool-scope.mjs`. Update later by re-running and adjusting the date in the filename.' )
     return lines.join( '\n' ) + '\n'
 }
 
@@ -376,13 +376,13 @@ async function main() {
         while( j < hits.length ) {
             const hit = hits[ j ]
             const classification = classify( { hit, file: f } )
-            let action = 'klassifiziert'
+            let action = 'classified'
             if( classification === 'pre-marked' ) {
-                action = 'pre-marked — keine Aktion erforderlich'
+                action = 'pre-marked — no action required'
             } else if( classification === 'on-hold-candidate' ) {
-                action = 'on-hold (TODO-Kommentar geprueft / hinzugefuegt)'
+                action = 'on-hold (TODO comment checked / added)'
             } else if( classification === 'public-only-violation' ) {
-                action = 'review (kein automatischer Fix)'
+                action = 'review (no automatic fix)'
             }
             findings.push( {
                 absPath: f,

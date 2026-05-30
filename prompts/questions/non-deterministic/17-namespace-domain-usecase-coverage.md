@@ -2,7 +2,7 @@
 id: Q-tools-aggregate-namespace-02
 area: tools-aggregate-namespace
 dimension: domainCoverage
-question: "Decken die Tools die wichtigsten Domain-Use-Cases ab?"
+question: "Do the tools cover the most important domain use cases?"
 scoreType: scale-1-5
 weight: 0.2
 determinism: non-deterministic
@@ -11,12 +11,13 @@ filesToRead:
   - "{{namespacePath}}"
   - "{{domainKnowledgePath}}"
 preInstructionRef: pre-instructions/tools-aggregate-namespace.md
-evaluatorTask: "Vergleiche Tools im Namespace mit den Use-Cases der Domain-Knowledge-Doc."
+evaluatorTask: "Compare the tools in the namespace with the use cases in the domain knowledge document."
 outputSchemaRef: output-schemas/tools-aggregate-namespace.schema.json
 personaRequired: false
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Ein Crypto-Namespace ohne Price-Tool ist incomplete. Bewertung gegen Domain-Erwartung.
+A crypto namespace without a price tool is incomplete. Assessment is made against
+the domain expectation.

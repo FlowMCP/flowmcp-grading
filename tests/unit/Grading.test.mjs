@@ -188,8 +188,8 @@ describe( 'Grading.checkAging', () => {
 } )
 
 
-// PRD-20 Memo 082 Phase 2h — loop fields on createEntry
-describe( 'Grading.createEntry: iteration (Memo 082 PRD-20)', () => {
+// Loop fields on createEntry
+describe( 'Grading.createEntry: iteration', () => {
     const baseInput = {
         schemaId: 'demo',
         selectionId: null,
@@ -236,7 +236,7 @@ describe( 'Grading.createEntry: iteration (Memo 082 PRD-20)', () => {
 } )
 
 
-describe( 'Grading.createEntry: improvementHints (Memo 082 PRD-20)', () => {
+describe( 'Grading.createEntry: improvementHints', () => {
     const baseInput = {
         schemaId: 'demo',
         selectionId: null,
@@ -277,7 +277,7 @@ describe( 'Grading.createEntry: improvementHints (Memo 082 PRD-20)', () => {
 } )
 
 
-describe( 'Grading.createEntry: persona (Memo 082 PRD-20)', () => {
+describe( 'Grading.createEntry: persona', () => {
     const baseInput = {
         schemaId: 'demo',
         selectionId: null,
@@ -318,7 +318,7 @@ describe( 'Grading.createEntry: persona (Memo 082 PRD-20)', () => {
 } )
 
 
-describe( 'Grading.readEntry: backward-compat (Memo 082 PRD-20)', () => {
+describe( 'Grading.readEntry: backward-compat', () => {
     test( 'legacy file without loop fields gets defaults', () => {
         const legacyJson = JSON.stringify( {
             gradingId: 'PLACEHOLDER001--2026-05-29T03-00-00Z',
@@ -374,8 +374,8 @@ describe( 'Grading.readEntry: backward-compat (Memo 082 PRD-20)', () => {
 } )
 
 
-// PRD-21 Memo 082 Phase 2h — filename helper
-describe( 'Grading.formatGradingFilename: hash (Memo 082 PRD-21)', () => {
+// Filename helper
+describe( 'Grading.formatGradingFilename: hash', () => {
     test( 'hash: 8-hex akzeptiert', () => {
         const { filename } = Grading.formatGradingFilename( {
             hash: 'a1b2c3d4',
@@ -412,7 +412,7 @@ describe( 'Grading.formatGradingFilename: hash (Memo 082 PRD-21)', () => {
 } )
 
 
-describe( 'Grading.formatGradingFilename: ts (Memo 082 PRD-21)', () => {
+describe( 'Grading.formatGradingFilename: ts', () => {
     test( 'ts: \'2026-05-30T10-15-00Z\' akzeptiert', () => {
         const { filename } = Grading.formatGradingFilename( {
             hash: 'a1b2c3d4',
@@ -440,7 +440,7 @@ describe( 'Grading.formatGradingFilename: ts (Memo 082 PRD-21)', () => {
 } )
 
 
-describe( 'Grading.formatGradingFilename: persona (Memo 082 PRD-21)', () => {
+describe( 'Grading.formatGradingFilename: persona', () => {
     test( 'persona: \'neutral\' akzeptiert', () => {
         const { filename } = Grading.formatGradingFilename( {
             hash: 'a1b2c3d4',
@@ -485,7 +485,7 @@ describe( 'Grading.formatGradingFilename: persona (Memo 082 PRD-21)', () => {
 } )
 
 
-describe( 'Grading.formatGradingFilename: output snapshots (PRD-21 §4.3)', () => {
+describe( 'Grading.formatGradingFilename: output snapshots', () => {
     test( 'snapshot row 1 — full persona', () => {
         const { filename } = Grading.formatGradingFilename( {
             hash: 'a1b2c3d4',

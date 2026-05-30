@@ -4,8 +4,8 @@
 //
 // Usage:  node tests/integration/fixtures/skills/_generate.mjs
 //
-// Per Memo 082 Kap 7.4 — Persona-Anwendung pro Bereich; Kap 8 — Blocker-Pattern;
-// Kap 9 — Output-Schema; Memory feedback_http_400_is_not_pass — HTTP 4xx never PASS.
+// Persona application per area; blocker pattern; output schema;
+// HTTP 4xx is never PASS.
 
 import { writeFileSync, mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -39,13 +39,13 @@ const buildPersona = () => ( {
 
 const buildPromptArtifact = ( { area, personaRequired } ) => {
     const lines = []
-    lines.push( '## Datei-Vorbereitung (Pflicht — strikte Reihenfolge)' )
+    lines.push( '## File preparation (mandatory — strict order)' )
     lines.push( '' )
-    lines.push( 'Lies die folgenden Dateien in dieser Reihenfolge BEVOR du eine Frage beantwortest.' )
-    lines.push( 'Falls eine Datei nicht existiert oder nicht lesbar ist, antworte ausschliesslich' )
-    lines.push( 'mit { "blocker": "<dateipfad>", "reason": "<grund>" } und brich ab.' )
+    lines.push( 'Read the following files in this order BEFORE answering any question.' )
+    lines.push( 'If a file does not exist or is not readable, respond exclusively' )
+    lines.push( 'with { "blocker": "<filepath>", "reason": "<reason>" } and abort.' )
     lines.push( '' )
-    lines.push( `1. /tmp/${ area }/source.md  — Source-Artefakt fuer ${ area }` )
+    lines.push( `1. /tmp/${ area }/source.md  — source artifact for ${ area }` )
 
     if( personaRequired === true ) {
         lines.push( '' )
@@ -54,12 +54,12 @@ const buildPromptArtifact = ( { area, personaRequired } ) => {
     }
 
     lines.push( '' )
-    lines.push( `## Fragen (Area: ${ area })` )
+    lines.push( `## Questions (Area: ${ area })` )
     lines.push( '' )
-    lines.push( '1. Erste Eval-Frage des Bereichs.' )
-    lines.push( '2. Zweite Eval-Frage des Bereichs.' )
+    lines.push( '1. First eval question of the area.' )
+    lines.push( '2. Second eval question of the area.' )
     lines.push( '' )
-    lines.push( `## Output-Schema: prompts/output-schemas/${ area }.schema.json` )
+    lines.push( `## Output schema: prompts/output-schemas/${ area }.schema.json` )
     return lines.join( '\n' ) + '\n'
 }
 

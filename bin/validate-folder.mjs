@@ -2,7 +2,7 @@
 /**
  * validate-folder.mjs — standalone CLI entry point for FolderScanner.
  *
- * Memo 080 PRD-14: documented under `flowmcp dev grading validate-folder` —
+ * Documented under `flowmcp dev grading validate-folder` —
  * standalone form for callers that don't yet have CLI sub-subcommand wiring.
  *
  * Usage:
@@ -33,7 +33,7 @@ const parseArgs = () => {
 const printHelp = () => {
     console.log( 'Usage: node bin/validate-folder.mjs --root=<path> [--verbose]' )
     console.log( '' )
-    console.log( 'Validates a grading-data/ folder against Memo 080 Kap 2 / 17.' )
+    console.log( 'Validates a grading-data/ folder against the folder-layout and validation spec.' )
     console.log( '' )
     console.log( 'Flags:' )
     console.log( '  --root=<path>   Path to the grading-data/ root folder.' )

@@ -2,7 +2,7 @@
 id: Q-namespace-skills-02
 area: namespace-skills
 dimension: skillAdequacy
-question: "Bildet der Namespace-Skill einen Persona-Workflow ab?"
+question: "Does the namespace skill represent a persona workflow?"
 scoreType: scale-1-5
 weight: 0.33
 determinism: non-deterministic
@@ -11,16 +11,16 @@ filesToRead:
   - "{{skillPath}}"
   - "{{personaPath}}"
 preInstructionRef: pre-instructions/namespace-skills.md
-evaluatorTask: "Pruefe ob der Namespace-Skill einen typischen Persona-Workflow innerhalb des Namespace abdeckt."
+evaluatorTask: "Check whether the namespace skill covers a typical persona workflow within the namespace."
 outputSchemaRef: output-schemas/namespace-skills.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Der Namespace-Skill ist das Persona-Anwendungs-Beispiel des Namespace.
+The namespace skill is the namespace's persona application example.
 
-## Persona-Anwendung
+## Persona Application
 
-Persona-Workflow als Beurteilungs-Grundlage.
+The persona workflow serves as the basis for assessment.

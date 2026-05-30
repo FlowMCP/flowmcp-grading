@@ -3,14 +3,13 @@
 | Field | Value |
 |-------|-------|
 | Status | Implementation-Reference |
-| Source | PRD-09 (Memo 082 Phase 2e) |
 | Targets | `prompts/output-schemas/_master.schema.json`, `flowmcp-spec/grading/1.1.0/08-grading-model.md` |
 
 This document maps every field of the Evaluator-Response Master Envelope (and
 of the per-area schemas) onto the durable grading entry defined in Spec 08.
-Implementers of the Generator-Skills (`*-apply-improvement`) and the
-Recursive-Loop-Engine (Memo 082 Phase 2h) MUST consult this document when
-translating an Evaluator response into a Spec-08-conformant grading entry.
+Implementers of the generator skills (`*-apply-improvement`) and the
+recursive-loop engine MUST consult this document when
+translating an evaluator response into a Spec-08-conformant grading entry.
 
 ---
 
@@ -22,16 +21,16 @@ evaluator response. The table below maps each envelope field to its
 destination in a Spec-08-conformant `<gradingId>.json` file or to a sidecar
 location.
 
-| Output-Schema-Feld | Typ | Mapping auf Spec 08 | Notiz |
+| Output-schema field | Type | Mapping to Spec 08 | Note |
 |--------------------|-----|---------------------|-------|
-| `gradingId` | `string` (`<hash>--<ts>`) | Top-Level `gradingId` (Spec 08 §3.X) | 1:1 Pass-Through. Pattern aus Spec 19 §17. |
-| `schemaHash` | `string` (8-hex) | Top-Level `schemaHash` (Spec 08 §3.X) | 1:1 Pass-Through. 8-Hex-Prefix des sha256 ueber kanonisches Schema-JSON. |
-| `area` | enum (10 Bereiche) | **Intentionally unmapped** auf Top-Level | Wirkt nur als Routing-Schluessel im Generator; pro-`gradings[i]` wirken die area-spezifischen `dimension`-Werte. Siehe §4.6 (area → dimension). |
-| `iteration` | `integer` 1–5 | **Sidecar** (`gradings/<gradingId>.loop.json`) | Spec 08 hat heute kein `iteration`-Feld; vorgesehen in Memo 082 Kap 14.2 (Spec-Erweiterungs-Vorschlaege, out-of-scope). |
-| `timestamp` | `string` ISO-8601 | Top-Level `gradings[i].timestamp` (Spec 08 §4) | Pass-Through pro Antwort-Element. |
-| `persona` | `null` ODER `{ basePersonaId, lensId }` | `gradings[i].selectionContext.personaIds[]` + Sidecar-Lens | Split: basePersona → personaIds (Spec 08 §4.X), lensId → Sidecar (Spec 12 §4 Lens noch nicht in §4 abgebildet). Siehe §4.4. |
-| `answers[]` | Array of `answer` | `gradings[]` Array (Spec 08 §4) | 1:N Expansion (siehe §4.3). |
-| `improvementHints[]` | Array of `improvementHint` | **Sidecar** (`gradings/<gradingId>.loop.json`) | Spec 08 hat kein Hint-Feld; ausschliesslich loop-intern. Persistiert nur fuer Generator-Diagnose. |
+| `gradingId` | `string` (`<hash>--<ts>`) | Top-level `gradingId` (Spec 08 §3.X) | 1:1 pass-through. Pattern from Spec 19 §17. |
+| `schemaHash` | `string` (8-hex) | Top-level `schemaHash` (Spec 08 §3.X) | 1:1 pass-through. 8-hex prefix of the sha256 over the canonical schema JSON. |
+| `area` | enum (10 areas) | **Intentionally unmapped** at top level | Acts only as a routing key in the generator; per `gradings[i]`, the area-specific `dimension` values apply. See §4.6 (area → dimension). |
+| `iteration` | `integer` 1–5 | **Sidecar** (`gradings/<gradingId>.loop.json`) | Spec 08 has no `iteration` field today; planned as a future spec extension (out-of-scope here). |
+| `timestamp` | `string` ISO-8601 | Top-level `gradings[i].timestamp` (Spec 08 §4) | Pass-through per response element. |
+| `persona` | `null` OR `{ basePersonaId, lensId }` | `gradings[i].selectionContext.personaIds[]` + sidecar lens | Split: basePersona → personaIds (Spec 08 §4.X), lensId → sidecar (Spec 12 §4 lens not yet represented in §4). See §4.4. |
+| `answers[]` | Array of `answer` | `gradings[]` array (Spec 08 §4) | 1:N expansion (see §4.3). |
+| `improvementHints[]` | Array of `improvementHint` | **Sidecar** (`gradings/<gradingId>.loop.json`) | Spec 08 has no hint field; loop-internal only. Persisted only for generator diagnostics. |
 
 ---
 
@@ -40,62 +39,62 @@ location.
 Each element of `answers[]` (Master `$defs.answer`) becomes one element of
 `gradings[]` (Spec 08 §4). The five answer-level fields map as follows:
 
-| Output-Schema-Feld | Typ | Mapping auf Spec 08 `gradings[i]` | Notiz |
+| Output-schema field | Type | Mapping to Spec 08 `gradings[i]` | Note |
 |--------------------|-----|------------------------------------|-------|
-| `questionId` | `string` (`Q-<area>-NN`) | **Intentionally unmapped** — Question-ID wird in `dimension` aufgeloest | Generator uebersetzt Question-ID → `dimension`-Enum-Wert via `prompts/generated/questions.json` Lookup. Die Question-ID selbst persistiert nicht. |
-| `score` | `number` 1.0–5.0 ODER enum | `gradings[i].score` | 1:1 Pass-Through, Spec 08 §5.2 Enum-Set identisch (`pass`/`fail`/`stale`/`n/a`). |
-| `reasoning` | `string` | `gradings[i].reasoning` | 1:1 Pass-Through. |
-| `evidence` | `string` \| `object` | `gradings[i].evidence` | 1:1 Pass-Through. Optional — beide Schemas erlauben das Feld als optional. |
-| `naReason` | enum (6 Werte) | `gradings[i].naReason` | 1:1 Pass-Through, geschlossene Menge identisch (Spec 08 §5.3). Pflicht wenn `score = "n/a"` — durch Master-Schema `if/then` enforced. |
+| `questionId` | `string` (`Q-<area>-NN`) | **Intentionally unmapped** — question ID is resolved into `dimension` | Generator translates question ID → `dimension` enum value via `prompts/generated/questions.json` lookup. The question ID itself is not persisted. |
+| `score` | `number` 1.0–5.0 OR enum | `gradings[i].score` | 1:1 pass-through, Spec 08 §5.2 enum set identical (`pass`/`fail`/`stale`/`n/a`). |
+| `reasoning` | `string` | `gradings[i].reasoning` | 1:1 pass-through. |
+| `evidence` | `string` \| `object` | `gradings[i].evidence` | 1:1 pass-through. Optional — both schemas allow the field as optional. |
+| `naReason` | enum (6 values) | `gradings[i].naReason` | 1:1 pass-through, closed set identical (Spec 08 §5.3). Mandatory when `score = "n/a"` — enforced by the Master-schema `if/then`. |
 
 ### Derived Fields (Generator-Added)
 
-Die folgenden Spec-08-Felder werden vom Generator deterministisch aus dem
-Question-Katalog (PRD-06) bzw. der Sub-Agent-Konfiguration ergaenzt, **nicht**
-vom Evaluator geliefert:
+The following Spec-08 fields are added deterministically by the generator from the
+question catalog and the sub-agent configuration, **not**
+supplied by the evaluator:
 
-| Feld | Quelle | Wert |
+| Field | Source | Value |
 |------|--------|------|
-| `gradings[i].dimension` | Question-ID-Lookup | aus `prompts/generated/questions.json` (Feld `dimension`) |
-| `gradings[i].weight` | Question-Katalog | aus `prompts/generated/questions.json` (Feld `weight`, Default 1.0) |
-| `gradings[i].determinism` | Question-Katalog | `non-deterministic` (Evaluator ist immer LLM) — alternativ Wert aus questions.json |
+| `gradings[i].dimension` | Question-ID lookup | from `prompts/generated/questions.json` (field `dimension`) |
+| `gradings[i].weight` | Question catalog | from `prompts/generated/questions.json` (field `weight`, default 1.0) |
+| `gradings[i].determinism` | Question catalog | `non-deterministic` (evaluator is always an LLM) — alternatively value from questions.json |
 | `gradings[i].graderIdentity` | Generator | `{ kind: "llm", name: "<modelName>", version: "<version>" }` |
-| `gradings[i].llmModel` | Generator | `<modelName>` (aus Sub-Agent-Konfiguration) |
-| `gradings[i].selectionContext` | Output-Schema `persona` | `{ groupId: <area>, personaIds: [basePersonaId], domainDocId: <domainDoc-aus-PRD-07> }` |
+| `gradings[i].llmModel` | Generator | `<modelName>` (from sub-agent configuration) |
+| `gradings[i].selectionContext` | Output-schema `persona` | `{ groupId: <area>, personaIds: [basePersonaId], domainDocId: <domainDoc> }` |
 
 ---
 
-## `persona`-Feld — Split + Sidecar
+## `persona` Field — Split + Sidecar
 
-Spec 12 §4 definiert das Lens-Konzept (Domain-spezifische Verschaerfung einer
-Base-Persona). Spec 08 §4 `selectionContext.personaIds[]` traegt aber nur
-**Base-Persona-IDs** — keine Lens-Information.
+Spec 12 §4 defines the lens concept (domain-specific sharpening of a
+base persona). Spec 08 §4 `selectionContext.personaIds[]` carries only
+**base-persona IDs** — no lens information.
 
-Loesung — Split:
+Solution — split:
 
-| Sub-Feld | Mapping |
+| Sub-field | Mapping |
 |----------|---------|
 | `persona.basePersonaId` | → `gradings[i].selectionContext.personaIds[0]` |
-| `persona.lensId` | → Sidecar `gradings/<gradingId>.loop.json` Feld `persona.lensId` |
+| `persona.lensId` | → sidecar `gradings/<gradingId>.loop.json` field `persona.lensId` |
 
-Datei-Naming-Konvention (Memo 082 Kap 13): `<basePersonaId>--<lensId>` oder
-`neutral` — der Filename ist die kompakte Repraesentation, die Sidecar-JSON die
-vollstaendige.
+File naming convention: `<basePersonaId>--<lensId>` or
+`neutral` — the filename is the compact representation, the sidecar JSON the
+complete one.
 
 ---
 
-## Sidecar-Datei: `<gradingId>.loop.json`
+## Sidecar File: `<gradingId>.loop.json`
 
-Loop-Provenance-Felder, die Spec 08 (heute) nicht abbildet, leben in einer
-**Sidecar-Datei** neben dem Grading-Artefakt:
+Loop-provenance fields that Spec 08 (today) does not represent live in a
+**sidecar file** next to the grading artifact:
 
 ```
 grading-data/single/<ns>--<tool>/gradings/
-+- <gradingId>.json          (Spec-08-konform)
-+- <gradingId>.loop.json     (Sidecar, Loop-Provenance)
++- <gradingId>.json          (Spec-08-conformant)
++- <gradingId>.loop.json     (sidecar, loop provenance)
 ```
 
-**Sidecar-Inhalt:**
+**Sidecar content:**
 
 ```json
 {
@@ -119,27 +118,26 @@ grading-data/single/<ns>--<tool>/gradings/
 }
 ```
 
-Die Sidecar-Datei ist **gitignored** wie der Rest von `grading-data/`
-(Memo 082 Kap 4.6 — gitignored Arbeits-Folder).
+The sidecar file is **gitignored** like the rest of `grading-data/`.
 
-Begruendung Sidecar statt Spec-08-Erweiterung **heute**: Memo 082 Kap 14.2 hat
-den Iterations-Counter explizit als **out-of-scope** Spec-Erweiterung markiert
-(Folge-Memo). Bis dahin lebt die Information in der Sidecar — die Spec-08-Datei
-bleibt strikt konform.
+Rationale for sidecar instead of a Spec-08 extension **today**: the iteration
+counter is explicitly **out-of-scope** as a spec extension and deferred to a
+follow-up. Until then, the information lives in the sidecar — the Spec-08 file
+stays strictly conformant.
 
 ---
 
-## area → dimension-Auswahl (Bereich-spezifisch)
+## area → dimension Selection (area-specific)
 
-Spec 08 §5.1.1 listet 17 Single-Dimensionen + §5.1.2 listet 4
-Selection-Dimensionen. Pro Output-Schema-Bereich beschraenkt sich der
-Generator auf eine **Teilmenge** dieser Dimensionen:
+Spec 08 §5.1.1 lists 17 single dimensions + §5.1.2 lists 4
+selection dimensions. Per output-schema area, the
+generator restricts itself to a **subset** of these dimensions:
 
-| Bereich (Output-Schema) | Erlaubte Spec-08-Dimensionen (`gradings[i].dimension`) | Tier |
+| Area (output-schema) | Allowed Spec-08 dimensions (`gradings[i].dimension`) | Tier |
 |--------------------------|---------------------------------------------------------|------|
 | `single-test` | `docsUrlReachable`, `outputSchemaMatch`, `apiKeyDomainMatch`, `whenToUse`, `parameters`, `outputSchemaConformance`, `descriptionNeutrality`, `completeness`, `formattingCompliance`, `apiAvailability` | `autonomous` |
 | `tools-aggregate-schema` | `routesUniqueNames`, `outputSchemaConformance`, `completeness`, `descriptionNeutrality` | `autonomous` |
-| `namespace-description` | `descriptionNeutrality`, `completeness`, `personaUseCaseFit` (Ersatz fuer geplante `namespaceDescriptionClarity` — Memo 14.2 out-of-scope) | `autonomous` |
+| `namespace-description` | `descriptionNeutrality`, `completeness`, `personaUseCaseFit` (substitute for the planned `namespaceDescriptionClarity`, out-of-scope) | `autonomous` |
 | `tools-aggregate-namespace` | `domainCoverage`, `domainConformance`, `completeness` | `autonomous` |
 | `about-namespace` | `aboutConventionCompliance`, `personaUseCaseFit` | `autonomous` |
 | `about-selection` | `aboutConventionCompliance`, `personaUseCaseFit` | `group-bound` |
@@ -148,8 +146,8 @@ Generator auf eine **Teilmenge** dieser Dimensionen:
 | `selection-skills-L3` | `selectionSkillL3` | `group-bound` |
 | `namespace-skills` | `namespaceSkillValidity` | `autonomous` |
 
-**Konsequenz:** Der Generator setzt `gradingTier` und `maxAttainableGrade`
-(Spec 08 §8) deterministisch aus dem Output-Schema-`area`-Feld:
+**Consequence:** The generator sets `gradingTier` and `maxAttainableGrade`
+(Spec 08 §8) deterministically from the output-schema `area` field:
 
 | `area` | `gradingTier` | `maxAttainableGrade` |
 |--------|---------------|----------------------|
@@ -166,9 +164,9 @@ Generator auf eine **Teilmenge** dieser Dimensionen:
 
 ---
 
-## Beispiel-Transformation
+## Example Transformation
 
-### Sub-Agent-Antwort (Output-Schema konform)
+### Sub-agent response (output-schema conformant)
 
 ```json
 {
@@ -182,7 +180,7 @@ Generator auf eine **Teilmenge** dieser Dimensionen:
         {
             "questionId": "Q-single-test-04",
             "score": 4.0,
-            "reasoning": "whenToUse-Beschreibung enthaelt klaren Trigger-Satz."
+            "reasoning": "whenToUse description contains a clear trigger sentence."
         }
     ],
     "improvementHints": [
@@ -195,7 +193,7 @@ Generator auf eine **Teilmenge** dieser Dimensionen:
 }
 ```
 
-### Generator-Output — Spec-08-Datei `<gradingId>.json`
+### Generator output — Spec-08 file `<gradingId>.json`
 
 ```json
 {
@@ -227,7 +225,7 @@ Generator auf eine **Teilmenge** dieser Dimensionen:
                 "domainDocId": "n/a"
             },
             "timestamp": "2026-05-29T15:34:00Z",
-            "reasoning": "whenToUse-Beschreibung enthaelt klaren Trigger-Satz."
+            "reasoning": "whenToUse description contains a clear trigger sentence."
         }
     ],
     "categoricalVeto": null,
@@ -236,7 +234,7 @@ Generator auf eine **Teilmenge** dieser Dimensionen:
 }
 ```
 
-### Generator-Output — Sidecar `<gradingId>.loop.json`
+### Generator output — sidecar `<gradingId>.loop.json`
 
 ```json
 {
@@ -257,122 +255,119 @@ Generator auf eine **Teilmenge** dieser Dimensionen:
 
 ## Intentionally-Unmapped Fields
 
-Felder des Output-Schemas, die **bewusst** nicht direkt auf Spec 08 gehen:
+Output-schema fields that are **deliberately** not mapped directly to Spec 08:
 
-| Feld | Grund |
+| Field | Reason |
 |------|-------|
-| `area` (Top-Level) | Routing-Schluessel; im persistierten Artefakt sind die `dimension`-Werte der `gradings[i]` ausreichend. |
-| `questionId` | Compose-Time-Identifier; nach Aufloesung in `dimension` semantisch redundant. |
-| `iteration` | Spec 08 hat heute kein Iterations-Feld (Memo 082 Kap 14.2 out-of-scope) — lebt in Sidecar. |
-| `improvementHints[]` | Loop-intern, nicht durable — lebt in Sidecar. |
-| `persona.lensId` | Spec 12 §4 Lens-Konzept noch nicht in Spec 08 §4 abgebildet — lebt in Sidecar + Filename. |
+| `area` (top-level) | Routing key; in the persisted artifact, the `dimension` values of `gradings[i]` are sufficient. |
+| `questionId` | Compose-time identifier; semantically redundant after resolution into `dimension`. |
+| `iteration` | Spec 08 has no iteration field today (out-of-scope) — lives in the sidecar. |
+| `improvementHints[]` | Loop-internal, not durable — lives in the sidecar. |
+| `persona.lensId` | Spec 12 §4 lens concept not yet represented in Spec 08 §4 — lives in the sidecar + filename. |
 
 ---
 
-## `categoricalVeto`-Mapping (Spec 08 §6)
+## `categoricalVeto` Mapping (Spec 08 §6)
 
-Das Master-Schema (PRD-08) modelliert **heute** keinen Veto-Branch im `oneOf`.
-Begruendung: Der Evaluator-Sub-Agent ist nicht autorisiert, einen Categorical
-Veto auszusprechen — das ist eine deterministische Pruefung
-(api-key-domain-mismatch, malicious-module, illegal-content) oder eine
-spezielle `ai-security-veto`-Operation der Engine-Schicht, nicht des
-per-Bereich-Evaluators.
+The Master schema models **no** veto branch in the `oneOf` today.
+Rationale: the evaluator sub-agent is not authorized to issue a categorical
+veto — that is a deterministic check
+(api-key-domain-mismatch, malicious-module, illegal-content) or a
+special `ai-security-veto` operation of the engine layer, not of the
+per-area evaluator.
 
-Konsequenz fuer das Mapping: `categoricalVeto = null` ist der **Default** im
-Generator-Output, ueberschrieben nur von Engine-Code (nicht von
-Sub-Agent-Antworten). Diese Trennung ist normativ — der Evaluator hat keine
-Veto-Befugnis.
-
----
-
-## `regradingTrigger`-Mapping (Spec 08 §11)
-
-Der Recursive-Loop (Memo 082 Kap 12) ist **kein** `regradingTrigger` im
-Spec-08-Sinne — er passiert *innerhalb* eines Grading-Laufs, nicht zwischen
-zwei abgeschlossenen Grading-Artefakten. `regradingTrigger` wird nur gesetzt,
-wenn:
-
-- ein User per CLI/Issue ein bestehendes `<gradingId>.json` neu bewerten laesst (`user-report`)
-- ein scheduled Re-Run laeuft (`scheduled`)
-- ein `scoringSystem`-Bump bzw. `gradingSystem`-Bump alle Artefakte invalidiert
-
-→ **Intentionally-unmapped** auf der Loop-Ebene. Der Generator setzt
-`regradingTrigger` nur in den drei Spec-08-§11-Faellen, nicht als
-Loop-Iteration-Marker.
+Consequence for the mapping: `categoricalVeto = null` is the **default** in the
+generator output, overwritten only by engine code (not by
+sub-agent responses). This separation is normative — the evaluator has no
+veto authority.
 
 ---
 
-## Spec-Erweiterungs-Verweis (Memo 082 Kap 14.2)
+## `regradingTrigger` Mapping (Spec 08 §11)
 
-Die folgenden Output-Schema-Felder sind **bewusst** als Sidecar persistiert
-und sollten in einem **Folge-Memo** in die Spec eingearbeitet werden — diese
-Erweiterungen sind explizit als **out-of-scope** fuer Memo 082 markiert
-(Kap 14.2 Spec-Erweiterungs-Vorschlaege):
+The recursive loop is **not** a `regradingTrigger` in the
+Spec-08 sense — it happens *within* a grading run, not between
+two completed grading artifacts. `regradingTrigger` is set only
+when:
 
-- `iteration` — Loop-Iterations-Counter (Top-Level oder `gradings[i].context`)
-- `improvementHints[]` — Generator-Feedback-Loop-Persistenz
-- `persona.lensId` — Lens-Konzept in `selectionContext` (heute nur Base-Persona-ID)
+- a user re-grades an existing `<gradingId>.json` via CLI/issue (`user-report`)
+- a scheduled re-run runs (`scheduled`)
+- a `scoringSystem` bump or `gradingSystem` bump invalidates all artifacts
 
-Bis ein solches Folge-Memo die Spec erweitert, gilt die Sidecar-Konvention aus
-§4.5 verbindlich. Implementierer der Loop-Engine (Memo 082 P2h) MUST schreiben
-beide Dateien — die Spec-08-Datei UND die `.loop.json`-Sidecar — im selben
-Transaktions-Block.
+→ **Intentionally unmapped** at the loop level. The generator sets
+`regradingTrigger` only in the three Spec-08 §11 cases, not as a
+loop-iteration marker.
 
 ---
 
-## Referenzen
+## Spec Extension Reference
 
-- Memo 082 REV-05 Kap 4.6 (Folder-Typen — `docs/` = Public Repo), Kap 9 (Output-Schema F16), Kap 12 (Recursive Loop), Kap 13 (Persona-Slug in Filename), Kap 14.2 (Spec-Erweiterungs-Vorschlaege out-of-scope)
-- Spec `08-grading-model.md` §3 (Top-Level-Felder), §3.X (5 Pflichtfelder ab 1.1.0), §4 (gradings[]-Element), §5.1.1 (17 Single-Dimensionen), §5.1.2 (4 Selection-Dimensionen), §5.3 (n/a-naReason), §6 (categoricalVeto), §8 (Tier-Trim + maxAttainableGrade), §11 (regradingTrigger)
-- Spec `12-personas-contract.md` §1 (4 Base-Personas), §4 (Lens-Konzept)
+The following output-schema fields are **deliberately** persisted as a sidecar
+and should be folded into the spec in a **follow-up** — these
+extensions are explicitly marked **out-of-scope** here:
+
+- `iteration` — loop-iteration counter (top-level or `gradings[i].context`)
+- `improvementHints[]` — generator feedback-loop persistence
+- `persona.lensId` — lens concept in `selectionContext` (today only base-persona ID)
+
+Until such a follow-up extends the spec, the sidecar convention from
+§4.5 is binding. Implementers of the loop engine MUST write
+both files — the Spec-08 file AND the `.loop.json` sidecar — within the same
+transaction block.
+
+---
+
+## References
+
+- Spec `08-grading-model.md` §3 (top-level fields), §3.X (5 mandatory fields from 1.1.0), §4 (gradings[] element), §5.1.1 (17 single dimensions), §5.1.2 (4 selection dimensions), §5.3 (n/a naReason), §6 (categoricalVeto), §8 (tier-trim + maxAttainableGrade), §11 (regradingTrigger)
+- Spec `12-personas-contract.md` §1 (4 base personas), §4 (lens concept)
 - Spec `13-skills.md` §3 (namespaceSkillValidity), §4 (selectionSkillL1/L2/L3)
-- Spec `19-folder-layout.md` §17 (Naming-Konvention `<gradingId>.json`)
-- PRD-08 (Phase 2e, Schema-Layout) — Vorbedingung
+- Spec `19-folder-layout.md` §17 (naming convention `<gradingId>.json`)
 
 ---
 
-## Annex: Modul-spezifische Felder (Memo 082, Phase 2h, PRD-20)
+## Annex: Module-specific Fields
 
-Folgende Felder sind **NICHT** in `gradingSpec/1.1.0` definiert, sondern auf
-Modul-Ebene (Memo 082, Phase 2h) pflichtig fuer alle Eintraege ab Phase 2h.
-Sie werden vom Generator (`src/Grading.mjs#createEntry`) entgegengenommen,
-validiert und in die persistierte JSON aufgenommen.
+The following fields are **NOT** defined in `gradingSpec/1.1.0` but are
+mandatory at the module level for all entries from the current phase onward.
+They are accepted, validated, and included in the persisted JSON by the
+generator (`src/Grading.mjs#createEntry`).
 
-| Feld | Typ | Quelle | Pflicht ab | Validation-Code |
-|------|-----|--------|------------|-----------------|
-| `iteration` | integer (`0..10`) | Memo 082 Kap 12 (Recursive Feedback Loop) | Phase 2h | `GRD-030` |
-| `improvementHints` | string[] | Memo 082 Kap 12 (Loop-Mechanik) | Phase 2h | `GRD-031` |
-| `persona` | string (`'neutral'` ODER `<base>--<lens>`) | Memo 082 Kap 13 (Parallele Personas) | Phase 2h | `GRD-032` |
+| Field | Type | Source | Validation code |
+|------|-----|--------|-----------------|
+| `iteration` | integer (`0..10`) | Recursive feedback loop | `GRD-030` |
+| `improvementHints` | string[] | Loop mechanics | `GRD-031` |
+| `persona` | string (`'neutral'` OR `<base>--<lens>`) | Parallel personas | `GRD-032` |
 
-### Spec-Erweiterung — out-of-scope
+### Spec extension — out-of-scope
 
-Spec-Erweiterungs-Vorschlag fuer Iterations-Counter ist explizit
-out-of-scope dieses Memos (Kap 14.2). Wenn Spec `1.2.0` diese Felder
-aufnimmt, wird das Mapping hier auf „Spec-konform ab 1.2.0" aktualisiert.
+The spec-extension proposal for the iteration counter is explicitly
+out-of-scope. When spec `1.2.0` adopts these fields,
+the mapping here will be updated to "spec-conformant from 1.2.0".
 
-### Backward-Compat (Read-Pfad)
+### Backward-Compat (read path)
 
-Legacy-Eintraege (Pilot-Files aus Memo 076/080) ohne diese Felder werden mit
-Defaults gelesen — `Grading.readEntry({ json })`:
+Legacy entries (pilot files) without these fields are read with
+defaults — `Grading.readEntry({ json })`:
 
-| Feld | Default beim Read |
+| Field | Default on read |
 |------|-------------------|
 | `iteration` | `0` |
 | `improvementHints` | `[]` |
 | `persona` | `'neutral'` |
 
-**Wichtig:** Diese Defaults gelten **ausschliesslich** beim Lesen von
-Legacy-Files. `createEntry()` weist fehlende Felder als undefined zurueck
-(keine Silent Defaults) — wer das Feld setzen will, MUSS es explizit
-uebergeben.
+**Important:** These defaults apply **exclusively** when reading
+legacy files. `createEntry()` rejects missing fields as undefined
+(no silent defaults) — whoever wants to set the field MUST pass it
+explicitly.
 
-### Filename-Konvention (Cross-Ref PRD-21)
+### Filename convention (cross-ref)
 
-Das `persona`-Feld im JSON-Body ist konsistent mit dem `persona`-Segment im
-Dateinamen (siehe `docs/grading-filename-convention.md`). Filename-Bildung
-darf nur via `Grading.formatGradingFilename({ hash, ts, persona })` laufen.
+The `persona` field in the JSON body is consistent with the `persona` segment in
+the filename (see `docs/grading-filename-convention.md`). Filename construction
+may only run via `Grading.formatGradingFilename({ hash, ts, persona })`.
 
-### Beispiel-Eintrag (neu, Phase 2h)
+### Example entry (new)
 
 ```json
 {
@@ -392,6 +387,6 @@ darf nur via `Grading.formatGradingFilename({ hash, ts, persona })` laufen.
 
 ### Cross-References
 
-- PRD-19 — Recursive-Loop-Logik in `*-start-grade`-Skills (Skill-Bodies)
-- PRD-20 — Dieses Annex (Modul-Eintrags-Schema)
-- PRD-21 — Persona-Slug-Filename-Konvention (`docs/grading-filename-convention.md`)
+- Recursive-loop logic in the `*-start-grade` skills (skill bodies)
+- This annex (module entry schema)
+- Persona-slug filename convention (`docs/grading-filename-convention.md`)

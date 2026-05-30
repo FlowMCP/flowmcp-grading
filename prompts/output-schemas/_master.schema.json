@@ -2,7 +2,7 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "$id": "https://flowmcp.org/grading/output-schemas/_master.schema.json",
     "title": "Evaluator-Response Master Envelope",
-    "description": "Master schema for Memo 082 Generator-Evaluator-Loop. Defines $defs only — per-area schemas extend via $ref. See Memo 082 Kap 9 + Spec 08 §3/§4/§5.3.",
+    "description": "Master schema for the generator-evaluator loop. Defines $defs only — per-area schemas extend via $ref. See the grading spec + Spec 08 §3/§4/§5.3.",
     "$defs": {
         "envelope": {
             "type": "object",
@@ -38,7 +38,7 @@
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 5,
-                    "description": "Loop iteration counter (Memo 082 Kap 12). Out-of-scope for Spec 08 — persisted via sidecar."
+                    "description": "Loop iteration counter. Out-of-scope for Spec 08 — persisted via sidecar."
                 },
                 "timestamp": {
                     "type": "string",
@@ -50,7 +50,7 @@
                         { "type": "null" },
                         { "$ref": "#/$defs/persona" }
                     ],
-                    "description": "null for neutral areas (1-4 per Kap 7.4); persona object for persona areas (5-8)."
+                    "description": "null for neutral areas (1-4); persona object for persona areas (5-8)."
                 }
             },
             "required": [
@@ -160,7 +160,7 @@
         },
         "improvementHint": {
             "type": "object",
-            "description": "Loop-internal improvement hint. Persisted via sidecar — NOT in Spec 08 today.",
+            "description": "Loop-internal improvement hint. Persisted via sidecar — not in Spec 08 today.",
             "properties": {
                 "targetField": {
                     "type": "string",
@@ -180,7 +180,7 @@
         },
         "blocker": {
             "type": "object",
-            "description": "Blocker shortcut per Memo 082 Kap 8. Evaluator may abort with this object if Pre-Instructions cannot be satisfied.",
+            "description": "Blocker shortcut per the grading spec. Evaluator may abort with this object if pre-instructions cannot be satisfied.",
             "properties": {
                 "blocker": {
                     "type": "string",

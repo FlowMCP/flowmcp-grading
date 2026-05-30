@@ -1,10 +1,10 @@
-<!-- Bereich: 08 namespace-skills | Persona: MIT | Spec: 13 §3 -->
+<!-- Area: 08 namespace-skills | Persona: WITH | Spec: 13 §3 -->
 
-## Datei-Vorbereitung (Pflicht — strikte Reihenfolge)
+## File Preparation (mandatory — strict order)
 
-Lies die folgenden Dateien in dieser Reihenfolge BEVOR du eine Frage beantwortest.
-Falls eine Datei nicht existiert oder nicht lesbar ist, antworte ausschliesslich
-mit { "blocker": "<dateipfad>", "reason": "<grund>" } und brich ab.
+Read the following files in this order BEFORE answering any question.
+If a file does not exist or is not readable, answer exclusively with
+{ "blocker": "<file-path>", "reason": "<reason>" } and stop.
 
-1. {{NAMESPACE_SKILLS_SPEC_PATH}} — Namespace-Skills-Spec/-Inhalt (Spec 13 §3)
-2. {{PERSONA_PATH}}               — Persona-File
+1. {{NAMESPACE_SKILLS_SPEC_PATH}} — Namespace skills spec/content (Spec 13 §3)
+2. {{PERSONA_PATH}}               — Persona file

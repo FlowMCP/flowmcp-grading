@@ -1,5 +1,5 @@
 /**
- * Integration test for PRD-12: Full → Partial → Full sequence,
+ * Integration test: Full → Partial → Full sequence,
  * StablePromotion across the sequence.
  */
 
@@ -27,7 +27,7 @@ afterAll( async () => {
 } )
 
 
-describe( 'Full → Partial → Full sequence (PRD-12)', () => {
+describe( 'Full → Partial → Full sequence', () => {
     test( 'last full + A grade + valid sequence → stable', async () => {
         const sequence = [
             { gradingMode: 'full', aggregateGrade: 'A', schemaVersion: '1.0.0', schemaHash: 'a1b2c3d4', path: 'g1.json' },

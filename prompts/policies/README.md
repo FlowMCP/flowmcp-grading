@@ -1,4 +1,4 @@
-# Sorgfalts-Policies fuer den PromptBuilder
+# Diligence Policies for the PromptBuilder
 
 | # | Policy | Status | appliesTo |
 |---|--------|--------|-----------|
@@ -9,21 +9,21 @@
 | 5 | [persona-only-where-required](persona-only-where-required.md) | enforced | all (frontmatter-driven) |
 | 6 | [file-output-rules](file-output-rules.md) | enforced | all |
 
-Policies werden vom `PromptBuilder.mjs` (PRD-04, Phase 2d) maschinell durchgesetzt.
-Jede Policy-Datei ist atomar, versioniert (semver) und referenziert ihre Quelle
-(Memo / Memory / Spec).
+Policies are enforced mechanically by `PromptBuilder.mjs`.
+Each policy file is atomic, versioned (semver), and references its source
+(grading spec).
 
-## Error-Code-Praefix
+## Error-Code Prefix
 
-Alle Policy-Verletzungen werfen Error-Codes mit Praefix `PB-NNN`
-(PromptBuilder). Zuordnung:
+All policy violations throw error codes with the prefix `PB-NNN`
+(PromptBuilder). Mapping:
 
-| Code | Policy | Bedeutung |
-|------|--------|-----------|
-| `PB-101` | no-secrets-in-prompt | Secret-Pattern im Prompt erkannt |
-| `PB-102` | evaluator-neutrality | Generator-Hinweis im Evaluator-Prompt |
-| `PB-103` | http-400-not-pass | HTTP 4xx als PASS klassifiziert |
-| `PB-104` | no-hidden-defaults | Placeholder unfilled, kein silent default |
-| `PB-201` | persona-only-where-required | personaRequired=true, Persona fehlt |
-| `PB-202` | persona-only-where-required | Persona uebergeben bei neutralem Bereich |
-| `PB-301` | file-output-rules | Pfad ausserhalb erlaubter Folder-Typen |
+| Code | Policy | Meaning |
+|------|--------|---------|
+| `PB-101` | no-secrets-in-prompt | Secret pattern detected in prompt |
+| `PB-102` | evaluator-neutrality | Generator hint in evaluator prompt |
+| `PB-103` | http-400-not-pass | HTTP 4xx classified as PASS |
+| `PB-104` | no-hidden-defaults | Placeholder unfilled, no silent default |
+| `PB-201` | persona-only-where-required | personaRequired=true, persona missing |
+| `PB-202` | persona-only-where-required | Persona supplied for a neutral area |
+| `PB-301` | file-output-rules | Path outside the allowed folder types |

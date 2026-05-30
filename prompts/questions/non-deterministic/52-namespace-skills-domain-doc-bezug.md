@@ -2,7 +2,7 @@
 id: Q-namespace-skills-05
 area: namespace-skills
 dimension: domainAlignment
-question: "Ist der Bezug zur Domain-Knowledge-Doc klar?"
+question: "Is the reference to the domain knowledge document clear?"
 scoreType: scale-1-5
 weight: 0.33
 determinism: non-deterministic
@@ -11,17 +11,16 @@ filesToRead:
   - "{{skillPath}}"
   - "{{domainKnowledgePath}}"
 preInstructionRef: pre-instructions/namespace-skills.md
-evaluatorTask: "Pruefe ob der Skill auf die Domain-Knowledge-Doc referenziert."
+evaluatorTask: "Check whether the skill references the domain knowledge document."
 outputSchemaRef: output-schemas/namespace-skills.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Domain-Knowledge-Doc ist Source-of-Truth (Spec 10 §3) — Skill ohne Bezug ist
-losgeloest.
+The domain knowledge document is the source of truth — a skill without a reference is detached.
 
-## Persona-Anwendung
+## Persona Application
 
-Persona-Workflow als Begruendung fuer Domain-Referenz.
+The persona workflow justifies the domain reference.

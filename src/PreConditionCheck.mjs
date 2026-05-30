@@ -1,9 +1,9 @@
 /**
  * PreConditionCheck — universal stable-gate shared by Selection-Grading and About-Verification.
  *
- * Memo 080 anchors:
- *   Kap 13 — Universal pre-condition (Spec §20)
- *   Kap 11 — Schritt 0 — Pre-Condition-Check (Pflicht)
+ * Per the grading spec:
+ *   - Defines the universal pre-condition.
+ *   - Step 0 — pre-condition check (mandatory).
  *
  * Rule: aggregated checks are blocked until every member-schema carries
  * gradingStatus: 'stable' in its corresponding phase-status/single/<ns>--<tool>.json.

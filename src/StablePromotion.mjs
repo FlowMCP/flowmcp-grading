@@ -1,9 +1,9 @@
 /**
  * StablePromotion — promotes a schema to `stable` when conditions are met.
  *
- * Memo 080 anchors:
- *   Kap 4 — Last grading entry before stable MUST be full
- *   Kap 11 — gradingStatus field, phase-status/single/<ns>--<tool>.json
+ * Per the grading spec:
+ *   - The last grading entry before stable MUST be full.
+ *   - The gradingStatus field lives in phase-status/single/<ns>--<tool>.json.
  *
  * Conditions for stable:
  *   - At least one grading file exists

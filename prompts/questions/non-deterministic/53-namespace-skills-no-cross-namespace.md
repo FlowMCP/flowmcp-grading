@@ -2,7 +2,7 @@
 id: Q-namespace-skills-06
 area: namespace-skills
 dimension: domainAlignment
-question: "Bleibt der Namespace-Skill innerhalb des eigenen Namespace?"
+question: "Does the namespace skill stay within its own namespace?"
 scoreType: boolean
 weight: 0.33
 determinism: non-deterministic
@@ -11,17 +11,16 @@ filesToRead:
   - "{{skillPath}}"
   - "{{namespacePath}}"
 preInstructionRef: pre-instructions/namespace-skills.md
-evaluatorTask: "Pruefe ob der Skill keine Tools aus anderen Namespaces aufruft."
+evaluatorTask: "Check whether the skill calls no tools from other namespaces."
 outputSchemaRef: output-schemas/namespace-skills.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Cross-Namespace-Skills gehoeren auf Selection-Level (L3), nicht in Namespace-Skills.
-Spec 13 §3.
+Cross-namespace skills belong at the selection level (L3), not in namespace skills.
 
-## Persona-Anwendung
+## Persona Application
 
-Persona-Workflow-Abgrenzung ist Architektur-Pflicht.
+Drawing the persona workflow boundary is an architectural requirement.

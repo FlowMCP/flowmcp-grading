@@ -1,92 +1,92 @@
 ---
 name: selection-skills-L2-evaluate
-description: Evaluator-Skill fuer Bereich selection-skills-L2 (Area 7b, Memo 082 Kap 7.1). Empfaengt das vom Generator-Skill selection-skills-L2-start-grade erzeugte Prompt-Artefakt und orchestriert einen frischen LLM-Sub-Agent in leerem Kontext. Erzwingt Strict-JSON-Output gemaess prompts/output-schemas/selection-skills-L2.schema.json. Persona-Anwendung gemaess Kap 7.4 — Bereich 7b ist MIT Persona (personaRequired: true, Spec 13 §4.2 MUST).
+description: Evaluator skill for the selection-skills-L2 area. Receives the prompt artifact produced by the generator skill selection-skills-L2-start-grade and orchestrates a fresh LLM sub-agent in an empty context. Enforces strict-JSON output per prompts/output-schemas/selection-skills-L2.schema.json. Per the grading spec, this area is graded WITH a persona (personaRequired: true, per the FlowMCP Spec §13 MUST).
 allowed-tools: Read, Grep, Glob
 model: inherit
 ---
 
 # selection-skills-L2-evaluate
 
-## Zweck
+## Purpose
 
-Dieser Skill wird vom Generator-Skill `selection-skills-L2-start-grade` aufgerufen. Er empfaengt das vom `PromptBuilder.build(...)` erzeugte Prompt-Artefakt per Tool-Result und orchestriert einen **frischen Sub-Agent** zur Bewertung.
+This skill is invoked by the generator skill `selection-skills-L2-start-grade`. It receives the prompt artifact produced by `PromptBuilder.build(...)` via tool result and orchestrates a **fresh sub-agent** for the evaluation.
 
 ## Input
 
-Vom Aufrufer (`selection-skills-L2-start-grade`) wird ein einziger String uebergeben:
+The caller (`selection-skills-L2-start-grade`) passes a single string:
 
-| Parameter | Pflicht | Format | Quelle |
-|-----------|---------|--------|--------|
-| `promptArtifact` | ja | String (inkl. Persona-Block, Pflicht) | `PromptBuilder.build(...)` aus PRD-04 (Phase 2d) |
+| Parameter | Required | Format | Source |
+|-----------|----------|--------|--------|
+| `promptArtifact` | yes | String (incl. persona block, mandatory) | `PromptBuilder.build(...)` |
 
-Quelle der Pflicht-Block-Logik: `prompts/pre-instructions/selection-skills-L2.md` (PRD-09/10, Phase 2d).
+The source of the mandatory-block logic is `prompts/pre-instructions/selection-skills-L2.md`.
 
-## Architektur-Rolle (Memo 082 Kap 4.2/4.3)
+## Architectural Role
 
-- Generator-Skill `selection-skills-L2-start-grade` kennt das Optimierungsziel und treibt den Loop.
-- Dieser Evaluator-Skill darf das Optimierungsziel **NICHT** in den Sub-Agent-Kontext einspeisen.
-- Der Sub-Agent sieht ausschliesslich:
-  1. Den Files-to-Read-Block aus dem Prompt-Artefakt
-  2. Die Eval-Fragen des Bereichs `selection-skills-L2`
-  3. Das Output-Schema `prompts/output-schemas/selection-skills-L2.schema.json`
-  4. Den **Persona-Block** (Pflicht, Kap 7.4 + Spec 13 §4.2)
+- The generator skill `selection-skills-L2-start-grade` knows the optimization goal and drives the loop.
+- This evaluator skill must **NOT** feed the optimization goal into the sub-agent context.
+- The sub-agent sees only:
+  1. The files-to-read block from the prompt artifact
+  2. The eval questions of the `selection-skills-L2` area
+  3. The output schema `prompts/output-schemas/selection-skills-L2.schema.json`
+  4. The **persona block** (mandatory, per the FlowMCP Spec §13)
 
-## Sub-Agent-Konfiguration (Memo 082 Kap 11)
+## Sub-Agent Configuration
 
-- **Kontext:** LEER.
-- **Tools:** NUR `Read`, `Grep`, `Glob`. Kein `Write`, kein `Bash`, kein `Edit`.
-- **Output:** Strict-JSON gemaess `prompts/output-schemas/selection-skills-L2.schema.json`.
-- **Persona-Anwendung (Kap 7.4):** `personaRequired: true` (MUST per Spec 13 §4.2). Persona-Slug-Format `<basePersona>--<lens>`.
+- **Context:** EMPTY.
+- **Tools:** ONLY `Read`, `Grep`, `Glob`. No `Write`, no `Bash`, no `Edit`.
+- **Output:** Strict JSON per `prompts/output-schemas/selection-skills-L2.schema.json`.
+- **Persona handling:** `personaRequired: true` (MUST per the FlowMCP Spec §13). Persona slug format `<basePersona>--<lens>`.
 
-## Ablauf
+## Process
 
-1. **Empfangen** — Generator uebergibt das Prompt-Artefakt (String, inkl. Persona-Block).
-2. **Pre-Check Files-to-Read** — Bei Fehler **AUSSCHLIESSLICH**:
+1. **Receive** — The generator passes the prompt artifact (string, incl. persona block).
+2. **Pre-Check Files-to-Read** — On error, send **ONLY**:
 
    ```json
-   { "blocker": "<pfad>", "reason": "<grund>" }
+   { "blocker": "<path>", "reason": "<reason>" }
    ```
 
-   und abbrechen (Kap 8).
-3. **Sub-Agent starten** — Frischer Sub-Agent mit leerem Kontext.
-4. **Files lesen** — In **strikter Reihenfolge** (L2-Skill-Files, Persona, Lens-Helper).
-5. **Fragen beantworten** — Eval-Fragen des Bereichs `selection-skills-L2` aus Persona-Sicht (L2 = Intermediate-Skills).
-6. **HTTP-Status-Auswertung** — Falls relevant: 4xx = **NIEMALS** PASS (Memory `feedback_http_400_is_not_pass`).
-7. **Strict-JSON validieren** — Bei Verletzung: `{ "blocker": "schema-validation", "reason": "<details>" }`.
-8. **Rueckgabe** — Per Tool-Result an `selection-skills-L2-apply-improvement` (PRD-16).
+   and abort.
+3. **Start Sub-Agent** — Fresh sub-agent with empty context.
+4. **Read Files** — In **strict order** (L2 skill files, persona, lens helper).
+5. **Answer Questions** — Eval questions of the `selection-skills-L2` area from the persona's perspective (L2 = intermediate skills).
+6. **HTTP Status Evaluation** — If relevant: 4xx is **NEVER** a PASS (memory `feedback_http_400_is_not_pass`).
+7. **Validate Strict JSON** — On violation: `{ "blocker": "schema-validation", "reason": "<details>" }`.
+8. **Return** — Via tool result to `selection-skills-L2-apply-improvement`.
 
-## Output-Format
+## Output Format
 
-Strict-JSON gemaess `prompts/output-schemas/selection-skills-L2.schema.json`. Pflichtfelder:
+Strict JSON per `prompts/output-schemas/selection-skills-L2.schema.json`. Required fields:
 
-| Feld | Typ | Wert / Constraint |
+| Field | Type | Value / Constraint |
 |------|-----|--------------------|
 | `gradingId` | string | `<schemaHash>--<ISO timestamp>` |
 | `schemaHash` | string | 8-hex sha256 prefix |
 | `area` | const | `"selection-skills-L2"` |
 | `iteration` | integer | 1..5 |
 | `timestamp` | string | ISO-8601 |
-| `persona` | object | `{ basePersonaId, lensId }` (Pflicht) |
-| `answers` | array | 5 Eintraege (Q-selection-skills-L2-01..05) |
+| `persona` | object | `{ basePersonaId, lensId }` (mandatory) |
+| `answers` | array | 5 entries (Q-selection-skills-L2-01..05) |
 | `improvementHints` | array | Optional |
 
-Bei Blocker:
+On blocker:
 
 ```json
-{ "blocker": "<dateipfad-oder-stufe>", "reason": "<klartext>" }
+{ "blocker": "<file-path-or-stage>", "reason": "<plain-text>" }
 ```
 
-## Sicherheits-Assertions
+## Safety Assertions
 
-1. Der Sub-Agent KENNT das Optimierungsziel NICHT.
-2. Keine stillen Defaults — fehlende Felder werden als `missing` markiert.
-3. HTTP 4xx = FAIL/DEFECT, niemals PASS.
+1. The sub-agent does NOT know the optimization goal.
+2. No silent defaults — missing fields are marked as `missing`.
+3. HTTP 4xx = FAIL/DEFECT, never PASS.
 
-## Verschaltung
+## Wiring
 
-- **Aufrufer:** `selection-skills-L2-start-grade` (PRD-15, Phase 2f)
-- **Konsument:** `selection-skills-L2-apply-improvement` (PRD-16)
-- **Spec-Bezug:**
-  - Spec 1.1.0 §3 (Validity Rules)
-  - Spec 1.1.0 §13 (Skills — Persona-Focus L1/L2/L3 MUST)
-  - Spec 1.1.0 §19 (Folder-Layout)
+- **Caller:** `selection-skills-L2-start-grade`
+- **Consumer:** `selection-skills-L2-apply-improvement`
+- **Spec reference:**
+  - FlowMCP Spec 1.1.0 §3 (Validity Rules)
+  - FlowMCP Spec 1.1.0 §13 (Skills — Persona-Focus L1/L2/L3 MUST)
+  - FlowMCP Spec 1.1.0 §19 (Folder layout)

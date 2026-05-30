@@ -1,10 +1,10 @@
-// Run Selection-Grading for crypto-domain-full (PRD-19).
+// Run Selection-Grading for crypto-domain-full.
 //
-// Memo 080 Kap 11 Selection-Grading-Workflow:
-//   Schritt 0 — Pre-Condition-Check (read lockfile, require all members 'stable')
-//   Schritt 1 — Selection-Validator S1-S4
-//   Schritt 2 — Persist grading-JSON
-//   Schritt 3 — Re-Grade on changes (driven by external loop, not this script)
+// Selection-grading workflow:
+//   Step 0 — Pre-Condition-Check (read lockfile, require all members 'stable')
+//   Step 1 — Selection-Validator S1-S4
+//   Step 2 — Persist grading-JSON
+//   Step 3 — Re-Grade on changes (driven by external loop, not this script)
 //
 // REALITY-CHECK (2026-05-29):
 //   Pre-Condition cannot be fulfilled in this single subagent run because the
@@ -14,7 +14,7 @@
 //   script exits with a clear BLOCK message; nothing is graded.
 //
 // Flags:
-//   --mode=full         (default; per PRD-19 §4.1 only 'full' is meaningful here)
+//   --mode=full         (default; only 'full' is meaningful here)
 //   --persona=<id>      (default crypto-trader-2026)
 //   --skip-precondition (override — debug only, requires --i-know-what-i-do)
 //   --verbose
@@ -63,7 +63,7 @@ const main = async () => {
     const { mode, persona, skipPrecond, override, verbose } = parseArgs( { argv: process.argv.slice( 2 ) } )
 
     if( mode !== 'full' ) {
-        console.error( `[sel-grade] WARN: --mode=${mode} ignored; PRD-19 §4.1 requires 'full' for initial grading` )
+        console.error( `[sel-grade] WARN: --mode=${mode} ignored; initial grading requires 'full'` )
     }
 
     const selectionPath = join( GRADING_DATA, 'selection', SELECTION_ID, 'selection.json' )

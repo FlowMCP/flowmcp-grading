@@ -10,7 +10,7 @@ tier: P1
 filesToRead:
   - "{{schemaPath}}"
 preInstructionRef: pre-instructions/single-test.md
-evaluatorTask: "Pruefe."
+evaluatorTask: "Check."
 outputSchemaRef: output-schemas/single-test.schema.json
 personaRequired: false
 ---

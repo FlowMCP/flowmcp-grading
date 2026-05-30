@@ -1,4 +1,4 @@
-// Migration script for Memo 080 Phase 2 — Source-of-Truth Layout Migration.
+// Migration script — Source-of-Truth Layout Migration.
 //
 // Moves the three pilot gradings (brightsky, etherscan, abgeordnetenwatch) from
 // the flat layout grading-data/gradings/<ns>--<tool>/<timestamp>.json into the
@@ -7,7 +7,7 @@
 // grading-data/schemas/<namespace>/<schema-hash>--v<X.Y.Z>.mjs.
 //
 // Hash values are explicit MIGRATION-PLACEHOLDER strings (PLACEHOLDER001/002/003).
-// Phase 3 (PRD-10 HashGenerator) replaces them with deterministic sha256 hashes.
+// A later phase (HashGenerator) replaces them with deterministic sha256 hashes.
 //
 // Properties:
 // - idempotent (rerun produces SKIP logs without filesystem changes)
@@ -80,8 +80,8 @@ const GITKEEP_DIRS = [
 
 const SNAPSHOT_HEADER = ( { namespace, tool, placeholderHash, schemaVersion, sourceRelative } ) => {
     const lines = [
-        '// MIGRATION-PLACEHOLDER hash, replaced in Phase 3 via PRD-10 (HashGenerator).',
-        '// Memo 080 Phase 2 — Source-of-Truth schema snapshot.',
+        '// MIGRATION-PLACEHOLDER hash, replaced in a later phase via the HashGenerator.',
+        '// Source-of-Truth schema snapshot.',
         '// Namespace:      ' + namespace,
         '// Tool:           ' + tool,
         '// Placeholder:    ' + placeholderHash,

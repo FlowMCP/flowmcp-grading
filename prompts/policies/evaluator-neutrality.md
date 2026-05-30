@@ -5,30 +5,29 @@ enforced: true
 appliesTo: all
 ---
 
-## Regel
+## Rule
 
-Der Evaluator-Sub-Agent DARF im Prompt nicht ueber das Optimierungsziel des
-Generators informiert werden. Verbesser-/Verstaerken-/Vorzieh-Anweisungen
-sind Generator-Eigenschaft, keine Evaluator-Eigenschaft.
+The evaluator sub-agent MUST NOT be told the generator's optimization goal in
+the prompt. Improve / reinforce / prefer instructions are a property of the
+generator, not of the evaluator.
 
-## Begruendung
+## Rationale
 
-Memo 082 Kap 4.2 — Generator kennt das Optimierungsziel, Evaluator NICHT.
-Wuerde der Evaluator das Ziel kennen, wuerde er auf das Ziel hin optimieren
-statt neutral zu bewerten. Recursive-Loop-Architektur (Memo 082 Kap 12)
-verlangt diese Trennung.
+The generator knows the optimization goal; the evaluator does NOT. If the
+evaluator knew the goal, it would optimize toward that goal instead of
+evaluating neutrally. The recursive-loop architecture requires this separation.
 
-## Durchsetzung im PromptBuilder
+## Enforcement in the PromptBuilder
 
-PromptBuilder hat eine Block-Liste von Phrasen (`verbessere`, `optimiere`,
-`bevorzuge`, `wenn moeglich, dann ...`). Pre-Build-Check des aggregierten
-Prompts gegen die Block-Liste. Bei Treffer: Warning + Build-Fail-Option
-(Konfig-Schalter in `EnvironmentManager`). Error-Code:
+PromptBuilder maintains a block list of phrases (`improve`, `optimize`,
+`prefer`, `if possible, then ...`). Pre-build check of the aggregated prompt
+against the block list. On a match: warning + build-fail option (config switch
+in `EnvironmentManager`). Error code:
 `PB-102: evaluator-neutrality violation — generator hint detected in prompt`.
 
-## Verletzungs-Beispiele
+## Violation Examples
 
-- Frage-Block enthaelt „Bewerte streng — wir wollen Grade A erreichen"
-- Persona-Block enthaelt „Diese Persona neigt zu hohen Bewertungen"
-- Pre-Instructions enthalten „Beachte besonders die Dimension X (wichtig
-  fuer den Loop)"
+- Question block contains "Grade strictly — we want to reach Grade A"
+- Persona block contains "This persona tends to give high scores"
+- Pre-instructions contain "Pay special attention to dimension X (important
+  for the loop)"

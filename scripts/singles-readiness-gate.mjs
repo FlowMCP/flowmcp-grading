@@ -1,34 +1,34 @@
 #!/usr/bin/env node
 /**
- * singles-readiness-gate.mjs — Zwischen-Gate fuer Mini-Praxis-Selection (Memo 082 Phase 6, PRD-26 redesigned).
+ * singles-readiness-gate.mjs — intermediate gate for mini-practice selection.
  *
- * Laeuft NACH den 7 Single-Gradings, VOR dem Selection-Grading.
- * Prueft fuer jeden Schema-Eintrag der Lockfile:
+ * Runs AFTER the 7 single gradings, BEFORE the selection grading.
+ * Checks for each schema entry of the lockfile:
  *   1. gradingMode === "full"
  *   2. aggregateGrade in ["A", "B"]
  *   3. aboutHash is set (non-empty)
  *
- * Kriterium 4 (schemaHash-Match gegen Lockfile) entfaellt bewusst: die Singles erzeugen
- * den Hash selbst — ein Vergleich gegen den Lockfile-Hash ist zirkulaer und blockiert
- * fuer frisch ausgewaehlte Schemas immer. Die Hash-Drift-Pruefung passiert spaeter
- * im Flywheel-Loop (Spec 18, Memo 080).
+ * Criterion 4 (schemaHash match against the lockfile) is intentionally dropped: the singles
+ * produce the hash themselves — comparing against the lockfile hash is circular and would always
+ * block freshly selected schemas. The hash-drift check happens later
+ * in the flywheel loop.
  *
- * Semantik-Wechsel zu PRD-26 v1 (Memo 082 REV-05):
- * - VORHER: Hard-Block-Vorbedingung BEVOR Mini-Praxis startet — Henne-Ei (Singles wurden
- *   noch nicht produziert, Stable kann es nicht geben).
- * - JETZT:  Zwischen-Gate zwischen Singles-Done und Selection-Start — semantisch sauber.
+ * Semantics change vs. the earlier version:
+ * - BEFORE: hard-block precondition BEFORE mini-practice starts — chicken-and-egg (singles were
+ *   not yet produced, so "stable" could not exist).
+ * - NOW:    intermediate gate between singles-done and selection-start — semantically clean.
  *
  * Exit codes:
- *   0 — PASS (alle 7 Schemas bestanden Singles-Readiness)
- *   1 — FAIL-BLOCKER (mindestens ein Schema nicht ready — Selection-Grading wird blockiert)
- *   2 — Strukturfehler (Lockfile fehlt/malformed, Hard-Threshold-Verletzung)
- *   3 — Parse error (Grading JSON malformed)
+ *   0 — PASS (all 7 schemas passed singles readiness)
+ *   1 — FAIL-BLOCKER (at least one schema not ready — selection grading is blocked)
+ *   2 — structural error (lockfile missing/malformed, hard-threshold violation)
+ *   3 — Parse error (grading JSON malformed)
  *
  * Output:
  *   - Terminal: per-schema PASS/FAIL line + Verdict
- *   - JSON Report: --report-out (gitignored unter grading-data/)
+ *   - JSON Report: --report-out (gitignored under grading-data/)
  *
- * NO SILENT DEFAULTS. Alle drei CLI-Parameter Pflicht.
+ * NO SILENT DEFAULTS. All three CLI parameters are mandatory.
  */
 
 import { readFile, readdir, writeFile, mkdir } from 'node:fs/promises'
@@ -52,7 +52,7 @@ class SinglesReadinessGate {
             return {
                 exitCode: 2,
                 report: null,
-                errors: [ `SRG-002: Lock-File not found: ${selectionLock} — run Phase 4 (PRD-23) first.` ]
+                errors: [ `SRG-002: Lock-File not found: ${selectionLock} — build the selection lockfile first.` ]
             }
         }
 
@@ -282,12 +282,12 @@ function parseArgs( { argv } ) {
 
 function printHelp() {
     const lines = [
-        'singles-readiness-gate.mjs — Zwischen-Gate zwischen Singles und Selection (Memo 082 PRD-26 redesigned)',
+        'singles-readiness-gate.mjs — intermediate gate between singles and selection',
         '',
-        'Run order in Phase 6:',
-        '  1. PRD-27 Step A:  7 Single-Gradings (FleetRunner)',
-        '  2. THIS GATE:      Singles-Readiness Check',
-        '  3. PRD-27 Step B:  1 Selection-Grading (only if Gate = PASS)',
+        'Run order:',
+        '  1. Step A:     7 Single-Gradings (FleetRunner)',
+        '  2. THIS GATE:  Singles-Readiness Check',
+        '  3. Step B:     1 Selection-Grading (only if Gate = PASS)',
         '',
         'Usage:',
         '  node scripts/singles-readiness-gate.mjs \\',

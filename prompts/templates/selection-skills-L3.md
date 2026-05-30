@@ -16,44 +16,41 @@ skillLevel: L3
 Persona: {{BASE_PERSONA_NAME}} ({{BASE_PERSONA_FILE}})
 Lens: {{LENS_NAME}} ({{LENS_FILE}})
 
-Spec 13 §4.2 verlangt Persona-Focus auf ALLEN drei Skill-Levels (Pflicht).
-Du bewertest den L3-Skill aus dieser Persona- + Lens-Perspektive.
+Spec 13 §4.2 requires a persona focus on ALL three skill levels (mandatory).
+You evaluate the L3 skill from this persona + lens perspective.
 
 ## Files to Read
 
-1. {{SPEC_13_PATH}}                    — Skills-Spec, §4
-2. {{BASE_PERSONA_FILE}}               — Base-Persona
-3. {{LENS_FILE}}                       — Domain-Lens
-4. {{SELECTION_SKILL_L3_FILE}}         — Der zu bewertende L3-Skill (Workflow)
-5. {{L2_GRADING_RESULT_FILE}}          — Ergebnis-JSON aus dem L2-Grading der gleichen Selection
+1. {{SPEC_13_PATH}}                    — Skills spec, §4
+2. {{BASE_PERSONA_FILE}}               — Base persona
+3. {{LENS_FILE}}                       — Domain lens
+4. {{SELECTION_SKILL_L3_FILE}}         — The L3 skill to be evaluated (workflow)
+5. {{L2_GRADING_RESULT_FILE}}          — Result JSON from the L2 grading of the same selection
 
-Hinweis: L3 referenziert L2, nicht direkt L1. Spec 13 §4 hierarchisch.
+Note: L3 references L2, not L1 directly. Spec 13 §4 is hierarchical.
 
-Falls `{{L2_GRADING_RESULT_FILE}}` fehlt, antworte ausschliesslich mit
-`{ "blocker": "<pfad>", "reason": "L2-Grading-Voraussetzung fehlt" }`
-und brich ab.
+If `{{L2_GRADING_RESULT_FILE}}` is missing, answer exclusively with
+`{ "blocker": "<path>", "reason": "L2 grading prerequisite missing" }`
+and stop.
 
 ## Question(s)
 
-Bewerte den L3-Workflow-Skill `{{SKILL_NAME}}` der Selection `{{SELECTION_NAME}}`.
-L3 = mehrere L2-Skills mit State. Pruefe ob der Workflow auf bewerteten
-L2-Komposition-Skills aufbaut, ob State-Uebergaenge explizit dokumentiert
-sind, und ob die Persona die End-to-End-Reise nachvollziehen kann.
+Evaluate the L3 workflow skill `{{SKILL_NAME}}` of the selection `{{SELECTION_NAME}}`.
+L3 = several L2 skills with state. Check whether the workflow builds on
+evaluated L2 composition skills, whether state transitions are explicitly
+documented, and whether the persona can follow the end-to-end journey.
 
 {{QUESTIONS_BLOCK}}
 
 ## Output Schema
 
-Die Antwort MUSS exakt dem JSON-Schema unter `{{OUTPUT_SCHEMA_REF}}` entsprechen.
-Bei Datei-Lese-Fehler antworte ausschliesslich mit:
-`{ "blocker": "<dateipfad>", "reason": "<grund>" }`
-und brich ab.
+The answer MUST conform exactly to the JSON schema at `{{OUTPUT_SCHEMA_REF}}`.
+On a file-read error, answer exclusively with:
+`{ "blocker": "<file-path>", "reason": "<reason>" }`
+and stop.
 
 <!--
-Caveat (Memo 082 REV-04 + Kap 10.1):
-„Bei Selection-Skills aufpassen wegen Komplexitaet" — 9 Skills (3 pro Sub-Bereich x 3 Levels)
-sind moeglicherweise zu viele. Der Mini-Praxis-Test in Phase 6 verifiziert,
-ob die Konsolidierung haelt. Lessons werden in
-`grading-data/mini-praxis-2026-MM.md` ODER
-`.memo/082-.../execution/mini-praxis-lessons.md` festgehalten.
+Caveat: watch out for selection-skill complexity — 9 skills (3 per sub-area x 3 levels)
+may be too many. A small practical test should verify whether the consolidation
+holds, with lessons recorded in the gitignored working folder.
 -->

@@ -74,7 +74,7 @@ describe( 'TestCatalogBuilder.build', () => {
 
         TestCatalogBuilder.build( { questionsFile, outFile } )
         const md = readFileSync( outFile, 'utf8' )
-        expect( md ).toContain( '| Frage-ID | Area | Dimension | Determinism | Code-Test-Bucket |' )
+        expect( md ).toContain( '| Question-ID | Area | Dimension | Determinism | Code-Test-Bucket |' )
         expect( md ).toContain( '| Q-single-test-01 | single-test |' )
         expect( md ).toContain( '| Q-single-test-02 | single-test |' )
     } )

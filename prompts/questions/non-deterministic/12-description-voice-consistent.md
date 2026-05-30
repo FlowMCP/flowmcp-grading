@@ -2,7 +2,7 @@
 id: Q-tools-aggregate-schema-06
 area: tools-aggregate-schema
 dimension: descriptionVoice
-question: "Ist die Description-Voice ueber alle Routes konsistent (3rd-Person vs. Imperativ)?"
+question: "Is the description voice consistent across all routes (third person vs. imperative)?"
 scoreType: scale-1-5
 weight: 0.5
 determinism: non-deterministic
@@ -10,13 +10,13 @@ tier: P5
 filesToRead:
   - "{{schemaPath}}"
 preInstructionRef: pre-instructions/tools-aggregate-schema.md
-evaluatorTask: "Pruefe die Description-Voice ueber alle Routes. Spec 06 §4 gibt 3rd-Person vor."
+evaluatorTask: "Check the description voice across all routes. The specification mandates third person."
 outputSchemaRef: output-schemas/tools-aggregate-schema.schema.json
 personaRequired: false
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Mischformen (manche Routes "Returns ...", andere "Get the ...") wirken
-inkonsistent und unprofessionell.
+Mixed styles (some routes "Returns ...", others "Get the ...") look inconsistent
+and unprofessional.

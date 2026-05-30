@@ -5,18 +5,18 @@
  *   GRD-* — Grading-System (data model, tier, re-grading)
  *   SCO-* — Scoring-System (dimensions, score range, aggregation)
  *   VET-* — Veto (closed trigger list, evidence requirement)
- *   HSH-* — HashGenerator (canonical JSON + sha256 8-char prefix) — Memo 080 Kap 3
- *   SNP-* — SourceSnapshot (frozen schema snapshots, NO-OVERWRITE) — Memo 080 Kap 2
- *   PRT-* — PartialGrading (gradingMode, Pflicht-Sequenz) — Memo 080 Kap 4
- *   STB-* — StablePromotion (stable/pending gate) — Memo 080 Kap 11
- *   LCK-* — SelectionLockfile (lockfile generator/reader) — Memo 080 Kap 11
- *   PRE-* — PreConditionCheck (universal stable-gate) — Memo 080 Kap 13
- *   SEL-* — Selection-Validator S1-S4 — Memo 080 Kap 5
- *   BMP-* — BumpHelper (diff + bump-rule) — Memo 080 Kap 10
- *   SCN-* — FolderScanner (grading-data/ structure check) — Memo 080 Kap 2
- *   ABT-* — AboutConsistencyCheck (text-vs-schema) — Memo 080 Kap 13
- *   SL-*  — SharedLists (loader + hash + filename) — Memo 080 Kap 12 / Phase 5 PRD-20
- *   NA-*  — NaReason (closed-set n/a-Reason validator) — Memo 080 Kap 12 / Phase 5 PRD-20
+ *   HSH-* — HashGenerator (canonical JSON + sha256 8-char prefix)
+ *   SNP-* — SourceSnapshot (frozen schema snapshots, NO-OVERWRITE)
+ *   PRT-* — PartialGrading (gradingMode, mandatory sequence)
+ *   STB-* — StablePromotion (stable/pending gate)
+ *   LCK-* — SelectionLockfile (lockfile generator/reader)
+ *   PRE-* — PreConditionCheck (universal stable-gate)
+ *   SEL-* — Selection-Validator S1-S4
+ *   BMP-* — BumpHelper (diff + bump-rule)
+ *   SCN-* — FolderScanner (grading-data/ structure check)
+ *   ABT-* — AboutConsistencyCheck (text-vs-schema)
+ *   SL-*  — SharedLists (loader + hash + filename)
+ *   NA-*  — NaReason (closed-set n/a-Reason validator)
  *
  * Code format (strict):
  *   ERROR    → ^[A-Z]{3}-\d{3}$           (e.g. GRD-001)
@@ -25,28 +25,28 @@
  *
  * Inventory:
  *
- * | Code            | Severity | Trigger                                       | Memo Ref |
- * |-----------------|----------|-----------------------------------------------|----------|
- * | GRD-001         | ERROR    | Required field missing                        | Kap 7    |
- * | GRD-002         | ERROR    | Type mismatch                                 | Kap 7    |
- * | GRD-003         | ERROR    | Invalid gradingTier                           | Z. 263   |
- * | GRD-004         | ERROR    | selectionId required when group-bound         | Z. 263   |
- * | GRD-005         | ERROR    | personaIds required when non-deterministic    | Z. 311   |
- * | GRD-006         | ERROR    | previousGradingId required for regrading      | Z. 307   |
- * | GRD-007         | ERROR    | llmModel required for graderIdentity.kind=llm | Z. 273   |
- * | GRD-WARN-001    | WARNING  | Entry exceeds retention threshold             | Z. 302   |
- * | GRD-INFO-001    | INFO     | Re-grading triggered, previous preserved      | Z. 307   |
- * | SCO-001         | ERROR    | Score out of range                            | Z. 269   |
- * | SCO-002         | ERROR    | Unknown dimension                             | Z. 268   |
- * | SCO-003         | ERROR    | Invalid score enum                            | Z. 269   |
- * | SCO-004         | ERROR    | weight must be positive float                 | Z. 269   |
- * | SCO-WARN-001    | WARNING  | Score stale due to aging                      | Z. 302   |
- * | SCO-INFO-001    | INFO     | Dimension set to n/a per pragma               | Z. 309   |
- * | VET-001         | ERROR    | Invalid veto trigger                          | Z. 279   |
- * | VET-002         | ERROR    | evidence required for categoricalVeto         | Z. 281   |
- * | VET-003         | ERROR    | reasoning required for ai-security-veto       | Z. 373   |
- * | VET-004         | ERROR    | graderIdentity required for categoricalVeto   | Z. 281   |
- * | VET-INFO-001    | INFO     | Entry marked as REJECTED via categoricalVeto  | Z. 281   |
+ * | Code            | Severity | Trigger                                       |
+ * |-----------------|----------|-----------------------------------------------|
+ * | GRD-001         | ERROR    | Required field missing                        |
+ * | GRD-002         | ERROR    | Type mismatch                                 |
+ * | GRD-003         | ERROR    | Invalid gradingTier                           |
+ * | GRD-004         | ERROR    | selectionId required when group-bound         |
+ * | GRD-005         | ERROR    | personaIds required when non-deterministic    |
+ * | GRD-006         | ERROR    | previousGradingId required for regrading      |
+ * | GRD-007         | ERROR    | llmModel required for graderIdentity.kind=llm |
+ * | GRD-WARN-001    | WARNING  | Entry exceeds retention threshold             |
+ * | GRD-INFO-001    | INFO     | Re-grading triggered, previous preserved      |
+ * | SCO-001         | ERROR    | Score out of range                            |
+ * | SCO-002         | ERROR    | Unknown dimension                             |
+ * | SCO-003         | ERROR    | Invalid score enum                            |
+ * | SCO-004         | ERROR    | weight must be positive float                 |
+ * | SCO-WARN-001    | WARNING  | Score stale due to aging                      |
+ * | SCO-INFO-001    | INFO     | Dimension set to n/a per pragma               |
+ * | VET-001         | ERROR    | Invalid veto trigger                          |
+ * | VET-002         | ERROR    | evidence required for categoricalVeto         |
+ * | VET-003         | ERROR    | reasoning required for ai-security-veto       |
+ * | VET-004         | ERROR    | graderIdentity required for categoricalVeto   |
+ * | VET-INFO-001    | INFO     | Entry marked as REJECTED via categoricalVeto  |
  */
 
 const ERROR_CODE_TABLE = Object.freeze( {
@@ -126,7 +126,7 @@ const ERROR_CODE_TABLE = Object.freeze( {
         'SCO-INFO-001': Object.freeze( {
             code: 'SCO-INFO-001',
             severity: 'INFO',
-            message: 'Dimension `{dimension}` set to `n/a` per pragma — Memo 054'
+            message: 'Dimension `{dimension}` set to `n/a` per the n/a pragma'
         } )
     } ),
     VET: Object.freeze( {

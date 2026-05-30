@@ -5,41 +5,41 @@ enforced: true
 appliesTo: all
 ---
 
-## Regel
+## Rule
 
-Alle vom Evaluator referenzierten und vom Generator geschriebenen Files
-MUESSEN zu einem der drei Folder-Typen passen (Memo 082 Kap 4.6):
+All files referenced by the evaluator and written by the generator MUST match
+one of the three folder types:
 
-1. **Public Repo** — Engine-Code, Templates, Skills, Specs, Tests,
-   Skripte, Docs
-2. **Gitignored Arbeits-Folder** `grading-data/` — Eval-Outputs,
-   Lens-Vorlagen, Pilot-Gradings
-3. **Memo-Folder** `.memo/` — Memo-Revisionen, internes Working-Material
+1. **Public repo** — engine code, templates, skills, specs, tests,
+   scripts, docs
+2. **Gitignored working folder** `grading-data/` — eval outputs,
+   lens templates, pilot gradings
+3. **Memo folder** `.memo/` — memo revisions, internal working material
 
-Working-Files (Inventur-Berichte, Lessons-Reports, Mini-Praxis-Logs)
-DUERFEN nicht ins Public Repo.
+Working files (inventory reports, lessons reports, practical-test logs)
+MUST NOT go into the public repo.
 
-## Begruendung
+## Rationale
 
-Memo 082 Kap 4.6 + User-Direktive REV-05 (Zitat im Memo). Belegt durch
-`flowmcp-grading/.gitignore:1` (`grading-data/`) und `:18` (`.memo/`).
+Defined by the grading spec. Backed by `flowmcp-grading/.gitignore`, which
+ignores `grading-data/` and `.memo/`.
 
-## Durchsetzung im PromptBuilder
+## Enforcement in the PromptBuilder
 
-PromptBuilder validiert Files-to-Read-Pfade vor Build. Path muss matchen:
+PromptBuilder validates the files-to-read paths before build. A path must match:
 
 - `^(repos/flowmcp-grading/(src|prompts|skills|spec|tests|scripts|docs)/)`
-  — Public Repo
+  — Public repo
 - `^(repos/flowmcp-grading/grading-data/)` — Gitignored
-- `^(\.memo/)` — Memo-Folder
+- `^(\.memo/)` — Memo folder
 
-Andere Pfade (z.B. `/tmp/`, `~/.flowmcp/`, absolute Pfade ausserhalb
-Workspace) — Build-Fehler `PB-301: file path not in allowed folder-type`.
+Other paths (e.g. `/tmp/`, `~/.flowmcp/`, absolute paths outside the
+workspace) — build error `PB-301: file path not in allowed folder-type`.
 
-## Verletzungs-Beispiele
+## Violation Examples
 
-- Files-to-Read enthaelt `~/.flowmcp/.env` (siehe auch Policy 1)
-- Generator schreibt Lessons-Report nach
-  `repos/flowmcp-grading/docs/lessons-2026.md` (Public — soll ins
-  gitignored Folder)
-- Evaluator-Prompt referenziert `/tmp/persona.md`
+- Files-to-read contains `~/.flowmcp/.env` (see also Policy 1)
+- Generator writes a lessons report to
+  `repos/flowmcp-grading/docs/lessons-2026.md` (public — should go into the
+  gitignored folder)
+- Evaluator prompt references `/tmp/persona.md`

@@ -2,7 +2,7 @@
 id: Q-single-test-09
 area: single-test
 dimension: errorCasesDocumented
-question: "Sind die Error-Cases (4xx/5xx) im Schema dokumentiert?"
+question: "Are the error cases (4xx/5xx) documented in the schema?"
 scoreType: scale-1-5
 weight: 0.25
 determinism: non-deterministic
@@ -10,12 +10,12 @@ tier: P3
 filesToRead:
   - "{{schemaPath}}"
 preInstructionRef: pre-instructions/single-test.md
-evaluatorTask: "Pruefe ob bekannte API-Fehler (Rate-Limit, Auth-Fail, Not-Found) dokumentiert sind."
+evaluatorTask: "Check whether known API errors (rate limit, auth failure, not found) are documented."
 outputSchemaRef: output-schemas/single-test.schema.json
 personaRequired: false
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Undokumentierte Fehler fuehren zu Try-and-Error-Debugging fuer den User.
+Undocumented errors lead to trial-and-error debugging for the user.

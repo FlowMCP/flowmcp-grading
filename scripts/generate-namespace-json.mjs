@@ -3,7 +3,7 @@
 // Reads the schema-snapshot files placed by migrate-080-phase-2.mjs
 // (filename convention: <schemaHash>--v<X.Y.Z>.mjs) and emits a deterministic
 // namespace.json with members[], namespaceHash (sha256-8 of canonical-JSON of
-// members + aboutHash) and aboutHash (PENDING until Phase 4 PRD-21+).
+// members + aboutHash) and aboutHash (PENDING until a later phase).
 //
 // Also creates the about/ placeholder directory (with .gitkeep) per namespace.
 //

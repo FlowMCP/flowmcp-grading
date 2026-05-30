@@ -2,7 +2,7 @@
 id: Q-namespace-skills-01
 area: namespace-skills
 dimension: skillAdequacy
-question: "Matched der Namespace-Skill das Namespace-Theme?"
+question: "Does the namespace skill match the namespace theme?"
 scoreType: scale-1-5
 weight: 0.34
 determinism: non-deterministic
@@ -11,16 +11,16 @@ filesToRead:
   - "{{skillPath}}"
   - "{{namespacePath}}"
 preInstructionRef: pre-instructions/namespace-skills.md
-evaluatorTask: "Bewerte ob der Namespace-Skill thematisch zum Namespace passt."
+evaluatorTask: "Assess whether the namespace skill fits the namespace thematically."
 outputSchemaRef: output-schemas/namespace-skills.schema.json
 personaRequired: true
 version: 1.0.0
 ---
 
-## Begruendung
+## Rationale
 
-Ein Crypto-Namespace-Skill, der ein DPMA-Patent-Lookup macht, ist Off-Topic.
+A crypto namespace skill that performs a patent lookup is off-topic.
 
-## Persona-Anwendung
+## Persona Application
 
-Persona-Default fuer Namespace-Skills (Memo 082 Kap 7.4).
+The persona default applies to namespace skills.
