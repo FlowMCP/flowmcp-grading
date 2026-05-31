@@ -153,9 +153,15 @@ these with real hashes via the HashGenerator.
 
 ---
 
+## Spec lives elsewhere — this repo is code-only
+
+The Grading-Spec is **not** in this repository. The single source of truth is
+`flowmcp-spec/grading/2.0.0/` (the v2 break). This repo holds **only code** —
+`src/`, `prompts/`, `personas/`, and tests. Do not author or copy spec documents here.
+
 ## References
 
-- Active spec: `gradingSpec/1.1.0` under `flowmcp-spec/grading/1.1.0/`
-- Predecessor spec: `gradingSpec/1.0.0` under `flowmcp-spec/grading/1.0.0/` (read-only)
+- Active spec: `gradingSpec/2.0.0` under `flowmcp-spec/grading/2.0.0/`
+- Legacy specs: `gradingSpec/1.0.0` and `1.1.0` under `flowmcp-spec/grading/1.0.0|1.1.0/` (read-only); the short-lived `1.2.0/` snapshot was renamed to `2.0.0`
 - Global `~/.claude/CLAUDE.md` — env rules
 - `README.md` in this repo — quickstart and migration notes

@@ -45,6 +45,7 @@ const AREAS_WITH_PERSONA = Object.freeze( [
     'selection-skills-L1',
     'selection-skills-L2',
     'selection-skills-L3',
+    'selection-aggregate',
     'namespace-skills'
 ] )
 
@@ -55,14 +56,31 @@ const AREAS_NEUTRAL = Object.freeze( [
     'tools-aggregate-namespace'
 ] )
 
+// 11 grading Areas (gradingSpec/1.2.0 §5.1) — the 11th is `selection-aggregate`.
 const KNOWN_AREAS = Object.freeze( AREAS_WITH_PERSONA.concat( AREAS_NEUTRAL ) )
 
-const SELECTION_AREAS = Object.freeze( [
-    'about-selection',
+// Selection-side Areas run by the fleet's selection step (areas 7-11). The
+// per-skill areas iterate ONE skill at a time (each with its own `skillId`),
+// not a level cohort. `about-selection` + `selection-aggregate` run once each.
+const SELECTION_PER_SKILL_AREAS = Object.freeze( [
     'selection-skills-L1',
     'selection-skills-L2',
     'selection-skills-L3'
 ] )
+const SELECTION_SINGLETON_AREAS = Object.freeze( [
+    'about-selection',
+    'selection-aggregate'
+] )
+
+// Per-skill predecessor chain (gradingSpec 1.2.0 §13): L2 needs L1 grades, L3
+// needs L2 grades. about-selection / selection-aggregate have no predecessor.
+const SKILL_LEVEL_PREDECESSOR = Object.freeze( {
+    'selection-skills-L1': null,
+    'selection-skills-L2': 'selection-skills-L1',
+    'selection-skills-L3': 'selection-skills-L2'
+} )
+
+const HARNESS = 'claude-code'
 
 
 class FleetRunner {
@@ -94,7 +112,7 @@ class FleetRunner {
         if( loaded.error !== null ) {
             throw new Error( loaded.error )
         }
-        const { selectionId, members } = loaded
+        const { selectionId, members, skills } = loaded
 
         const gateResult = PreConditionCheck.checkLockfile( { lockfile: { members } } )
         if( !gateResult.passed ) {
@@ -134,7 +152,7 @@ class FleetRunner {
         let selectionStatus = 'ok'
         if( persona !== null ) {
             const selectionResult = await FleetRunner.#runSelectionGrading( {
-                selectionId, persona, iterations, outputBase, skillInvoker
+                selectionId, persona, iterations, outputBase, skillInvoker, skills
             } )
             selectionResult.errors
                 .forEach( ( e ) => errors.push( e ) )
@@ -298,7 +316,31 @@ class FleetRunner {
             }
         }
 
-        return { error: null, selectionId: parsed.selectionId, members: parsed.members }
+        // skills[] is optional in the lock/selection definition. When absent there
+        // are simply no selection skills to grade per-skill (an explicit empty list,
+        // not a silent fallback). Map-form { name: ref } and array-form are accepted.
+        const skills = FleetRunner.#extractSkillIds( { raw: parsed.skills } )
+
+        return { error: null, selectionId: parsed.selectionId, members: parsed.members, skills }
+    }
+
+
+    static #extractSkillIds( { raw } ) {
+        if( raw === undefined || raw === null ) { return [] }
+        if( Array.isArray( raw ) ) {
+            return raw
+                .map( ( s ) => {
+                    if( typeof s === 'string' ) { return s }
+                    if( s !== null && typeof s === 'object' && typeof s.skillId === 'string' ) { return s.skillId }
+                    if( s !== null && typeof s === 'object' && typeof s.name === 'string' ) { return s.name }
+                    return null
+                } )
+                .filter( ( s ) => s !== null )
+        }
+        if( typeof raw === 'object' ) {
+            return Object.keys( raw )
+        }
+        return []
     }
 
 
@@ -332,7 +374,8 @@ class FleetRunner {
                 area,
                 personaSlug,
                 iterations,
-                outputBase
+                outputBase,
+                harness: HARNESS
             }
 
             let response
@@ -378,7 +421,7 @@ class FleetRunner {
             }
 
             const targetPath = FleetRunner.#buildSinglePath( {
-                outputBase, ns, tool, schemaHash, personaSlug
+                outputBase, ns, tool, area, personaSlug
             } )
             FleetRunner.#assertUnderGradingData( { path: targetPath, outputBase } )
 
@@ -393,30 +436,74 @@ class FleetRunner {
     }
 
 
-    static async #runSelectionGrading( { selectionId, persona, iterations, outputBase, skillInvoker } ) {
+    static async #runSelectionGrading( { selectionId, persona, iterations, outputBase, skillInvoker, skills } ) {
         const summary = {
             selectionId,
             areas: {},
+            skills: {},
             status: 'ok',
             path: null
         }
         const errors = []
 
-        const areaIndices = Array.from( { length: SELECTION_AREAS.length }, ( _, i ) => i )
+        // Build the per-step list: singleton areas run once; per-skill areas run
+        // ONCE PER SKILL (each with its own skillId). The predecessor chain (L2←L1,
+        // L3←L2) is enforced per-skill: a level run is blocked when the same skill's
+        // predecessor level was not graded (no silent skip).
+        const skillList = Array.isArray( skills ) ? skills : []
+        const gradedPerSkill = {}
 
-        await areaIndices.reduce( async ( prev, idx ) => {
+        const steps = []
+        SELECTION_SINGLETON_AREAS
+            .forEach( ( area ) => {
+                steps.push( { area, skillId: null } )
+            } )
+        SELECTION_PER_SKILL_AREAS
+            .forEach( ( area ) => {
+                skillList
+                    .forEach( ( skillId ) => {
+                        steps.push( { area, skillId } )
+                    } )
+            } )
+
+        const stepIndices = Array.from( { length: steps.length }, ( _, i ) => i )
+
+        await stepIndices.reduce( async ( prev, idx ) => {
             await prev
-            const area = SELECTION_AREAS[ idx ]
+            const { area, skillId } = steps[ idx ]
             const personaSlug = FleetRunner.#resolvePersona( { area, persona } )
             const skillName = `${area}-start-grade`
+            const areaKey = skillId === null ? area : `${area}/${skillId}`
+
+            // Per-skill predecessor gate (no LLM call when blocked).
+            const predecessorArea = SKILL_LEVEL_PREDECESSOR[ area ]
+            if( skillId !== null && predecessorArea !== undefined && predecessorArea !== null ) {
+                const predGraded = gradedPerSkill[ skillId ] !== undefined
+                    && gradedPerSkill[ skillId ].includes( predecessorArea )
+                if( !predGraded ) {
+                    errors.push( {
+                        code: 'FLEET-008',
+                        severity: 'WARNING',
+                        message: `FLEET-008: ${area} for skill '${skillId}' blocked: predecessor '${predecessorArea}' not graded`,
+                        selectionId,
+                        area,
+                        skillId
+                    } )
+                    summary.status = 'blocked'
+                    summary.areas[ areaKey ] = { status: 'blocked', path: null, skillId }
+                    return
+                }
+            }
 
             const payload = {
                 selectionId,
                 area,
                 personaSlug,
                 iterations,
-                outputBase
+                outputBase,
+                harness: HARNESS
             }
+            if( skillId !== null ) { payload.skillId = skillId }
 
             let response
             try {
@@ -427,10 +514,11 @@ class FleetRunner {
                     severity: 'WARNING',
                     message: `FLEET-006: selection-skill ${skillName} threw: ${invokerError.message}`,
                     selectionId,
-                    area
+                    area,
+                    skillId
                 } )
                 summary.status = 'blocked'
-                summary.areas[ area ] = { status: 'blocked', path: null }
+                summary.areas[ areaKey ] = { status: 'blocked', path: null, skillId }
                 return
             }
 
@@ -440,10 +528,11 @@ class FleetRunner {
                     severity: 'WARNING',
                     message: `FLEET-006: selection-skill ${skillName} returned no response object`,
                     selectionId,
-                    area
+                    area,
+                    skillId
                 } )
                 summary.status = 'blocked'
-                summary.areas[ area ] = { status: 'blocked', path: null }
+                summary.areas[ areaKey ] = { status: 'blocked', path: null, skillId }
                 return
             }
 
@@ -453,15 +542,16 @@ class FleetRunner {
                     severity: 'WARNING',
                     message: `FLEET-006: selection-skill ${skillName} reported blocker: ${response.blocker}`,
                     selectionId,
-                    area
+                    area,
+                    skillId
                 } )
                 summary.status = 'blocked'
-                summary.areas[ area ] = { status: 'blocked', path: null }
+                summary.areas[ areaKey ] = { status: 'blocked', path: null, skillId }
                 return
             }
 
             const targetPath = FleetRunner.#buildSelectionPath( {
-                outputBase, selectionId, personaSlug
+                outputBase, selectionId, area, personaSlug
             } )
             FleetRunner.#assertUnderGradingData( { path: targetPath, outputBase } )
 
@@ -469,8 +559,15 @@ class FleetRunner {
                 targetPath, gradingJson: response.gradingJson
             } )
 
-            summary.areas[ area ] = { status: 'ok', path: targetPath }
+            summary.areas[ areaKey ] = { status: 'ok', path: targetPath, skillId }
             summary.path = targetPath
+
+            // Record the per-skill graded level so the next level's predecessor gate passes.
+            if( skillId !== null ) {
+                if( gradedPerSkill[ skillId ] === undefined ) { gradedPerSkill[ skillId ] = [] }
+                gradedPerSkill[ skillId ].push( area )
+                summary.skills[ skillId ] = gradedPerSkill[ skillId ].slice()
+            }
         }, Promise.resolve() )
 
         return { summary, errors }
@@ -486,24 +583,37 @@ class FleetRunner {
     }
 
 
-    static #buildSinglePath( { outputBase, ns, tool, schemaHash, personaSlug } ) {
+    static #buildSinglePath( { outputBase, ns, tool, area, personaSlug } ) {
         const ts = FleetRunner.#timestamp()
+        const { basePersona, lens } = FleetRunner.#splitPersona( { personaSlug } )
         const filenameResult = Grading.formatGradingFilename( {
-            hash: schemaHash, ts, persona: personaSlug
+            area, basePersona, lens, timestamp: ts
         } )
         return join( outputBase, 'single', `${ns}--${tool}`, 'gradings', filenameResult.filename )
     }
 
 
-    static #buildSelectionPath( { outputBase, selectionId, personaSlug } ) {
+    static #buildSelectionPath( { outputBase, selectionId, area, personaSlug } ) {
         const ts = FleetRunner.#timestamp()
-        // Selection-Grading uses a stable placeholder hash for the selection itself
-        // (selectionHash lives on the lockfile; the per-area filename keeps ts + persona unique).
-        const placeholder = 'PLACEHOLDER001'
+        const { basePersona, lens } = FleetRunner.#splitPersona( { personaSlug } )
+        // B2 grammar: the area + (optional) persona + ts make each grading unique;
+        // no in-source hash (versioning is timestamp-based per gradingSpec §10).
         const filenameResult = Grading.formatGradingFilename( {
-            hash: placeholder, ts, persona: personaSlug
+            area, basePersona, lens, timestamp: ts
         } )
         return join( outputBase, 'selection', selectionId, 'gradings', filenameResult.filename )
+    }
+
+
+    static #splitPersona( { personaSlug } ) {
+        // personaSlug is 'neutral' (no persona segment) or '<base>--<lens>'.
+        if( personaSlug === 'neutral' ) {
+            return { basePersona: undefined, lens: undefined }
+        }
+        const idx = personaSlug.indexOf( '--' )
+        const basePersona = personaSlug.slice( 0, idx )
+        const lens = personaSlug.slice( idx + 2 )
+        return { basePersona, lens }
     }
 
 
@@ -584,4 +694,4 @@ class FleetRunner {
 }
 
 
-export { FleetRunner }
+export { FleetRunner, KNOWN_AREAS, HARNESS, SELECTION_PER_SKILL_AREAS, SKILL_LEVEL_PREDECESSOR }

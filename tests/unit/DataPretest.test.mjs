@@ -114,18 +114,27 @@ describe( 'DataPretest typed-test extraction + happy path', () => {
         expect( out.errors ).toEqual( [] )
         expect( out.results ).toHaveLength( 3 )
         expect( out.results.every( ( r ) => r.primitive === 'tool' && r.working === true ) ).toBe( true )
-        expect( out.payloadHash ).toMatch( /^[0-9a-f]{8}$/ )
+        expect( out.perTool.getBalance ).toEqual( { working: 3, total: 3 } )
 
-        const raw = await readFile( out.payloadPath, 'utf-8' )
-        const payload = JSON.parse( raw )
-        expect( payload.namespace ).toBe( 'etherscan' )
-        expect( payload.toolName ).toBe( 'getBalance' )
-        expect( payload.ok ).toBe( true )
-        expect( payload.passedDownloadable ).toBe( 3 )
-        expect( payload.tests ).toHaveLength( 3 )
-        expect( payload.payloadHash ).toBe( out.payloadHash )
-        expect( out.payloadPath ).toContain( join( 'schemas', 'etherscan', 'data-pretest' ) )
-        expect( out.payloadPath ).toContain( `getBalance--${out.payloadHash}.json` )
+        // summary.json — human-readable, no opaque hash
+        const summary = JSON.parse( await readFile( out.summaryPath, 'utf-8' ) )
+        expect( summary.namespace ).toBe( 'etherscan' )
+        expect( summary.schemaFile ).toBe( 'getBalance' )
+        expect( summary.ok ).toBe( true )
+        expect( summary.perTool.getBalance ).toEqual( { working: 3, total: 3 } )
+        expect( out.summaryPath ).toContain( join( 'providers', 'etherscan', 'getBalance', 'summary.json' ) )
+
+        // per-test files: numbered + self-describing (real response + HTTP status,
+        // NO request — F26 forbids persisting interpolated {{KEY}} server params)
+        const t1 = JSON.parse( await readFile( join( out.schemaDir, 'tools', 'getBalance', 'tests', 'test-1.json' ), 'utf-8' ) )
+        expect( t1.test ).toBe( 1 )
+        expect( t1.tool ).toBe( 'getBalance' )
+        expect( t1.status ).toBe( true )
+        expect( t1.working ).toBe( true )
+        expect( Object.prototype.hasOwnProperty.call( t1, 'request' ) ).toBe( false )
+        expect( t1.response ).not.toBeNull()
+        const t3 = JSON.parse( await readFile( join( out.schemaDir, 'tools', 'getBalance', 'tests', 'test-3.json' ), 'utf-8' ) )
+        expect( t3.test ).toBe( 3 )
     } )
 } )
 
@@ -147,7 +156,39 @@ describe( 'DataPretest abort rule', () => {
 
         expect( out.ok ).toBe( false )
         expect( out.passedDownloadable ).toBe( 2 )
-        expect( out.stopReason ).toContain( 'fewer-than-3' )
+        expect( out.stopReason ).toContain( 'tools-below-3' )
+        expect( out.errors.some( ( e ) => e.includes( 'DPT-003' ) ) ).toBe( true )
+    } )
+
+    test( 'per-tool gate: one fully-working tool does NOT mask a sibling with zero working tests', async () => {
+        // getBalance: 3 working; getSupply: 3 failing. Schema-file total = 3 (>=3),
+        // but the per-tool rule must FAIL because getSupply has 0/3 working.
+        fetchQueue = [
+            successFetch( { result: '284938' } ),
+            successFetch( { result: '190021' } ),
+            successFetch( { result: '77310' } )
+            // getSupply's 3 tests hit the empty queue -> status:false -> 0 working
+        ]
+        const main = {
+            namespace: 'etherscan',
+            requiredServerParams: [],
+            tools: {
+                getBalance: { description: 'get balance', tests: [ { address: '0x1' }, { address: '0x2' }, { address: '0x3' } ] },
+                getSupply: { description: 'get supply', tests: [ { address: '0x4' }, { address: '0x5' }, { address: '0x6' } ] }
+            }
+        }
+
+        const out = await DataPretest.run( {
+            namespace: 'etherscan',
+            toolName: 'multi',
+            main,
+            gradingDataDir: tempRoot
+        } )
+
+        expect( out.passedDownloadable ).toBe( 3 )
+        expect( out.ok ).toBe( false )
+        expect( out.toolsBelowThreshold.some( ( t ) => t.includes( 'getSupply' ) ) ).toBe( true )
+        expect( out.toolsBelowThreshold.some( ( t ) => t.includes( 'getBalance' ) ) ).toBe( false )
         expect( out.errors.some( ( e ) => e.includes( 'DPT-003' ) ) ).toBe( true )
     } )
 
@@ -262,21 +303,8 @@ describe( 'DataPretest stub primitives', () => {
 } )
 
 
-describe( 'DataPretest namespace.json merge (no-overwrite)', () => {
-    test( 'merges a dataPretest block into the matching member, preserving other fields', async () => {
-        const nsDir = join( tempRoot, 'schemas', 'mergens' )
-        await mkdir( nsDir, { recursive: true } )
-        const indexBefore = {
-            namespace: 'mergens',
-            namespaceHash: 'deadbeef',
-            aboutHash: 'PENDING',
-            members: [
-                { schemaId: 'mergens.getBalance', schemaVersion: '1.0.0', schemaHash: '9f8e7d6c' },
-                { schemaId: 'mergens.other', schemaVersion: '1.0.0', schemaHash: '11112222' }
-            ]
-        }
-        await writeFile( join( nsDir, 'namespace.json' ), JSON.stringify( indexBefore, null, 4 ) + '\n', 'utf-8' )
-
+describe( 'DataPretest on-disk layout (readable: per-tool numbered tests + summary)', () => {
+    test( 'writes providers/<ns>/<schema>/tools/<tool>/tests/test-N.json + summary.json', async () => {
         fetchQueue = [
             successFetch( { result: '1' } ),
             successFetch( { result: '2' } ),
@@ -285,53 +313,110 @@ describe( 'DataPretest namespace.json merge (no-overwrite)', () => {
         const main = makeMainWithToolTests( { count: 3 } )
 
         const out = await DataPretest.run( {
-            namespace: 'mergens',
-            toolName: 'getBalance',
+            namespace: 'layoutns',
+            toolName: 'prices',
             main,
             gradingDataDir: tempRoot
         } )
         expect( out.ok ).toBe( true )
 
-        const raw = await readFile( join( nsDir, 'namespace.json' ), 'utf-8' )
-        const indexAfter = JSON.parse( raw )
+        // numbered, self-describing test files under tools/<tool>/tests/
+        const toolDir = join( tempRoot, 'providers', 'layoutns', 'prices', 'tools', 'getBalance', 'tests' )
+        const files = ( await readdir( toolDir ) ).sort()
+        expect( files ).toEqual( [ 'test-1.json', 'test-2.json', 'test-3.json' ] )
 
-        // Top-level fields preserved.
-        expect( indexAfter.namespaceHash ).toBe( 'deadbeef' )
-        expect( indexAfter.aboutHash ).toBe( 'PENDING' )
+        const t2 = JSON.parse( await readFile( join( toolDir, 'test-2.json' ), 'utf-8' ) )
+        expect( t2.test ).toBe( 2 )
+        expect( t2.tool ).toBe( 'getBalance' )
+        expect( t2.response ).not.toBeNull()
+        expect( t2.working ).toBe( true )
+        // F26: no request field is persisted
+        expect( Object.prototype.hasOwnProperty.call( t2, 'request' ) ).toBe( false )
 
-        const matched = indexAfter.members.find( ( m ) => m.schemaId === 'mergens.getBalance' )
-        expect( matched.schemaHash ).toBe( '9f8e7d6c' )
-        expect( matched.schemaVersion ).toBe( '1.0.0' )
-        expect( matched.dataPretest.ok ).toBe( true )
-        expect( matched.dataPretest.passedDownloadable ).toBe( 3 )
-        expect( matched.dataPretest.payloadHash ).toBe( out.payloadHash )
-        expect( matched.dataPretest.payloadPath ).toBe( `schemas/mergens/data-pretest/getBalance--${out.payloadHash}.json` )
-        expect( matched.dataPretest.payloadPath.startsWith( '/' ) ).toBe( false )
+        // summary.json with per-tool gate result, no opaque hash filename
+        const summary = JSON.parse( await readFile( join( tempRoot, 'providers', 'layoutns', 'prices', 'summary.json' ), 'utf-8' ) )
+        expect( summary.schemaFile ).toBe( 'prices' )
+        expect( summary.ok ).toBe( true )
+        expect( summary.perTool.getBalance ).toEqual( { working: 3, total: 3 } )
 
-        // The non-matching member is untouched.
-        const other = indexAfter.members.find( ( m ) => m.schemaId === 'mergens.other' )
-        expect( other.dataPretest ).toBeUndefined()
-        expect( other.schemaHash ).toBe( '11112222' )
+        // schema folder holds tools/ + summary.json; the tool lives under tools/
+        const schemaFileEntries = await readdir( join( tempRoot, 'providers', 'layoutns', 'prices' ) )
+        expect( schemaFileEntries ).not.toContain( 'data-pretest' )
+        expect( schemaFileEntries.sort() ).toEqual( [ 'summary.json', 'tools' ] )
+        const toolEntries = await readdir( join( tempRoot, 'providers', 'layoutns', 'prices', 'tools', 'getBalance' ) )
+        expect( toolEntries ).toContain( 'tests' )
     } )
+} )
 
-    test( 'no namespace.json present -> payload still written, no crash', async () => {
+
+describe( 'DataPretest F26 key-hygiene (no request, no API key on disk)', () => {
+    const collectFiles = async ( { dir } ) => {
+        const entries = await readdir( dir, { withFileTypes: true } )
+        const nested = await entries
+            .reduce( ( promise, entry ) => promise.then( async ( acc ) => {
+                const full = join( dir, entry.name )
+                if( entry.isDirectory() ) {
+                    const sub = await collectFiles( { dir: full } )
+                    return acc.concat( sub )
+                }
+                return acc.concat( [ full ] )
+            } ), Promise.resolve( [] ) )
+        return nested
+    }
+
+    test( 'persisted test files omit request and never leak a serverParams key value', async () => {
+        const secret = 'SUPER-SECRET-API-KEY-1234567890'
         fetchQueue = [
-            successFetch( { result: '1' } ),
-            successFetch( { result: '2' } ),
-            successFetch( { result: '3' } )
+            successFetch( { result: 'a' } ),
+            successFetch( { result: 'b' } ),
+            successFetch( { result: 'c' } )
         ]
-        const main = makeMainWithToolTests( { count: 3 } )
+        const main = {
+            namespace: 'keyns',
+            requiredServerParams: [ 'ETHERSCAN_API_KEY' ],
+            tools: {
+                getBalance: {
+                    description: 'get balance',
+                    tests: Array.from( { length: 3 } )
+                        .map( ( _e, idx ) => ( { _description: `case ${idx}`, address: `0xabc${idx}` } ) )
+                }
+            }
+        }
 
         const out = await DataPretest.run( {
-            namespace: 'orphan',
+            namespace: 'keyns',
             toolName: 'getBalance',
             main,
+            serverParams: { ETHERSCAN_API_KEY: secret },
             gradingDataDir: tempRoot
         } )
-
         expect( out.ok ).toBe( true )
-        const files = await readdir( join( tempRoot, 'schemas', 'orphan', 'data-pretest' ) )
-        expect( files.length ).toBe( 1 )
+
+        const persisted = await collectFiles( { dir: join( tempRoot, 'providers', 'keyns' ) } )
+        expect( persisted.length ).toBeGreaterThan( 0 )
+
+        const contents = await persisted
+            .reduce( ( promise, file ) => promise.then( async ( acc ) => {
+                const body = await readFile( file, 'utf-8' )
+                return acc.concat( [ { file, body } ] )
+            } ), Promise.resolve( [] ) )
+
+        // No persisted artifact contains the secret key value anywhere.
+        contents
+            .forEach( ( { body } ) => {
+                expect( body.includes( secret ) ).toBe( false )
+            } )
+
+        // Every persisted test file omits the `request` field entirely.
+        const testFiles = contents
+            .filter( ( { file } ) => file.endsWith( '.json' ) && file.includes( join( 'tests', 'test-' ) ) )
+        expect( testFiles.length ).toBe( 3 )
+        testFiles
+            .forEach( ( { body } ) => {
+                const parsed = JSON.parse( body )
+                expect( Object.prototype.hasOwnProperty.call( parsed, 'request' ) ).toBe( false )
+                expect( parsed.response ).not.toBeNull()
+            } )
     } )
 } )
 

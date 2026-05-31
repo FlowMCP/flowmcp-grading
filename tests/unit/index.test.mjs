@@ -24,6 +24,34 @@ describe( 'Public API exports', () => {
             .filter( ( k ) => !keys.includes( k ) )
         expect( missing ).toEqual( [] )
     } )
+
+    test( 'exports PromptBuilder on the public surface (G9)', () => {
+        expect( Object.keys( api ) ).toContain( 'PromptBuilder' )
+        expect( typeof api.PromptBuilder.build ).toBe( 'function' )
+        expect( typeof api.PromptBuilder.buildGoalBlock ).toBe( 'function' )
+        expect( typeof api.PromptBuilder.getValidAreas ).toBe( 'function' )
+    } )
+
+    test( 'exports GradingImport and GradingExport (IN/OUT round-trip)', () => {
+        const keys = Object.keys( api )
+        expect( keys ).toContain( 'GradingImport' )
+        expect( keys ).toContain( 'GradingExport' )
+        expect( typeof api.GradingImport.run ).toBe( 'function' )
+        expect( typeof api.GradingExport.run ).toBe( 'function' )
+    } )
+
+    test( 'SelectionLockfile is NOT exported (lifecycle dropped in v2)', () => {
+        expect( Object.keys( api ) ).not.toContain( 'SelectionLockfile' )
+    } )
+
+    test( 'validateOverride salvage + OVERRIDE_WHITELIST stay reachable', () => {
+        const keys = Object.keys( api )
+        expect( keys ).toContain( 'validateOverride' )
+        expect( keys ).toContain( 'OVERRIDE_WHITELIST' )
+        expect( typeof api.validateOverride ).toBe( 'function' )
+        const r = api.validateOverride( { override: { name: 'x' } } )
+        expect( r.valid ).toBe( true )
+    } )
 } )
 
 
@@ -60,20 +88,35 @@ describe( 'gradeSingleSchema', () => {
 } )
 
 
-describe( 'gradeSelection', () => {
-    test( 'returns grading object on happy path', () => {
-        const result = api.gradeSelection( {
+describe( 'gradeSelection (async, real S1/S3/S4 chain — no stub)', () => {
+    test( 'returns grading object on happy path', async () => {
+        const result = await api.gradeSelection( {
             selectionId: 'sel-1',
-            schemaIds: [ 'a', 'b' ],
+            schemaIds: [ 'test.a', 'test.b' ],
             grader: { kind: 'script', name: 'unit', version: '0.0.1' },
-            options: {}
+            options: { gradingDataRoot: '/tmp/does-not-exist-island' }
         } )
         expect( result.grading ).not.toBeNull()
         expect( result.grading.gradingTier ).toBe( 'group-bound' )
     } )
 
-    test( 'missing schemaIds yields GRD-001', () => {
-        const result = api.gradeSelection( {
+    test( 'runs the real phase chain — no runAllStub marker present', async () => {
+        const result = await api.gradeSelection( {
+            selectionId: 'sel-1',
+            schemaIds: [ 'test.a' ],
+            grader: { kind: 'script', name: 'unit', version: '0.0.1' },
+            options: { gradingDataRoot: '/tmp/does-not-exist-island' }
+        } )
+        // The stub used to set grading.stub === true and a `todo` field.
+        expect( result.grading.stub ).toBeUndefined()
+        expect( result.grading.todo ).toBeUndefined()
+        // The real chain reports the executed phases S1/S3/S4.
+        const phaseNames = result.grading.phases.map( ( p ) => p.phase )
+        expect( phaseNames ).toEqual( [ 'S1', 'S3', 'S4' ] )
+    } )
+
+    test( 'missing schemaIds yields GRD-001', async () => {
+        const result = await api.gradeSelection( {
             selectionId: 'sel-1',
             grader: { kind: 'script', name: 'u', version: '0.0.1' }
         } )

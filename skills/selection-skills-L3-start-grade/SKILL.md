@@ -28,7 +28,7 @@ Parameters (passed by the caller via tool call):
 6. **Load Persona (mandatory)** — Split `personaSlug` into `<basePersona>--<lens>`. Read the base persona from `repos/flowmcp-spec/personas/<basePersona>.md`. Read the lens helper from `flowmcp-grading/grading-data/personas/<lens>-<YYYY>.md`.
 7. **Load previous Grading (optional)** — If `iteration > 1`: read `previousGradingPath`, extract `improvementHints[]`.
 8. **Build Prompt** — Call `PromptBuilder.build({ template, preInstructions, outputSchema, questions, persona: { base, lens }, previousHints, selectionPath, iteration, tier: "L3" })`.
-9. **Spawn Sub-Agent** — Via Bash: `claude --print --model inherit --max-turns 1 --output-format json --append-system-prompt "Sub-Agent: Strict-JSON only. No prose." -- <prompt>`. Read-only tools. Fresh, empty context.
+9. **Spawn Sub-Agent** — Via `Agent()` (sub-agent evaluator; harness `claude-code` — fresh empty context, read-only, strict JSON validated against the output-schema. See `docs/harness.md`). Read-only tools. Fresh, empty context.
 10. **Validate Response** — Parse JSON. Validate against `selection-skills-L3.schema.json`. On schema failure: `{ "blocker": "schema-validation", "reason": "<details>" }`.
 11. **Hand-off** — Call `selection-skills-L3-apply-improvement` with the JSON + `iteration` + `selectionPath` + `personaSlug`.
 

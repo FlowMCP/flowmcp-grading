@@ -4,7 +4,6 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { SelectionPhases } from '../../src/Phases/Selection.mjs'
-import { HashGenerator } from '../../src/HashGenerator.mjs'
 
 
 let tempRoot = null
@@ -25,11 +24,20 @@ const baseEntry = () => {
 }
 
 
-const seedPhaseStatus = async ( { schemaId } ) => {
-    const ns = schemaId.replace( /\./g, '--' )
-    const dir = join( tempRoot, 'phase-status', 'single' )
+// v2: member pins live in selections/<sel>/index.json.lockSnapshot (the
+// phase-status tree is dropped). Seed the snapshot for the S1 coverage check.
+const seedLockSnapshot = async ( { selectionId, memberIds } ) => {
+    const dir = join( tempRoot, 'selections', selectionId )
     await mkdir( dir, { recursive: true } )
-    await writeFile( join( dir, `${ns}.json` ), JSON.stringify( { schemaHash: 'aaaaaaaa' } ), 'utf-8' )
+    const index = {
+        indexVersion: 2,
+        selectionId,
+        lockSnapshot: {
+            selectionId,
+            members: memberIds.map( ( id ) => ( { schemaId: id, gradingStatus: 'stable' } ) )
+        }
+    }
+    await writeFile( join( dir, 'index.json' ), JSON.stringify( index ), 'utf-8' )
 }
 
 
@@ -45,10 +53,9 @@ afterAll( async () => {
 } )
 
 
-describe( 'SelectionPhases.runS1 (Member-Coverage)', () => {
-    test( 'all members resolved → no errors', async () => {
-        await seedPhaseStatus( { schemaId: 'ns.a' } )
-        await seedPhaseStatus( { schemaId: 'ns.b' } )
+describe( 'SelectionPhases.runS1 (Member-Coverage, reads index.json.lockSnapshot)', () => {
+    test( 'all members pinned in lockSnapshot → no errors', async () => {
+        await seedLockSnapshot( { selectionId: 'demo', memberIds: [ 'ns.a', 'ns.b' ] } )
         const selectionJson = { members: [ { schemaId: 'ns.a' }, { schemaId: 'ns.b' } ] }
         const r = await SelectionPhases.runS1( {
             entry: baseEntry(), selectionId: 'demo', selectionJson, gradingDataRoot: tempRoot
@@ -57,19 +64,20 @@ describe( 'SelectionPhases.runS1 (Member-Coverage)', () => {
     } )
 
     test( 'duplicate member → SEL-S1', async () => {
-        await seedPhaseStatus( { schemaId: 'ns.a' } )
+        await seedLockSnapshot( { selectionId: 'demo-dup', memberIds: [ 'ns.a' ] } )
         const selectionJson = { members: [ { schemaId: 'ns.a' }, { schemaId: 'ns.a' } ] }
         const r = await SelectionPhases.runS1( {
-            entry: baseEntry(), selectionId: 'demo', selectionJson, gradingDataRoot: tempRoot
+            entry: baseEntry(), selectionId: 'demo-dup', selectionJson, gradingDataRoot: tempRoot
         } )
         const hasErr = r.errors.some( ( e ) => e.includes( 'SEL-S1' ) )
         expect( hasErr ).toBe( true )
     } )
 
-    test( 'missing phase-status → SEL-S1', async () => {
+    test( 'member not pinned in lockSnapshot → SEL-S1', async () => {
+        await seedLockSnapshot( { selectionId: 'demo-miss', memberIds: [ 'ns.a' ] } )
         const selectionJson = { members: [ { schemaId: 'nope.x' } ] }
         const r = await SelectionPhases.runS1( {
-            entry: baseEntry(), selectionId: 'demo', selectionJson, gradingDataRoot: tempRoot
+            entry: baseEntry(), selectionId: 'demo-miss', selectionJson, gradingDataRoot: tempRoot
         } )
         const hasErr = r.errors.some( ( e ) => e.includes( 'SEL-S1' ) )
         expect( hasErr ).toBe( true )
@@ -77,34 +85,9 @@ describe( 'SelectionPhases.runS1 (Member-Coverage)', () => {
 } )
 
 
-describe( 'SelectionPhases.runS2 (Lockfile-Consistency)', () => {
-    test( 'matching hash + members → no errors', async () => {
-        const selectionJson = { selectionId: 'demo', members: [] }
-        const expectedHash = HashGenerator.computeSelectionHash( { selection: selectionJson } ).hash
-        const lockfile = { selectionHash: expectedHash, members: [] }
-        const r = await SelectionPhases.runS2( {
-            entry: baseEntry(), selectionId: 'demo', selectionJson, lockfile, gradingDataRoot: tempRoot
-        } )
-        expect( r.errors ).toEqual( [] )
-    } )
-
-    test( 'mismatched selectionHash → SEL-S2', async () => {
-        const selectionJson = { selectionId: 'demo', members: [] }
-        const lockfile = { selectionHash: 'deadbeef', members: [] }
-        const r = await SelectionPhases.runS2( {
-            entry: baseEntry(), selectionId: 'demo', selectionJson, lockfile, gradingDataRoot: tempRoot
-        } )
-        const hasErr = r.errors.some( ( e ) => e.includes( 'SEL-S2' ) )
-        expect( hasErr ).toBe( true )
-    } )
-
-    test( 'missing lockfile → SEL-S2', async () => {
-        const selectionJson = { selectionId: 'demo', members: [] }
-        const r = await SelectionPhases.runS2( {
-            entry: baseEntry(), selectionId: 'demo', selectionJson, lockfile: null, gradingDataRoot: tempRoot
-        } )
-        const hasErr = r.errors.some( ( e ) => e.includes( 'SEL-S2' ) )
-        expect( hasErr ).toBe( true )
+describe( 'SelectionPhases — S2 (Lockfile-Consistency) is DROPPED in v2', () => {
+    test( 'runS2 no longer exists', () => {
+        expect( SelectionPhases.runS2 ).toBeUndefined()
     } )
 } )
 
@@ -112,7 +95,7 @@ describe( 'SelectionPhases.runS2 (Lockfile-Consistency)', () => {
 describe( 'SelectionPhases.runS3 (Skills-Coverage)', () => {
     test( '4 skills with existing files → no errors', async () => {
         const selectionId = 'demo-s3-ok'
-        const skillsDir = join( tempRoot, 'selection', selectionId, 'skills' )
+        const skillsDir = join( tempRoot, 'selections', selectionId, 'skills' )
         await mkdir( skillsDir, { recursive: true } )
         await writeFile( join( skillsDir, 'one.mjs' ), 'export {}' )
         await writeFile( join( skillsDir, 'two.mjs' ), 'export {}' )
@@ -186,6 +169,8 @@ describe( 'SelectionPhases.runAllStub (back-compat)', () => {
     test( 'returns synchronous stub when called via the old path', () => {
         const r = SelectionPhases.runAllStub( { entry: baseEntry() } )
         expect( r.stub ).toBe( true )
-        expect( r.phases.length ).toBe( 4 )
+        // v2: S2 dropped → S1/S3/S4 only
+        expect( r.phases.length ).toBe( 3 )
+        expect( r.phases.map( ( p ) => p.phase ) ).toEqual( [ 'S1', 'S3', 'S4' ] )
     } )
 } )

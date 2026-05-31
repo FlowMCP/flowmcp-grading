@@ -1,6 +1,6 @@
 import { describe, test, expect } from '@jest/globals'
 
-import { PartialGrading } from '../../src/Phases/PartialGrading.mjs'
+import { PartialGrading, NODE_STATUSES } from '../../src/Phases/PartialGrading.mjs'
 
 
 const baseFullEntry = ( { aggregateGrade } ) => {
@@ -36,6 +36,23 @@ describe( 'PartialGrading.buildPartialEntry', () => {
         expect( result.entry.aggregateGrade ).toBe( 'A' )
         expect( result.entry.inheritedFrom ).toBe( 'demo.foo@a1b2c3d4' )
         expect( result.entry.gradings.length ).toBe( 1 )
+    } )
+
+    test( 'v2 scoping: carries area + skillId when provided', () => {
+        const base = baseFullEntry( { aggregateGrade: 'A' } )
+        const result = PartialGrading.buildPartialEntry( {
+            baseEntry: base,
+            dimensions: [ 'selection-skills-L1' ],
+            newGradings: [ { dimension: 'selection-skills-L1', score: 'pass', determinism: 'non-deterministic' } ],
+            grader: base.grader,
+            schemaHash: 'a1b2c3d4',
+            schemaVersion: '1.0.0',
+            area: 'selection-skills-L1',
+            skillId: 'crypto-entry'
+        } )
+        expect( result.errors ).toEqual( [] )
+        expect( result.entry.area ).toBe( 'selection-skills-L1' )
+        expect( result.entry.skillId ).toBe( 'crypto-entry' )
     } )
 
     test( 'newGrading with dimension not in dimensions[] yields PRT-002', () => {
@@ -151,5 +168,33 @@ describe( 'PartialGrading.listGradedDimensions', () => {
     test( 'missing entry yields PRT-001', () => {
         const r = PartialGrading.listGradedDimensions( {} )
         expect( r.errors[ 0 ] ).toContain( 'PRT-001' )
+    } )
+} )
+
+
+describe( 'PartialGrading.resolveNodeStatus (partial/full × 5-status)', () => {
+    test( 'NODE_STATUSES exports the 5-status enum', () => {
+        expect( NODE_STATUSES ).toEqual( [ 'pending', 'blocked', 'graded', 'stable', 'rejected' ] )
+    } )
+
+    test( 'partial keeps the node at its last full status (never promotes)', () => {
+        const r = PartialGrading.resolveNodeStatus( { mode: 'partial', lastFullStatus: 'graded', eligibleStable: true } )
+        expect( r.nodeStatus ).toBe( 'graded' )
+    } )
+
+    test( 'full + eligible → stable', () => {
+        const r = PartialGrading.resolveNodeStatus( { mode: 'full', lastFullStatus: 'graded', eligibleStable: true } )
+        expect( r.nodeStatus ).toBe( 'stable' )
+    } )
+
+    test( 'full + not eligible → graded', () => {
+        const r = PartialGrading.resolveNodeStatus( { mode: 'full', lastFullStatus: 'pending', eligibleStable: false } )
+        expect( r.nodeStatus ).toBe( 'graded' )
+    } )
+
+    test( 'unknown mode errors PRT-002 (no silent default)', () => {
+        const r = PartialGrading.resolveNodeStatus( { mode: 'sideways', lastFullStatus: 'graded', eligibleStable: false } )
+        expect( r.nodeStatus ).toBeNull()
+        expect( r.errors[ 0 ] ).toContain( 'PRT-002' )
     } )
 } )

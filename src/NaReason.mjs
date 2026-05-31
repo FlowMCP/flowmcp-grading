@@ -1,12 +1,14 @@
 /**
  * NaReason — closed-set validator for `gradings[i].naReason` fields.
  *
- * Per the grading spec:
- *   - Scope whitelist defines the n/a convention with standard reasons.
+ * Per the grading spec (08-grading-model §5.3 n/a convention):
+ *   - A score of `n/a` is only allowed with a naReason from the closed set.
  *
- * Closed set of six allowed `naReason` values. Any free-text reason is
- * rejected with NA-001. The validator is static, takes object params,
- * returns object — NO SILENT DEFAULTS.
+ * Closed set of six allowed `naReason` values (exactly the spec §5.3 set). Any
+ * free-text reason is rejected with NA-001. Additional values can only be added
+ * through a spec bump, so no `not-applicable-to-selection` is introduced here.
+ * The validator is static, takes object params, returns object — NO SILENT
+ * DEFAULTS.
  */
 
 

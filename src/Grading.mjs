@@ -56,6 +56,45 @@ const TIER_MAX_GRADES = Object.freeze( {
     'group-bound': 'A'
 } )
 
+// Grade ordering (worst -> best) for the tier trim.
+const GRADE_ORDER = Object.freeze( [ 'F', 'D', 'C', 'B', 'A' ] )
+
+// gradingSystem/1.0.0 score-to-grade thresholds. Input is the weighted mean of
+// per-answer scores on the 1.0-5.0 scale (Scoring.computeWeightedSum). Bands are
+// scanned high-to-low; the first satisfied `min` wins. Documented in
+// gradingSpec/1.2.0 chapter 07-scoring-vs-grading.
+const GRADE_THRESHOLDS = Object.freeze( [
+    { min: 4.5, grade: 'A' },
+    { min: 3.5, grade: 'B' },
+    { min: 2.5, grade: 'C' },
+    { min: 1.5, grade: 'D' },
+    { min: 0.0, grade: 'F' }
+] )
+
+// v2 envelope vocabularies (gradingSpec/1.2.0 §3.Y / §5.1).
+const VALID_HARNESSES = [ 'claude-code' ]
+const VALID_NODE_STATUSES = [ 'pending', 'blocked', 'graded', 'stable', 'rejected' ]
+const VALID_AREAS = [
+    'single-test',
+    'tools-aggregate-schema',
+    'tools-aggregate-namespace',
+    'namespace-description',
+    'namespace-skills',
+    'about-namespace',
+    'about-selection',
+    'selection-skills-L1',
+    'selection-skills-L2',
+    'selection-skills-L3',
+    'selection-aggregate'
+]
+// Areas that grade one skill at a time — the envelope MUST carry skillId.
+const PER_SKILL_AREAS = [
+    'namespace-skills',
+    'selection-skills-L1',
+    'selection-skills-L2',
+    'selection-skills-L3'
+]
+
 
 class Grading {
     static getVersion() {
@@ -63,12 +102,13 @@ class Grading {
     }
 
 
-    static createEntry( { schemaId, selectionId, gradingTier, grader, options, iteration, improvementHints, persona } ) {
-        const { status, messages } = Grading.#validationCreateEntry( {
+    static createEntry( { schemaId, selectionId, gradingTier, grader, options, iteration, improvementHints, persona, area, skillId, level, status, harness } ) {
+        const { status: ok, messages } = Grading.#validationCreateEntry( {
             schemaId, selectionId, gradingTier, grader,
-            iteration, improvementHints, persona
+            iteration, improvementHints, persona,
+            area, skillId, level, status, harness
         } )
-        if( !status ) { return { entry: null, errors: messages } }
+        if( !ok ) { return { entry: null, errors: messages } }
 
         const now = new Date().toISOString()
         const entry = {
@@ -95,6 +135,24 @@ class Grading {
         }
         if( persona !== undefined && persona !== null ) {
             entry.persona = persona
+        }
+
+        // v2 envelope fields — present only when the caller passes them; each is
+        // validated strictly in #validationCreateEntry (no silent defaults).
+        if( area !== undefined && area !== null ) {
+            entry.area = area
+        }
+        if( skillId !== undefined && skillId !== null ) {
+            entry.skillId = skillId
+        }
+        if( level !== undefined && level !== null ) {
+            entry.level = level
+        }
+        if( status !== undefined && status !== null ) {
+            entry.status = status
+        }
+        if( harness !== undefined && harness !== null ) {
+            entry.harness = harness
         }
 
         return { entry, errors: [] }
@@ -126,13 +184,30 @@ class Grading {
     }
 
 
-    static formatGradingFilename( { hash, ts, persona } ) {
+    /**
+     * formatGradingFilename — v2 grading-filename grammar (gradingSpec/1.2.0 §17.4):
+     *   `‹area›[--‹basePersona›--‹lens›]--‹timestamp›.json`
+     * The timestamp is the LAST segment before `.json` (no random hash), so a naive
+     * `sort().at(-1)` yields the newest grading (RebuildIndex.resolveLatest relies on
+     * this). `basePersona` + `lens` are BOTH present or BOTH absent — no silent half.
+     *
+     * @param {Object} params
+     * @param {string} params.area          — one of the 11 grading areas
+     * @param {string} [params.basePersona] — base persona id (omit for neutral areas)
+     * @param {string} [params.lens]        — domain lens id (omit for neutral areas)
+     * @param {string} params.timestamp     — ISO 8601 with '-' instead of ':'
+     * @returns {{ filename: string }}
+     */
+    static formatGradingFilename( { area, basePersona, lens, timestamp } ) {
         const { status, messages } = Grading.#validationFormatGradingFilename( {
-            hash, ts, persona
+            area, basePersona, lens, timestamp
         } )
         if( !status ) { throw new Error( messages.join( '; ' ) ) }
 
-        const filename = `${hash}--${ts}--${persona}.json`
+        const personaSegment = basePersona === undefined || basePersona === null
+            ? ''
+            : `--${basePersona}--${lens}`
+        const filename = `${area}${personaSegment}--${timestamp}.json`
         return { filename }
     }
 
@@ -169,23 +244,24 @@ class Grading {
 
         const weighted = Scoring.computeWeightedSum( { gradings: entry.gradings } )
         if( weighted.normalizedScore === null ) {
+            // No scorable answers (all n/a / stale / veto-skipped) — not an error,
+            // but no grade can be computed. The caller treats null as `pending`.
             return {
                 aggregateGrade: null,
                 maxAttainableGrade,
-                errors: weighted.errors,
-                stub: true,
-                todo: 'follow-up memo: aggregate-grade computation formula (raw float → letter grade)'
+                normalizedScore: null,
+                errors: weighted.errors
             }
         }
 
-        const rawGrade = Grading.#trimByTier( { aggregateRaw: weighted.normalizedScore, gradingTier: entry.gradingTier } )
+        const trimmed = Grading.#trimByTier( { aggregateRaw: weighted.normalizedScore, gradingTier: entry.gradingTier } )
 
         return {
-            aggregateGrade: rawGrade.grade,
+            aggregateGrade: trimmed.grade,
+            rawGrade: trimmed.rawGrade,
             maxAttainableGrade,
-            errors: weighted.errors,
-            stub: true,
-            todo: 'follow-up memo: full grade-letter mapping logic'
+            normalizedScore: weighted.normalizedScore,
+            errors: weighted.errors
         }
     }
 
@@ -257,17 +333,21 @@ class Grading {
 
 
     static #trimByTier( { aggregateRaw, gradingTier } ) {
-        // Stub trim — concrete letter mapping in follow-up memo.
         const maxGrade = TIER_MAX_GRADES[ gradingTier ]
+        // Map the 1.0-5.0 weighted mean to a letter via the threshold bands.
+        const band = GRADE_THRESHOLDS
+            .find( ( entry ) => aggregateRaw >= entry.min )
+        const rawGrade = band === undefined ? 'F' : band.grade
+        // Tier trim: cap the grade at the tier maximum (autonomous -> B, group-bound -> A).
+        const cappedIndex = Math.min( GRADE_ORDER.indexOf( rawGrade ), GRADE_ORDER.indexOf( maxGrade ) )
         return {
-            grade: maxGrade,
-            stub: true,
-            todo: 'follow-up memo: implement grade-letter mapping from numeric aggregate'
+            grade: GRADE_ORDER[ cappedIndex ],
+            rawGrade
         }
     }
 
 
-    static #validationCreateEntry( { schemaId, selectionId, gradingTier, grader, iteration, improvementHints, persona } ) {
+    static #validationCreateEntry( { schemaId, selectionId, gradingTier, grader, iteration, improvementHints, persona, area, skillId, level, status, harness } ) {
         const messages = []
         const struct = { status: false, messages }
 
@@ -369,6 +449,39 @@ class Grading {
             }
         }
 
+        // v2 envelope fields — strictly validated when present (no silent defaults).
+        if( area !== undefined && area !== null ) {
+            if( typeof area !== 'string' || !VALID_AREAS.includes( area ) ) {
+                messages.push( `GRD-033: createEntry: unknown area '${area}'` )
+                return struct
+            }
+        }
+        if( harness !== undefined && harness !== null ) {
+            if( typeof harness !== 'string' || !VALID_HARNESSES.includes( harness ) ) {
+                messages.push( `GRD-034: createEntry: harness must be one of [${VALID_HARNESSES.join( ', ' )}], was: '${harness}'` )
+                return struct
+            }
+        }
+        if( status !== undefined && status !== null ) {
+            if( typeof status !== 'string' || !VALID_NODE_STATUSES.includes( status ) ) {
+                messages.push( `GRD-035: createEntry: status must be one of [${VALID_NODE_STATUSES.join( ', ' )}], was: '${status}'` )
+                return struct
+            }
+        }
+        if( skillId !== undefined && skillId !== null ) {
+            if( typeof skillId !== 'string' || skillId.length === 0 ) {
+                messages.push( `GRD-036: createEntry: skillId must be a non-empty string, was: '${skillId}'` )
+                return struct
+            }
+        }
+        // Per-skill areas REQUIRE a skillId — no silent omission.
+        if( area !== undefined && area !== null && PER_SKILL_AREAS.includes( area ) ) {
+            if( skillId === undefined || skillId === null ) {
+                messages.push( `GRD-037: createEntry: skillId required for per-skill area '${area}'` )
+                return struct
+            }
+        }
+
         struct.status = true
         return struct
     }
@@ -392,16 +505,16 @@ class Grading {
     }
 
 
-    static #validationFormatGradingFilename( { hash, ts, persona } ) {
+    static #validationFormatGradingFilename( { area, basePersona, lens, timestamp } ) {
         const messages = []
         const struct = { status: false, messages }
 
-        const pairs = [
-            [ 'hash', hash ],
-            [ 'ts', ts ],
-            [ 'persona', persona ]
+        // area + timestamp are always required; basePersona/lens are an all-or-nothing pair.
+        const required = [
+            [ 'area', area ],
+            [ 'timestamp', timestamp ]
         ]
-        pairs
+        required
             .forEach( ( [ key, value ] ) => {
                 if( value === undefined || value === null ) {
                     messages.push( `GRD-001: Required field missing: ${key}` )
@@ -414,24 +527,35 @@ class Grading {
 
         if( messages.length > 0 ) { return struct }
 
-        const hashHexPattern = /^[a-f0-9]{6,16}$/
-        const hashPlaceholderPattern = /^PLACEHOLDER[0-9]{3}$/
-        if( !hashHexPattern.test( hash ) && !hashPlaceholderPattern.test( hash ) ) {
-            messages.push( `GRD-040: formatGradingFilename: hash must be 6-16 hex characters, was: '${hash}'` )
+        if( !VALID_AREAS.includes( area ) ) {
+            messages.push( `GRD-043: formatGradingFilename: unknown area '${area}'` )
             return struct
         }
 
         const tsPattern = /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z$/
-        if( !tsPattern.test( ts ) ) {
-            messages.push( `GRD-041: formatGradingFilename: ts must be ISO 8601 with '-' instead of ':' (e.g. 2026-05-30T10-15-00Z), was: '${ts}'` )
+        if( !tsPattern.test( timestamp ) ) {
+            messages.push( `GRD-041: formatGradingFilename: timestamp must be ISO 8601 with '-' instead of ':' (e.g. 2026-05-30T10-15-00Z), was: '${timestamp}'` )
             return struct
         }
 
-        const isNeutral = persona === 'neutral'
-        const personaPattern = /^[a-z][a-z0-9-]*--[a-z][a-z0-9-]*$/
-        if( !isNeutral && !personaPattern.test( persona ) ) {
-            messages.push( `GRD-042: formatGradingFilename: persona must be 'neutral' or '<base>--<lens>', was: '${persona}'` )
+        // No silent half-persona: basePersona and lens are present together or not at all.
+        const baseGiven = basePersona !== undefined && basePersona !== null
+        const lensGiven = lens !== undefined && lens !== null
+        if( baseGiven !== lensGiven ) {
+            messages.push( 'GRD-042: formatGradingFilename: basePersona and lens must be provided together' )
             return struct
+        }
+
+        if( baseGiven ) {
+            const segPattern = /^[a-z][a-z0-9-]*$/
+            if( typeof basePersona !== 'string' || !segPattern.test( basePersona ) ) {
+                messages.push( `GRD-042: formatGradingFilename: basePersona must match [a-z][a-z0-9-]*, was: '${basePersona}'` )
+                return struct
+            }
+            if( typeof lens !== 'string' || !segPattern.test( lens ) ) {
+                messages.push( `GRD-042: formatGradingFilename: lens must match [a-z][a-z0-9-]*, was: '${lens}'` )
+                return struct
+            }
         }
 
         struct.status = true
@@ -567,4 +691,4 @@ class Grading {
 }
 
 
-export { Grading, AGING_DEFAULTS }
+export { Grading, AGING_DEFAULTS, VALID_AREAS, VALID_NODE_STATUSES, VALID_HARNESSES, PER_SKILL_AREAS }

@@ -23,6 +23,8 @@
  *   PB-004 — Invalid area (not in whitelist)
  *   PB-005 — Persona required for area but not provided
  *   PB-006 — Persona shape invalid (missing id/basePersona/lens)
+ *   PB-007 — Goal condition exceeds 4000 characters (spec Area 25 §2)
+ *   PB-008 — Goal maxTurns must be a positive integer
  */
 
 
@@ -36,11 +38,12 @@ const VALID_AREAS = [
     'selection-skills-L1',
     'selection-skills-L2',
     'selection-skills-L3',
-    'namespace-skills'
+    'namespace-skills',
+    'selection-aggregate'
 ]
 
 
-// Persona-application table per the grading spec — 4 neutral, 6 with persona.
+// Persona-application table per the grading spec — 4 neutral, 7 with persona.
 const PERSONA_REQUIRED_BY_AREA = Object.freeze( {
     'single-test': false,
     'tools-aggregate-schema': false,
@@ -51,7 +54,8 @@ const PERSONA_REQUIRED_BY_AREA = Object.freeze( {
     'selection-skills-L1': true,
     'selection-skills-L2': true,
     'selection-skills-L3': true,
-    'namespace-skills': true
+    'namespace-skills': true,
+    'selection-aggregate': true
 } )
 
 
@@ -75,12 +79,37 @@ const PLACEHOLDER_FILES = '{{FILES_TO_READ_BLOCK}}'
 const PLACEHOLDER_POLICIES = '{{POLICIES_BLOCK}}'
 const PLACEHOLDER_QUESTIONS = '{{QUESTIONS_BLOCK}}'
 const PLACEHOLDER_OUTPUT_SCHEMA = '{{OUTPUT_SCHEMA_BLOCK}}'
+const PLACEHOLDER_PREDECESSOR_GRADES = '{{PREDECESSOR_GRADES_BLOCK}}'
+const PLACEHOLDER_GOAL = '{{GOAL_BLOCK}}'
+
+
+// Default turn bound for the Goal-Block completion condition (spec Area 25 §2).
+const DEFAULT_GOAL_MAX_TURNS = 25
+
+
+// Surfacing convention header — the mandatory [GRADING] lines the loop emits
+// into the transcript so the transcript-only /goal evaluator can confirm
+// completion (spec Area 25 §3). The evaluator reads ONLY the transcript and
+// calls NO tools, so progress and end-state MUST be surfaced as text.
+const SURFACING_CONVENTION = '### Surfacing convention (mandatory)\n\n'
+    + 'The evaluator reads ONLY the transcript and calls NO tools. Writing\n'
+    + 'silently to disk is not enough. The loop MUST emit these `[GRADING]`\n'
+    + 'lines into the transcript:\n\n'
+    + '- Per area, on completion:\n'
+    + '  `[GRADING] area=<area>/<id> schema-valid=✓ status=<status> written=✓`\n'
+    + '- Progress:\n'
+    + '  `[GRADING] PROGRESS x/y`\n'
+    + '- Final:\n'
+    + '  `[GRADING] DONE`\n'
 
 
 class PromptBuilder {
-    static build( { template, persona, files, questions, outputSchema, policies, area } ) {
+    static build( { template, persona, files, questions, outputSchema, policies, area, predecessorGrades, goal } ) {
         const { status, messages } = PromptBuilder.#validationBuild( { template, persona, files, questions, outputSchema, policies, area } )
         if( status === false ) { throw new Error( `PromptBuilder.build: ${messages.join( '; ' )}` ) }
+
+        const predecessorGradesValidated = PromptBuilder.#normalizePredecessorGrades( { predecessorGrades } )
+        const goalValidated = PromptBuilder.#normalizeGoal( { goal, area } )
 
         const personaRequired = PromptBuilder.#computePersonaRequired( { area } )
         const personaBlock = PromptBuilder.#buildPersonaBlock( { persona, personaRequired } )
@@ -89,6 +118,9 @@ class PromptBuilder {
         const questionBlock = PromptBuilder.#buildQuestionBlock( { questions } )
         const filesBlock = PromptBuilder.#buildFilesBlock( { files } )
         const outputSchemaBlock = PromptBuilder.#buildOutputSchemaBlock( { outputSchema } )
+        const predecessorBlock = PromptBuilder.#buildPredecessorGradesBlock( { predecessorGrades: predecessorGradesValidated } )
+        const goalResult = PromptBuilder.#buildGoalBlock( { condition: goalValidated.condition, maxTurns: goalValidated.maxTurns } )
+        const goalBlock = goalResult.goalBlock
 
         const prompt = PromptBuilder.#assemble( {
             template,
@@ -97,7 +129,9 @@ class PromptBuilder {
             filesBlock,
             policyBlock,
             questionBlock,
-            outputSchemaBlock
+            outputSchemaBlock,
+            predecessorBlock,
+            goalBlock
         } )
 
         const personaId = personaRequired === true
@@ -109,10 +143,41 @@ class PromptBuilder {
             persona: personaId,
             fileCount: files.length,
             questionCount: questions.length,
-            personaRequired
+            personaRequired,
+            predecessorGradeCount: predecessorGradesValidated.length,
+            goalBlockLength: goalBlock.length,
+            goalConditionLength: goalResult.conditionLength,
+            goalMaxTurns: goalValidated.maxTurns
         }
 
         return { prompt, metadata }
+    }
+
+
+    /**
+     * buildGoalBlock — public Goal-Block generator (spec Area 25).
+     *
+     * Produces a completion condition (<= 4000 characters, with "or stop
+     * after N turns") plus the mandatory surfacing convention. The CLI/harness
+     * pulls this block to drive the outer /goal loop.
+     *
+     * @param {Object} params
+     * @param {string} [params.condition] — completion condition; defaults to a
+     *        per-area condition when omitted.
+     * @param {string} [params.area] — used to derive the default condition.
+     * @param {number} [params.maxTurns] — turn bound (default 25).
+     * @returns {{ goalBlock: string, condition: string, conditionLength: number, maxTurns: number }}
+     */
+    static buildGoalBlock( { condition, area, maxTurns } ) {
+        const goalValidated = PromptBuilder.#normalizeGoal( { goal: { condition, maxTurns }, area } )
+        const goalResult = PromptBuilder.#buildGoalBlock( { condition: goalValidated.condition, maxTurns: goalValidated.maxTurns } )
+
+        return {
+            goalBlock: goalResult.goalBlock,
+            condition: goalResult.condition,
+            conditionLength: goalResult.conditionLength,
+            maxTurns: goalValidated.maxTurns
+        }
     }
 
 
@@ -219,7 +284,105 @@ class PromptBuilder {
     }
 
 
-    static #assemble( { template, preInstructionBlock, personaBlock, filesBlock, policyBlock, questionBlock, outputSchemaBlock } ) {
+    static #buildPredecessorGradesBlock( { predecessorGrades } ) {
+        if( predecessorGrades.length === 0 ) { return '' }
+
+        const lines = predecessorGrades
+            .map( ( entry, index ) => {
+                const position = index + 1
+                const id = entry.id
+                const grade = entry.grade
+                const status = entry.status
+                return `${position}. ${id} — grade=${grade}, status=${status}`
+            } )
+            .join( '\n' )
+
+        return `## Predecessor Grades\n\n${lines}\n`
+    }
+
+
+    static #buildGoalBlock( { condition, maxTurns } ) {
+        const fullCondition = `${condition} — or stop after ${maxTurns} turns.`
+        const goalBlock = '## Goal-Block (completion condition)\n\n'
+            + `${fullCondition}\n\n`
+            + SURFACING_CONVENTION
+
+        return {
+            goalBlock,
+            condition: fullCondition,
+            conditionLength: fullCondition.length
+        }
+    }
+
+
+    static #normalizePredecessorGrades( { predecessorGrades } ) {
+        // Optional parameter — absent means an empty predecessor chain. Explicit
+        // empty array allowed. Anything else must be a well-shaped array.
+        if( predecessorGrades === undefined || predecessorGrades === null ) { return [] }
+        if( !Array.isArray( predecessorGrades ) ) {
+            throw new Error( "PromptBuilder.build: PB-002: Parameter 'predecessorGrades' must be of type array" )
+        }
+
+        predecessorGrades
+            .forEach( ( entry, index ) => {
+                if( entry === undefined || entry === null || typeof entry !== 'object' || Array.isArray( entry ) ) {
+                    throw new Error( `PromptBuilder.build: PB-002: Parameter 'predecessorGrades[${index}]' must be of type object` )
+                }
+                const pairs = [
+                    [ 'id', entry.id ],
+                    [ 'grade', entry.grade ],
+                    [ 'status', entry.status ]
+                ]
+                pairs
+                    .forEach( ( [ key, value ] ) => {
+                        if( typeof value !== 'string' || value === '' ) {
+                            throw new Error( `PromptBuilder.build: PB-003: Parameter 'predecessorGrades[${index}].${key}' must be a non-empty string` )
+                        }
+                    } )
+            } )
+
+        return predecessorGrades
+    }
+
+
+    static #normalizeGoal( { goal, area } ) {
+        // Optional goal config — { condition?, maxTurns? }. No silent default for
+        // a malformed type, but an absent goal yields a per-area default condition
+        // plus the default turn bound, which is the documented behaviour.
+        const safeArea = area === undefined || area === null
+            ? 'the area in scope'
+            : area
+        const defaultCondition = `Grade every ${safeArea} area in scope until each one is schema-valid`
+
+        if( goal === undefined || goal === null ) {
+            return { condition: defaultCondition, maxTurns: DEFAULT_GOAL_MAX_TURNS }
+        }
+        if( typeof goal !== 'object' || Array.isArray( goal ) ) {
+            throw new Error( "PromptBuilder.build: PB-002: Parameter 'goal' must be of type object" )
+        }
+
+        const condition = goal.condition === undefined || goal.condition === null
+            ? defaultCondition
+            : goal.condition
+        if( typeof condition !== 'string' || condition === '' ) {
+            throw new Error( "PromptBuilder.build: PB-003: Parameter 'goal.condition' must be a non-empty string" )
+        }
+        if( condition.length > 4000 ) {
+            throw new Error( "PromptBuilder.build: PB-007: Parameter 'goal.condition' must be at most 4000 characters" )
+        }
+
+        const maxTurns = goal.maxTurns === undefined || goal.maxTurns === null
+            ? DEFAULT_GOAL_MAX_TURNS
+            : goal.maxTurns
+        if( typeof maxTurns !== 'number' || Number.isInteger( maxTurns ) === false || maxTurns < 1 ) {
+            throw new Error( "PromptBuilder.build: PB-008: Parameter 'goal.maxTurns' must be a positive integer" )
+        }
+
+        return { condition, maxTurns }
+    }
+
+
+    static #assemble( { template, preInstructionBlock, personaBlock, filesBlock, policyBlock, questionBlock, outputSchemaBlock, predecessorBlock, goalBlock } ) {
         // Replace template placeholders deterministically. Missing placeholders
         // (e.g. neutral template has no policy slot) simply produce no-op
         // replacements — the underlying template owns its structure.
@@ -229,8 +392,10 @@ class PromptBuilder {
         const withPolicies = withFiles.split( PLACEHOLDER_POLICIES ).join( policyBlock )
         const withQuestions = withPolicies.split( PLACEHOLDER_QUESTIONS ).join( questionBlock )
         const withSchema = withQuestions.split( PLACEHOLDER_OUTPUT_SCHEMA ).join( outputSchemaBlock )
+        const withPredecessor = withSchema.split( PLACEHOLDER_PREDECESSOR_GRADES ).join( predecessorBlock )
+        const withGoal = withPredecessor.split( PLACEHOLDER_GOAL ).join( goalBlock )
 
-        return withSchema
+        return withGoal
     }
 
 

@@ -1,17 +1,20 @@
 /**
- * SourceSnapshot — frozen schema snapshots in grading-data/schemas/<namespace>/.
+ * SourceSnapshot — frozen schema snapshots in grading-data/providers/<ns>/<schema>/schema/.
  *
- * Per the grading spec:
- *   - Defines the folder layout for grading-data/schemas/.
- *   - Enforces the NO-OVERWRITE rule.
+ * Per the grading spec (gradingSpec/1.2.0 §10.1 / §19):
+ *   - Layout migrated schemas/ → providers/ (schema-level folders).
+ *   - Filename is the B2 grammar `<name>--<YYYY-MM-DDTHH-MM-SSZ>--<hash8>.mjs`
+ *     (timestamp BEFORE hash so `sort().at(-1)` yields the newest snapshot —
+ *     versioning is timestamp-based; the in-source `schemaVersion` is removed).
+ *   - Enforces the NO-OVERWRITE rule (a content change writes a NEW file).
  *
  * Layout:
  *   grading-data/
- *   └── schemas/
+ *   └── providers/
  *       └── <namespace>/
- *           ├── namespace.json
- *           ├── about/<hash>--about.md
- *           └── <schema-hash>--v<X.Y.Z>.mjs   ← frozen snapshot
+ *           └── <schema>/
+ *               ├── schema/<name>--<ts>--<hash8>.mjs   ← frozen snapshot (B2)
+ *               └── resources/about/<name>--<ts>--<hash8>.md
  *
  * NO SILENT DEFAULTS. Static methods only, object params, object returns.
  */
@@ -23,14 +26,15 @@ import { pathToFileURL } from 'node:url'
 import { HashGenerator, HASH_REGEX } from './HashGenerator.mjs'
 
 
-const SEMVER_REGEX = /^\d+\.\d+\.\d+$/
-const SNAPSHOT_FILENAME_REGEX = /^([0-9a-f]{8})--v(\d+\.\d+\.\d+)\.mjs$/
+// B2 primitive grammar: <name>--<YYYY-MM-DDTHH-MM-SSZ>--<hash8>.mjs
+const SNAPSHOT_FILENAME_REGEX = /^(.+)--(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z)--([0-9a-f]{8})\.mjs$/
+const NAME_REGEX = /^[A-Za-z][A-Za-z0-9_-]*$/
 
 
 class SourceSnapshot {
-    static async create( { sourcePath, gradingDataRoot, namespace, schemaVersion, schemaHash } ) {
+    static async create( { sourcePath, gradingDataRoot, namespace, schemaName, schemaHash } ) {
         const { status, messages } = SourceSnapshot.#validationCreate( {
-            sourcePath, gradingDataRoot, namespace, schemaVersion, schemaHash
+            sourcePath, gradingDataRoot, namespace, schemaName, schemaHash
         } )
         if( !status ) { return { snapshotPath: null, created: false, errors: messages } }
 
@@ -39,25 +43,28 @@ class SourceSnapshot {
             return { snapshotPath: null, created: false, errors: sourceContent.errors }
         }
 
-        const namespaceDir = join( gradingDataRoot, 'schemas', namespace )
-        const snapshotFilename = `${schemaHash}--v${schemaVersion}.mjs`
-        const snapshotPath = join( namespaceDir, snapshotFilename )
+        const schemaDir = join( gradingDataRoot, 'providers', namespace, schemaName, 'schema' )
+        await mkdir( schemaDir, { recursive: true } )
 
-        await mkdir( namespaceDir, { recursive: true } )
-        await mkdir( join( namespaceDir, 'about' ), { recursive: true } )
-
-        const existing = await SourceSnapshot.#readFileSafe( { path: snapshotPath } )
-        if( existing.errors.length === 0 ) {
-            // file exists — check identity
-            if( existing.content === sourceContent.content ) {
-                return { snapshotPath, created: false, errors: [] }
+        // No-overwrite: an existing snapshot with the SAME hash and identical
+        // content is a no-op. A snapshot with the same hash but different content
+        // is a conflict (SNP-004). Otherwise a NEW timestamped file is written.
+        const existing = await SourceSnapshot.#findByHash( { schemaDir, schemaHash } )
+        if( existing !== null ) {
+            const existingContent = await SourceSnapshot.#readFileSafe( { path: existing.path } )
+            if( existingContent.errors.length === 0 && existingContent.content === sourceContent.content ) {
+                return { snapshotPath: existing.path, created: false, errors: [] }
             }
             return {
-                snapshotPath,
+                snapshotPath: existing.path,
                 created: false,
-                errors: [ `SNP-004: Snapshot conflict — target file ${snapshotPath} exists with different content` ]
+                errors: [ `SNP-004: Snapshot conflict — hash ${schemaHash} already present with different content` ]
             }
         }
+
+        const ts = SourceSnapshot.#timestamp()
+        const snapshotFilename = `${schemaName}--${ts}--${schemaHash}.mjs`
+        const snapshotPath = join( schemaDir, snapshotFilename )
 
         await writeFile( snapshotPath, sourceContent.content, 'utf-8' )
         return { snapshotPath, created: true, errors: [] }
@@ -66,18 +73,19 @@ class SourceSnapshot {
 
     static parseSnapshotFilename( { filename } ) {
         const { status, messages } = SourceSnapshot.#validationParseFilename( { filename } )
-        if( !status ) { return { hash: null, schemaVersion: null, errors: messages } }
+        if( !status ) { return { name: null, timestamp: null, hash: null, errors: messages } }
 
         const matched = SNAPSHOT_FILENAME_REGEX.exec( filename )
         if( matched === null ) {
             return {
+                name: null,
+                timestamp: null,
                 hash: null,
-                schemaVersion: null,
-                errors: [ `SNP-003: Invalid snapshot filename format: ${filename} (expected <hash>--v<X.Y.Z>.mjs)` ]
+                errors: [ `SNP-003: Invalid snapshot filename format: ${filename} (expected <name>--<ts>--<hash8>.mjs)` ]
             }
         }
 
-        return { hash: matched[ 1 ], schemaVersion: matched[ 2 ], errors: [] }
+        return { name: matched[ 1 ], timestamp: matched[ 2 ], hash: matched[ 3 ], errors: [] }
     }
 
 
@@ -131,26 +139,64 @@ class SourceSnapshot {
         const { status, messages } = SourceSnapshot.#validationList( { gradingDataRoot, namespace } )
         if( !status ) { return { snapshots: [], errors: messages } }
 
-        const namespaceDir = join( gradingDataRoot, 'schemas', namespace )
+        const namespaceDir = join( gradingDataRoot, 'providers', namespace )
         const dirExists = await SourceSnapshot.#dirExists( { path: namespaceDir } )
         if( !dirExists ) { return { snapshots: [], errors: [] } }
 
-        const entries = await readdir( namespaceDir )
-        const candidates = entries
-            .filter( ( name ) => SNAPSHOT_FILENAME_REGEX.test( name ) )
-            .sort()
+        // Each schema is its own folder under providers/<ns>/; the snapshots live
+        // in providers/<ns>/<schema>/schema/.
+        const schemaNames = await SourceSnapshot.#listDirs( { path: namespaceDir } )
 
-        const snapshots = candidates
-            .map( ( name ) => {
-                const parsed = SourceSnapshot.parseSnapshotFilename( { filename: name } )
-                return {
-                    hash: parsed.hash,
-                    schemaVersion: parsed.schemaVersion,
-                    path: join( namespaceDir, name )
-                }
+        const perSchema = await Promise.all(
+            schemaNames.map( async ( schemaName ) => {
+                const schemaDir = join( namespaceDir, schemaName, 'schema' )
+                const dirOk = await SourceSnapshot.#dirExists( { path: schemaDir } )
+                if( !dirOk ) { return [] }
+                const entries = await readdir( schemaDir )
+                return entries
+                    .filter( ( name ) => SNAPSHOT_FILENAME_REGEX.test( name ) )
+                    .sort()
+                    .map( ( name ) => {
+                        const parsed = SourceSnapshot.parseSnapshotFilename( { filename: name } )
+                        return {
+                            schemaName,
+                            name: parsed.name,
+                            timestamp: parsed.timestamp,
+                            hash: parsed.hash,
+                            path: join( schemaDir, name )
+                        }
+                    } )
             } )
+        )
+
+        const snapshots = perSchema
+            .reduce( ( acc, list ) => acc.concat( list ), [] )
 
         return { snapshots, errors: [] }
+    }
+
+
+    static async #findByHash( { schemaDir, schemaHash } ) {
+        try {
+            const entries = await readdir( schemaDir )
+            const matched = entries
+                .filter( ( name ) => SNAPSHOT_FILENAME_REGEX.test( name ) )
+                .find( ( name ) => {
+                    const parsed = SourceSnapshot.parseSnapshotFilename( { filename: name } )
+                    return parsed.hash === schemaHash
+                } )
+            if( matched === undefined ) { return null }
+            return { path: join( schemaDir, matched ) }
+        } catch( error ) {
+            return null
+        }
+    }
+
+
+    static #timestamp() {
+        const iso = new Date().toISOString()
+        const noMillis = iso.replace( /\.\d{3}Z$/, 'Z' )
+        return noMillis.replace( /:/g, '-' )
     }
 
 
@@ -177,6 +223,19 @@ class SourceSnapshot {
     }
 
 
+    static async #listDirs( { path } ) {
+        try {
+            const entries = await readdir( path, { withFileTypes: true } )
+            return entries
+                .filter( ( e ) => e.isDirectory() )
+                .map( ( e ) => e.name )
+                .sort()
+        } catch( error ) {
+            return []
+        }
+    }
+
+
     static async #dirExists( { path } ) {
         try {
             const result = await stat( path )
@@ -187,7 +246,7 @@ class SourceSnapshot {
     }
 
 
-    static #validationCreate( { sourcePath, gradingDataRoot, namespace, schemaVersion, schemaHash } ) {
+    static #validationCreate( { sourcePath, gradingDataRoot, namespace, schemaName, schemaHash } ) {
         const messages = []
         const struct = { status: false, messages }
 
@@ -195,7 +254,7 @@ class SourceSnapshot {
             [ 'sourcePath', sourcePath, 'string' ],
             [ 'gradingDataRoot', gradingDataRoot, 'string' ],
             [ 'namespace', namespace, 'string' ],
-            [ 'schemaVersion', schemaVersion, 'string' ],
+            [ 'schemaName', schemaName, 'string' ],
             [ 'schemaHash', schemaHash, 'string' ]
         ]
 
@@ -212,8 +271,8 @@ class SourceSnapshot {
 
         if( messages.length > 0 ) { return struct }
 
-        if( !SEMVER_REGEX.test( schemaVersion ) ) {
-            messages.push( `SNP-003: Invalid semver for schemaVersion: ${schemaVersion}` )
+        if( !NAME_REGEX.test( schemaName ) ) {
+            messages.push( `SNP-003: Invalid schemaName: ${schemaName} (expected [A-Za-z][A-Za-z0-9_-]*)` )
             return struct
         }
         if( !HASH_REGEX.test( schemaHash ) ) {

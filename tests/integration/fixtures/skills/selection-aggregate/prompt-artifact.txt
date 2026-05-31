@@ -1,0 +1,17 @@
+## File preparation (mandatory — strict order)
+
+Read the following files in this order BEFORE answering any question.
+If a file does not exist or is not readable, respond exclusively
+with { "blocker": "<filepath>", "reason": "<reason>" } and abort.
+
+1. /tmp/selection-aggregate/source.md  — source artifact for selection-aggregate
+
+## PERSONA: decision-maker--crypto-trader
+[Lens: crypto-trader, Base: decision-maker]
+
+## Questions (Area: selection-aggregate)
+
+1. First eval question of the area.
+2. Second eval question of the area.
+
+## Output schema: prompts/output-schemas/selection-aggregate.schema.json

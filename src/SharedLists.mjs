@@ -2,12 +2,12 @@
  * SharedLists — loader + hash binding for shared-lists/.
  *
  * Per the grading spec:
- *   - Shared lists are secondary in-scope.
+ *   - Shared lists are secondary in-scope and live at the root `shared-lists/`.
  *   - Folder layout: `shared-lists/<listname>/<hash>--v<X.Y.Z>.json`.
- *   - Naming convention: `<hash>--v<X.Y.Z>.json`.
  *
- * Hash pipeline reuses HashGenerator: canonical JSON + sha256(8).
- * Bump rule: any list-entry change -> Patch bump.
+ * Hash pipeline reuses HashGenerator: canonical JSON + sha256(8). The list hash
+ * is a stable identifier surfaced in the versioned filename and bound only in
+ * the derived index.json — it is never written back into the source list body.
  *
  * NO SILENT DEFAULTS. Static methods only, object params, object returns.
  */

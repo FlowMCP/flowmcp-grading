@@ -23,7 +23,8 @@ const AREAS = [
     { area: 'selection-skills-L1',        personaRequired: true,  answerCount: 4 },
     { area: 'selection-skills-L2',        personaRequired: true,  answerCount: 5 },
     { area: 'selection-skills-L3',        personaRequired: true,  answerCount: 6 },
-    { area: 'namespace-skills',           personaRequired: true,  answerCount: 6 }
+    { area: 'namespace-skills',           personaRequired: true,  answerCount: 6 },
+    { area: 'selection-aggregate',        personaRequired: true,  answerCount: 6, aggregate: true }
 ]
 
 const FIXED_SCHEMA_HASH = 'a1b2c3d4'
@@ -70,10 +71,35 @@ const buildAnswerPass = ( { area, index } ) => ( {
     evidence: `/tmp/${ area }/source.md:1`
 } )
 
-const buildResponsePass = ( { area, personaRequired, answerCount } ) => {
+// The selection-aggregate area MUST merge deterministic (categorical) answers
+// with non-deterministic (numeric) judgment answers — a deterministic-only
+// result is not a valid grading (spec Area 24 §3.2). The first and last
+// answers (thresholds + cascade-stop) are deterministic; the middle four are
+// numeric judgments.
+const buildAnswerAggregatePass = ( { area, index, answerCount } ) => {
+    const isDeterministic = index === 0 || index === answerCount - 1
+    if( isDeterministic === true ) {
+        return {
+            questionId: `Q-${ area }-${ NUM_PAD( index + 1 ) }`,
+            score: 'pass',
+            reasoning: `Deterministic selection-wide check ${ index + 1 } passes (threshold / cascade-stop).`,
+            evidence: { memberCount: 8, softThreshold: 5, hardThreshold: 7 }
+        }
+    }
+    return {
+        questionId: `Q-${ area }-${ NUM_PAD( index + 1 ) }`,
+        score: 4.5,
+        reasoning: `Non-deterministic judgment ${ index + 1 } (coherence / conformance / persona fit / tier).`,
+        evidence: `/tmp/${ area }/source.md:1`
+    }
+}
+
+const buildResponsePass = ( { area, personaRequired, answerCount, aggregate } ) => {
     const answers = Array
         .from( { length: answerCount } )
-        .map( ( _, i ) => buildAnswerPass( { area, index: i } ) )
+        .map( ( _, i ) => aggregate === true
+            ? buildAnswerAggregatePass( { area, index: i, answerCount } )
+            : buildAnswerPass( { area, index: i } ) )
     const persona = personaRequired === true
         ? buildPersona()
         : null
@@ -84,6 +110,7 @@ const buildResponsePass = ( { area, personaRequired, answerCount } ) => {
         iteration: 1,
         timestamp: FIXED_TIMESTAMP,
         persona,
+        harness: 'claude-code',
         answers,
         improvementHints: []
     }
@@ -130,6 +157,7 @@ const buildResponseHttp4xx = ( { area, personaRequired, answerCount } ) => {
         iteration: 1,
         timestamp: FIXED_TIMESTAMP,
         persona,
+        harness: 'claude-code',
         answers,
         improvementHints: [
             {
