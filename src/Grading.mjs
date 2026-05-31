@@ -56,6 +56,21 @@ const TIER_MAX_GRADES = Object.freeze( {
     'group-bound': 'A'
 } )
 
+// Grade ordering (worst -> best) for the tier trim.
+const GRADE_ORDER = Object.freeze( [ 'F', 'D', 'C', 'B', 'A' ] )
+
+// gradingSystem/1.0.0 score-to-grade thresholds. Input is the weighted mean of
+// per-answer scores on the 1.0-5.0 scale (Scoring.computeWeightedSum). Bands are
+// scanned high-to-low; the first satisfied `min` wins. Documented in
+// gradingSpec/1.2.0 chapter 07-scoring-vs-grading.
+const GRADE_THRESHOLDS = Object.freeze( [
+    { min: 4.5, grade: 'A' },
+    { min: 3.5, grade: 'B' },
+    { min: 2.5, grade: 'C' },
+    { min: 1.5, grade: 'D' },
+    { min: 0.0, grade: 'F' }
+] )
+
 // v2 envelope vocabularies (gradingSpec/1.2.0 §3.Y / §5.1).
 const VALID_HARNESSES = [ 'claude-code' ]
 const VALID_NODE_STATUSES = [ 'pending', 'blocked', 'graded', 'stable', 'rejected' ]
@@ -229,23 +244,24 @@ class Grading {
 
         const weighted = Scoring.computeWeightedSum( { gradings: entry.gradings } )
         if( weighted.normalizedScore === null ) {
+            // No scorable answers (all n/a / stale / veto-skipped) — not an error,
+            // but no grade can be computed. The caller treats null as `pending`.
             return {
                 aggregateGrade: null,
                 maxAttainableGrade,
-                errors: weighted.errors,
-                stub: true,
-                todo: 'follow-up memo: aggregate-grade computation formula (raw float → letter grade)'
+                normalizedScore: null,
+                errors: weighted.errors
             }
         }
 
-        const rawGrade = Grading.#trimByTier( { aggregateRaw: weighted.normalizedScore, gradingTier: entry.gradingTier } )
+        const trimmed = Grading.#trimByTier( { aggregateRaw: weighted.normalizedScore, gradingTier: entry.gradingTier } )
 
         return {
-            aggregateGrade: rawGrade.grade,
+            aggregateGrade: trimmed.grade,
+            rawGrade: trimmed.rawGrade,
             maxAttainableGrade,
-            errors: weighted.errors,
-            stub: true,
-            todo: 'follow-up memo: full grade-letter mapping logic'
+            normalizedScore: weighted.normalizedScore,
+            errors: weighted.errors
         }
     }
 
@@ -317,12 +333,16 @@ class Grading {
 
 
     static #trimByTier( { aggregateRaw, gradingTier } ) {
-        // Stub trim — concrete letter mapping in follow-up memo.
         const maxGrade = TIER_MAX_GRADES[ gradingTier ]
+        // Map the 1.0-5.0 weighted mean to a letter via the threshold bands.
+        const band = GRADE_THRESHOLDS
+            .find( ( entry ) => aggregateRaw >= entry.min )
+        const rawGrade = band === undefined ? 'F' : band.grade
+        // Tier trim: cap the grade at the tier maximum (autonomous -> B, group-bound -> A).
+        const cappedIndex = Math.min( GRADE_ORDER.indexOf( rawGrade ), GRADE_ORDER.indexOf( maxGrade ) )
         return {
-            grade: maxGrade,
-            stub: true,
-            todo: 'follow-up memo: implement grade-letter mapping from numeric aggregate'
+            grade: GRADE_ORDER[ cappedIndex ],
+            rawGrade
         }
     }
 

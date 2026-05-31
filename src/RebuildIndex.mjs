@@ -29,11 +29,25 @@ import { readFile, writeFile, mkdir, readdir, stat, rename } from 'node:fs/promi
 import { join, basename } from 'node:path'
 
 import { SelectionLockfile } from './SelectionLockfile.mjs'
+import { Grading } from './Grading.mjs'
 
 
 const INDEX_VERSION = 2
 const INDEX_FILENAME = 'index.json'
 const GRADINGS_DIR = '_gradings'
+
+// Area -> grading tier. Provider-side areas are `autonomous` (max grade B);
+// selection-side areas are `group-bound` (max grade A). Used to compute a grade
+// from an answer-envelope at rollup time (the envelope carries no grade field —
+// index.json is the derived, reproducible rollup).
+const PROVIDER_AREAS = Object.freeze( [
+    'single-test', 'tools-aggregate-schema', 'tools-aggregate-namespace',
+    'namespace-description', 'namespace-skills', 'about-namespace'
+] )
+const SELECTION_AREAS = Object.freeze( [
+    'about-selection', 'selection-skills-L1', 'selection-skills-L2',
+    'selection-skills-L3', 'selection-aggregate'
+] )
 
 const NODE_STATUSES = Object.freeze( [ 'pending', 'blocked', 'graded', 'stable', 'rejected' ] )
 const ROLLUP_STATUSES = Object.freeze( [ 'operational', 'partial', 'blocked', 'pending', 'rejected' ] )
@@ -336,7 +350,7 @@ class RebuildIndex {
         // Any non-REJECTED graded aggregate is a `graded` node by default of the
         // grade-derivation; promotion to `stable` is decided by StablePromotion,
         // not here. Unknown values error (no silent default).
-        const KNOWN_GRADES = [ 'A', 'B', 'C', 'F' ]
+        const KNOWN_GRADES = [ 'A', 'B', 'C', 'D', 'F' ]
         if( KNOWN_GRADES.includes( aggregateGrade ) ) { return { status: 'graded', errors: [] } }
         return { status: null, errors: [ `IDX-007: Unknown aggregateGrade: ${aggregateGrade}` ] }
     }
@@ -526,7 +540,42 @@ class RebuildIndex {
             return { status: mapped.status, grade: gradeValue, ref }
         }
 
+        // Derived path: the entry is an answer-envelope (answers[], no explicit
+        // grade). Compute the aggregate grade from the answers via Scoring/Grading.
+        if( Array.isArray( entry.answers ) && entry.answers.length > 0 ) {
+            const gradingTier = RebuildIndex.#areaTier( { area: entry.area } )
+            if( gradingTier === null ) {
+                const reason = `IDX-009: cannot derive grading tier for area: ${entry.area}`
+                blockers.push( { node: nodePath, reason } )
+                return { status: 'blocked', reason, ref }
+            }
+            const computed = Grading.computeAggregateGrade( {
+                entry: { gradings: entry.answers, gradingTier, categoricalVeto: null }
+            } )
+            if( computed.errors.length > 0 ) {
+                blockers.push( { node: nodePath, reason: computed.errors[ 0 ] } )
+                return { status: 'blocked', reason: computed.errors[ 0 ], ref }
+            }
+            if( computed.aggregateGrade === null ) {
+                return { status: 'pending', reason: 'no scorable answers', ref }
+            }
+            const mapped = RebuildIndex.mapAggregateGradeToStatus( { aggregateGrade: computed.aggregateGrade } )
+            if( mapped.errors.length > 0 ) {
+                blockers.push( { node: nodePath, reason: mapped.errors[ 0 ] } )
+                return { status: 'blocked', reason: mapped.errors[ 0 ], ref }
+            }
+            return { status: mapped.status, grade: computed.aggregateGrade, ref }
+        }
+
         return { status: 'pending', reason: 'no grade in entry', ref }
+    }
+
+
+    // area -> grading tier ('autonomous' | 'group-bound'), or null when unknown.
+    static #areaTier( { area } ) {
+        if( PROVIDER_AREAS.includes( area ) ) { return 'autonomous' }
+        if( SELECTION_AREAS.includes( area ) ) { return 'group-bound' }
+        return null
     }
 
 
@@ -584,7 +633,7 @@ class RebuildIndex {
             grades.push( namespaceAggregate.grade )
         }
         if( grades.includes( 'REJECTED' ) ) { return 'REJECTED' }
-        const ORDER = [ 'A', 'B', 'C', 'F' ]
+        const ORDER = [ 'A', 'B', 'C', 'D', 'F' ]
         const present = ORDER.filter( ( g ) => grades.includes( g ) )
         if( present.length === 0 ) { return 'F' }
         // worst-case (lowest) grade as the conservative rollup grade
