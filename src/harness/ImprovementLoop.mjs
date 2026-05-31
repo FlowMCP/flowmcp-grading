@@ -1,9 +1,9 @@
 /**
- * ImprovementLoop — the self-improvement engine (Memo 087, Kap 5/6).
+ * ImprovementLoop — the grading self-improvement engine.
  *
  * Loop: test all areas -> pick the lowest (floor lever: a 1->4 jump beats 4->5)
  * -> apply an improvement -> re-test. Three stop conditions, ANY of which ends
- * the loop (abort is a legitimate outcome — never "pass at any cost", Kap 1):
+ * the loop (abort is a legitimate outcome — never "pass at any cost"):
  *
  *   - round-limit  : the non-negotiable deterministic backstop.
  *   - token-budget : deterministic; spentFn() >= tokenBudget.
@@ -11,7 +11,7 @@
  *                    by more than `epsilon` across the last `rounds` rounds.
  *
  * Floor-lever tie-break within the same score: tools < schema < provider
- * (Kap 8: within the ordering Tools -> Schema -> Provider).
+ * (within the ordering Tools -> Schema -> Provider).
  *
  * Engine only — the actual scoring + improving are caller-supplied callbacks
  * (production: AreaScorer + a schema-fix step; tests: mocks). NO LLM calls here.

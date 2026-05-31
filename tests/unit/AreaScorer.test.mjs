@@ -113,7 +113,7 @@ describe( 'AreaScorer.validateAnswers', () => {
 } )
 
 
-describe( 'AreaScorer.answersToGradings (BLOCK-001 / Option A)', () => {
+describe( 'AreaScorer.answersToGradings (neutral-area personaIds rule)', () => {
     test( 'attaches personaIds=[neutral] to non-deterministic gradings only', () => {
         const result = AreaScorer.answersToGradings( {
             answers: highAnswers(), questions: singleTestQuestions, recordedAt: '2026-06-01T00:00:00.000Z'
@@ -219,7 +219,7 @@ describe( 'AreaScorer.scoreArea (skillInvoker seam)', () => {
 } )
 
 
-describe( 'AreaScorer.resolveGradingsDir (Kap 12 ablage)', () => {
+describe( 'AreaScorer.resolveGradingsDir (gradings-dir mapping)', () => {
     const root = '/tmp/providers'
 
     test( 'single-test -> tools/<tool>/_gradings', () => {

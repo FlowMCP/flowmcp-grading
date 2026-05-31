@@ -1,5 +1,5 @@
 /**
- * AreaScorer — v2 Stage-2 harness building block (Memo 087, Kap 11/12/13).
+ * AreaScorer — v2 Stage-2 grading harness building block.
  *
  * The CLI emits Stage-1 (prompts.json + DataPretest) and consumes Stage-3
  * (rebuild index from `_gradings/`). Stage-2 — the actual scoring — lives in
@@ -15,11 +15,11 @@
  * (production: Claude Code subagent; tests: mock) — mirroring FleetRunner. The
  * scorer itself makes NO LLM calls.
  *
- * BLOCK-001 resolution (user decision 2026-06-01, Option A): `single-test` is a
- * neutral area (persona:null) but carries non-deterministic questions, and
- * Grading.addGrading raises GRD-005 (personaIds[] required for non-det). The
- * harness convention attaches selectionContext.personaIds=['neutral'] to neutral
- * non-det gradings — no core/spec change.
+ * Neutral-area non-deterministic resolution: `single-test` is a neutral area
+ * (persona:null) but carries non-deterministic questions, and Grading.addGrading
+ * raises GRD-005 (personaIds[] required for non-det). The harness convention
+ * attaches selectionContext.personaIds=['neutral'] to neutral non-det gradings —
+ * no core/spec change.
  *
  * NO SILENT DEFAULTS. Static methods only, object params, object returns.
  */
@@ -47,7 +47,7 @@ const HARNESS = 'claude-code'
 class AreaScorer {
     /**
      * Validate an evaluator answer-envelope's answers against the question set.
-     * No silent skips — every divergence is a message (Kap 10.6).
+     * No silent skips — every divergence is a message (strict-verification rule).
      *
      * @param {Object}   params
      * @param {Object[]} params.answers   — answers[] from the evaluator envelope
@@ -146,7 +146,7 @@ class AreaScorer {
                     reasoning: answer.reasoning,
                     recordedAt
                 }
-                // BLOCK-001 / Option A: neutral non-det gradings carry a sentinel
+                // Neutral-area rule: neutral non-det gradings carry a sentinel
                 // personaIds so addGrading's GRD-005 passes without a core change.
                 if( question.determinism === 'non-deterministic' ) {
                     grading.selectionContext = { personaIds: NEUTRAL_PERSONA_IDS }
@@ -160,7 +160,7 @@ class AreaScorer {
 
 
     /**
-     * Build a full Grading entry from gradings (Kap 12 eintrag-bau). Routes through
+     * Build a full Grading entry from gradings (grading-spec entry construction). Routes through
      * createEntry -> addGrading (per grading) -> computeAggregateGrade and stamps
      * the derived grade onto the entry so RebuildIndex reads it directly.
      *
@@ -328,7 +328,7 @@ class AreaScorer {
 
 
     /**
-     * Resolve the island `_gradings/` dir for an area (Kap 12 ablage mapping),
+     * Resolve the island `_gradings/` dir for an area (grading-spec gradings-dir mapping),
      * relative to providersRoot/<ns>. No silent defaults — a required segment that
      * is missing for the area is an explicit error.
      *
