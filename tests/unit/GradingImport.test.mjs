@@ -192,3 +192,38 @@ describe( 'GradingImport.run — validate gate seam + input validation', () => {
         expect( result.errors.some( ( e ) => e.includes( 'IMP-001' ) ) ).toBe( true )
     } )
 } )
+
+
+describe( 'GradingImport.run — human-readable name vs path slug (regression: defillama)', () => {
+    test( 'schema with a spaced human-readable name imports; folder uses the filename slug', async () => {
+        // Real production schemas (e.g. defillama) carry human-readable names
+        // with spaces ("DeFi Llama Historical Prices"). The schema FOLDER must be
+        // the filename slug (prices), never the human-readable name.
+        await writeFile(
+            join( providerPath, 'prices.mjs' ),
+            schemaSource( { namespace: 'etherscan', name: 'DeFi Llama Historical Prices' } ),
+            'utf-8'
+        )
+
+        const result = await GradingImport.run( { providerPath, gradingDataRoot } )
+
+        expect( result.status ).toBe( true )
+        expect( result.imported.length ).toBe( 1 )
+        expect( result.imported[ 0 ].schema ).toBe( 'prices' )
+        expect( result.imported[ 0 ].name ).toBe( 'DeFi Llama Historical Prices' )
+        // Folder is the slug, not the spaced name.
+        expect( await dirExists( join( gradingDataRoot, 'providers', 'etherscan', 'prices' ) ) ).toBe( true )
+        expect( await dirExists( join( gradingDataRoot, 'providers', 'etherscan', 'DeFi Llama Historical Prices' ) ) ).toBe( false )
+    } )
+
+    test( 'a filename that is not a safe slug is rejected with IMP-003', async () => {
+        await writeFile(
+            join( providerPath, 'has space.mjs' ),
+            schemaSource( { namespace: 'etherscan', name: 'Whatever' } ),
+            'utf-8'
+        )
+        const result = await GradingImport.run( { providerPath, gradingDataRoot } )
+        expect( result.status ).toBe( false )
+        expect( result.errors.some( ( e ) => e.includes( 'IMP-003' ) && e.includes( 'slug' ) ) ).toBe( true )
+    } )
+} )

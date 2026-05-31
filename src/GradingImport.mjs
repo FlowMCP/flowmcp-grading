@@ -83,8 +83,8 @@ class GradingImport {
                 await prev
                 const one = await GradingImport.#importOne( { item, namespace, gradingDataRoot } )
                 one.errors.forEach( ( e ) => errors.push( e ) )
-                if( one.skipped === true ) { skipped.push( { schemaName: item.schema.name, hash: one.hash } ) }
-                if( one.created === true ) { imported.push( { schemaName: item.schema.name, hash: one.hash, snapshotPath: one.snapshotPath } ) }
+                if( one.skipped === true ) { skipped.push( { schema: one.schemaSlug, name: item.schema.name, hash: one.hash } ) }
+                if( one.created === true ) { imported.push( { schema: one.schemaSlug, name: item.schema.name, hash: one.hash, snapshotPath: one.snapshotPath } ) }
                 one.normalizedSkills.forEach( ( n ) => normalizedSkills.push( n ) )
             }, Promise.resolve() )
 
@@ -105,13 +105,18 @@ class GradingImport {
     // ---- step 5: per-schema import ----------------------------------------
 
     static async #importOne( { item, namespace, gradingDataRoot } ) {
-        const result = { created: false, skipped: false, hash: null, snapshotPath: null, normalizedSkills: [], errors: [] }
+        const result = { created: false, skipped: false, hash: null, snapshotPath: null, normalizedSkills: [], errors: [], schemaSlug: null }
 
-        const schemaName = item.schema.name
-        if( typeof schemaName !== 'string' || !NAME_REGEX.test( schemaName ) ) {
-            result.errors.push( `IMP-003: Invalid schema name: ${schemaName} (expected [A-Za-z][A-Za-z0-9_-]*)` )
+        // The schema FOLDER + logical name is the schema slug derived from the
+        // source filename (e.g. prices.mjs -> 'prices'), per the folder-layout
+        // spec (providers/<ns>/<schema>/...). The schema's `name` field is a
+        // human-readable label (may contain spaces) and is NEVER a path component.
+        const schemaSlug = basename( item.sourcePath, '.mjs' )
+        if( typeof schemaSlug !== 'string' || !NAME_REGEX.test( schemaSlug ) ) {
+            result.errors.push( `IMP-003: Invalid schema slug: ${schemaSlug} (from filename; expected [A-Za-z][A-Za-z0-9_-]*)` )
             return result
         }
+        result.schemaSlug = schemaSlug
 
         const hashResult = HashGenerator.computeSchemaHash( { schema: item.schema } )
         if( hashResult.errors.length > 0 ) {
@@ -128,7 +133,7 @@ class GradingImport {
             sourcePath: item.sourcePath,
             gradingDataRoot,
             namespace,
-            schemaName,
+            schemaName: schemaSlug,
             schemaHash: hashResult.hash
         } )
         if( snap.errors.length > 0 ) {
@@ -139,7 +144,7 @@ class GradingImport {
         result.created = snap.created
         result.skipped = snap.created === false
 
-        const schemaDir = join( gradingDataRoot, 'providers', namespace, schemaName )
+        const schemaDir = join( gradingDataRoot, 'providers', namespace, schemaSlug )
 
         const about = await GradingImport.#convertAboutResource( { schema: item.schema, schemaDir, namespace } )
         if( about.errors.length > 0 ) {
