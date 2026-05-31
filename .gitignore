@@ -28,3 +28,4 @@ scripts/_*.mjs
 
 # local recovery copies (legacy never deleted; git history is source of truth)
 .trash/
+.poc-087/
