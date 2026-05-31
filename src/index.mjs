@@ -18,11 +18,10 @@
  * | SourceSnapshot          | class    | static create / parseSnapshotFilename / verify / listForNamespace                          | SNP-*                     |
  * | PartialGrading          | class    | static getValidModes / buildPartialEntry / validateSequence / listGradedDimensions         | PRT-*                     |
  * | StablePromotion         | class    | static checkEligibility / promoteIfEligible                                                | STB-*                     |
- * | SelectionLockfile       | class    | static generate / read / diff / validateOverride                                           | LCK-*                     |
+ * | SelectionLockfile       | class    | static validateOverride (lifecycle generate/read/diff DROPPED in v2)                       | LCK-*                     |
  * | ProjectIndex            | class    | static init / read / write / validateIndex / indexPath                                     | IDX-*                     |
  * | RebuildIndex            | class    | static resolveLatest / rebuildNamespaceIndex / rebuildSelectionIndex / buildLockSnapshot / validateIndex / mapAggregateGradeToStatus | IDX-* |
  * | PreConditionCheck       | class    | static check / checkLockfile                                                               | PRE-*                     |
- * | BumpHelper              | class    | static diffSchemas / diffSelections / checkVersionHashConsistency                          | BMP-*                     |
  * | FolderScanner           | class    | static scan / checkNamespaceFolder / checkSchemaSnapshots / checkSelectionFolder           | SCN-*                     |
  * | AboutConsistencyCheck   | class    | static checkNamespaceAbout / checkSelectionAbout / verifyNamespace                         | ABT-*                     |
  * | NaReason                | class    | static (closed-set n/a-reason validator)                                                   | NA-*                      |
@@ -53,7 +52,6 @@ import { StablePromotion } from './StablePromotion.mjs'
 import { SelectionLockfile } from './SelectionLockfile.mjs'
 import { ProjectIndex } from './ProjectIndex.mjs'
 import { PreConditionCheck } from './PreConditionCheck.mjs'
-import { BumpHelper } from './BumpHelper.mjs'
 import { FolderScanner } from './FolderScanner.mjs'
 import { AboutConsistencyCheck } from './AboutConsistencyCheck.mjs'
 import { NaReason } from './NaReason.mjs'
@@ -278,7 +276,6 @@ export {
     SelectionLockfile,
     ProjectIndex,
     PreConditionCheck,
-    BumpHelper,
     FolderScanner,
     AboutConsistencyCheck,
     NaReason,

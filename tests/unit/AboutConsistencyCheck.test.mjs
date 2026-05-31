@@ -10,30 +10,28 @@ import { HashGenerator } from '../../src/HashGenerator.mjs'
 let tempRoot = null
 
 
+// v2 layout: providers/<ns>/<schema>/schema/<name>--<ts>--<hash>.mjs and the
+// About Resource at providers/<ns>/<schema>/resources/about/ (namespace-wide).
 const seedNamespace = async ( { namespace, tools, aboutText } ) => {
     const root = join( tempRoot, 'ab', namespace )
-    const nsDir = join( root, 'schemas', namespace )
-    await mkdir( join( nsDir, 'about' ), { recursive: true } )
+    const schemaName = 'demo'
+    const schemaDir = join( root, 'providers', namespace, schemaName, 'schema' )
+    const aboutDir = join( root, 'providers', namespace, schemaName, 'resources', 'about' )
+    await mkdir( schemaDir, { recursive: true } )
+    await mkdir( aboutDir, { recursive: true } )
 
     const schemaObject = {
-        version: '4.0.0',
-        schemaVersion: '1.0.0',
+        version: 'flowmcp/4.0.0',
         namespace,
-        name: 'demo',
+        name: schemaName,
         tools
     }
     const hashResult = HashGenerator.computeSchemaHash( { schema: schemaObject } )
-    const filename = `${hashResult.hash}--v1.0.0.mjs`
+    const filename = `${schemaName}--2026-05-30T10-15-00Z--${hashResult.hash}.mjs`
     const fileSource = `export const main = ${JSON.stringify( schemaObject )}`
-    await writeFile( join( nsDir, filename ), fileSource, 'utf-8' )
+    await writeFile( join( schemaDir, filename ), fileSource, 'utf-8' )
 
-    await writeFile(
-        join( nsDir, 'namespace.json' ),
-        JSON.stringify( { namespace, aboutHash: 'aaaaaaaa', members: [ { schemaHash: hashResult.hash } ] } ),
-        'utf-8'
-    )
-
-    await writeFile( join( nsDir, 'about', 'aaaaaaaa--about.md' ), aboutText, 'utf-8' )
+    await writeFile( join( aboutDir, `${schemaName}-about--2026-05-30T10-15-00Z--aaaaaaaa.md` ), aboutText, 'utf-8' )
     return root
 }
 

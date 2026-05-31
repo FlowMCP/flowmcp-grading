@@ -32,32 +32,35 @@ import { readdir, readFile } from 'node:fs/promises'
 
 import { FolderScanner } from './FolderScanner.mjs'
 import { ProjectIndex } from './ProjectIndex.mjs'
-import { SelectionLockfile } from './SelectionLockfile.mjs'
 import { PreConditionCheck } from './PreConditionCheck.mjs'
 import { SourceSnapshot } from './SourceSnapshot.mjs'
-import { BumpHelper } from './BumpHelper.mjs'
 import { HashGenerator } from './HashGenerator.mjs'
 import { Grading } from './Grading.mjs'
 import { PartialGrading } from './Phases/PartialGrading.mjs'
+import { RebuildIndex } from './RebuildIndex.mjs'
 
 
-// The six schema-scope areas (single-schema validator, autonomous tier).
-// Each area maps to one or more dimensions emitted by SingleSchemaPhases.
+// The six provider-scope Areas (single-schema validator, autonomous tier) per
+// gradingSpec/1.2.0 §5.1 areas 1-6. Each Area is a self-contained rubric.
 const SCHEMA_AREAS = Object.freeze( {
-    structure: [ 'schemaStructureValid' ],
-    availability: [ 'apiAvailability', 'apiResponseValid' ],
-    descriptionQuality: [ 'descriptionNeutrality' ],
-    parameters: [ 'parametersTyping' ],
-    usageClarity: [ 'whenToUseClarity' ],
-    conventions: [ 'aboutConventionCompliance', 'namespaceSkillValidity' ]
+    'single-test': [ 'single-test' ],
+    'tools-aggregate-schema': [ 'tools-aggregate-schema' ],
+    'tools-aggregate-namespace': [ 'tools-aggregate-namespace' ],
+    'namespace-description': [ 'namespace-description' ],
+    'namespace-skills': [ 'namespace-skills' ],
+    'about-namespace': [ 'about-namespace' ]
 } )
 
-// The four selection-scope areas (selection validator, group-bound tier).
+// The five selection-scope Areas (selection validator, group-bound tier) per
+// gradingSpec/1.2.0 §5.1 areas 7-11. The legacy `lockfile` Area is DROPPED (the
+// lockfile lifecycle is gone — pins live in index.json.lockSnapshot). The 11th
+// Area `selection-aggregate` is the group-bound path to grade A.
 const SELECTION_AREAS = Object.freeze( {
-    membership: [ 'memberConsistency' ],
-    lockfile: [ 'lockfileConsistency' ],
-    skills: [ 'skillReferenceValidity' ],
-    persona: [ 'personaReferenceCoherence' ]
+    'about-selection': [ 'about-selection' ],
+    'selection-skills-L1': [ 'selection-skills-L1' ],
+    'selection-skills-L2': [ 'selection-skills-L2' ],
+    'selection-skills-L3': [ 'selection-skills-L3' ],
+    'selection-aggregate': [ 'selection-aggregate' ]
 } )
 
 const SCHEMA_AREA_KEYS = Object.freeze( Object.keys( SCHEMA_AREAS ) )
@@ -150,13 +153,15 @@ class ModuleApi {
         }
         const schemaHash = hashResult.hash
 
+        const schemaName = ModuleApi.#deriveSchemaName( { schemaId } )
+
         const existing = await SourceSnapshot.listForNamespace( { gradingDataRoot, namespace } )
         const present = existing.snapshots.find( ( s ) => s.hash === schemaHash )
         const intentReplace = options !== undefined && options !== null && options.intent === 'replace'
 
         if( present !== undefined && !intentReplace ) {
             return {
-                snapshot: { hash: schemaHash, schemaVersion: present.schemaVersion, path: present.path },
+                snapshot: { hash: schemaHash, schemaVersion, path: present.path },
                 namespaceUpdated: false,
                 alreadyPresent: true,
                 errors: []
@@ -164,18 +169,39 @@ class ModuleApi {
         }
 
         const created = await SourceSnapshot.create( {
-            sourcePath: schemaPath, gradingDataRoot, namespace, schemaVersion, schemaHash
+            sourcePath: schemaPath, gradingDataRoot, namespace, schemaName, schemaHash
         } )
         if( created.errors.length > 0 ) {
             return { snapshot: null, namespaceUpdated: false, alreadyPresent: false, errors: created.errors }
         }
 
+        // Trigger the namespace index rebuild (the only overwritable artifact). The
+        // rebuild is best-effort here; its errors are surfaced, never swallowed.
+        const rebuild = await ModuleApi.#triggerNamespaceRebuild( { gradingDataRoot, namespace } )
+
         return {
             snapshot: { hash: schemaHash, schemaVersion, path: created.snapshotPath, schemaId },
-            namespaceUpdated: false,
+            namespaceUpdated: rebuild.status,
             alreadyPresent: false,
-            errors: []
+            errors: rebuild.errors
         }
+    }
+
+
+    static async #triggerNamespaceRebuild( { gradingDataRoot, namespace } ) {
+        const namespaceDir = join( gradingDataRoot, 'providers', namespace )
+        const result = await RebuildIndex.rebuildNamespaceIndex( { namespaceDir } )
+        return { status: result.status === true, errors: result.errors }
+    }
+
+
+    static #deriveSchemaName( { schemaId } ) {
+        // schemaId convention: '<namespace>.<schema>' → '<schema>'. When there is no
+        // dot, the whole id is the schema name.
+        if( schemaId.includes( '.' ) ) {
+            return schemaId.split( '.' )[ 1 ]
+        }
+        return schemaId
     }
 
 
@@ -197,14 +223,21 @@ class ModuleApi {
             }
         }
 
+        // v2: snapshots are timestamp-versioned (no in-source schemaVersion). The
+        // "from" snapshot is the newest existing snapshot of THIS schema name —
+        // sort().at(-1) is newest because the B2 timestamp sits before the hash.
+        const schemaName = ModuleApi.#deriveSchemaName( { schemaId } )
         const existing = await SourceSnapshot.listForNamespace( { gradingDataRoot, namespace } )
-        const fromSnapshot = existing.snapshots.find( ( s ) => s.schemaVersion === fromVersion )
+        const forSchema = existing.snapshots
+            .filter( ( s ) => s.schemaName === schemaName )
+            .sort( ( a, b ) => ( a.timestamp < b.timestamp ? -1 : 1 ) )
+        const fromSnapshot = forSchema.length > 0 ? forSchema[ forSchema.length - 1 ] : undefined
         if( fromSnapshot === undefined ) {
             return {
                 snapshot: null,
                 diff: null,
                 namespaceUpdated: false,
-                errors: [ `API-003: Invalid version upgrade: fromVersion ${fromVersion} snapshot not found in namespace ${namespace}` ]
+                errors: [ `API-003: Invalid version upgrade: no existing snapshot for schema ${schemaName} in namespace ${namespace}` ]
             }
         }
 
@@ -230,26 +263,25 @@ class ModuleApi {
             }
         }
 
-        const diff = BumpHelper.diffSchemas( { oldSchema: oldSchema.schema, newSchema: newSchema.schema } )
-
         // No-overwrite: a new version always becomes a NEW snapshot (new hash),
-        // the old snapshot stays untouched.
+        // the old snapshot stays untouched. v2 versioning is timestamp-based — the
+        // SemVer bump tables (BumpHelper) are dropped (F20); a content change is a
+        // new hash and a regrade marker, no bump classification.
         const created = await SourceSnapshot.create( {
-            sourcePath: schemaPath, gradingDataRoot, namespace, schemaVersion: toVersion, schemaHash: newHash
+            sourcePath: schemaPath, gradingDataRoot, namespace, schemaName, schemaHash: newHash
         } )
         if( created.errors.length > 0 ) {
-            return { snapshot: null, diff, namespaceUpdated: false, errors: created.errors }
+            return { snapshot: null, diff: null, namespaceUpdated: false, errors: created.errors }
         }
 
-        // Mark regrade need only — never auto-regrade. The marker is derived from
-        // the existing trigger logic; the old grading entry is not mutated.
+        // Mark regrade need only — never auto-regrade. The old grading entry is not mutated.
         const trigger = options !== undefined && options !== null && typeof options.regradingTrigger === 'string'
             ? options.regradingTrigger
-            : 'schema-version-bump'
+            : 'schema-content-change'
 
         return {
             snapshot: { hash: newHash, schemaVersion: toVersion, path: created.snapshotPath, schemaId },
-            diff: { bump: diff.bump, reasons: diff.reasons, regradeMarked: true, regradingTrigger: trigger },
+            diff: { fromHash: fromSnapshot.hash, toHash: newHash, regradeMarked: true, regradingTrigger: trigger },
             namespaceUpdated: false,
             errors: []
         }
@@ -343,20 +375,20 @@ class ModuleApi {
 
 
     static async #buildSchemaScope( { gradingDataRoot, scan } ) {
-        const phaseStatusDir = join( gradingDataRoot, 'phase-status', 'single' )
-        const statuses = await ModuleApi.#readPhaseStatuses( { dir: phaseStatusDir } )
+        // v2: node statuses live in providers/<ns>/<ns>--<tool>--status.json snapshots
+        // written by StablePromotion (the phase-status/ tree is dropped).
+        const statuses = await ModuleApi.#readNamespaceStatuses( { gradingDataRoot, scan } )
 
         const stable = statuses.entries.filter( ( s ) => s.gradingStatus === 'stable' ).length
         const pending = statuses.entries.filter( ( s ) => s.gradingStatus === 'pending' ).length
         const schemaGaps = scan.issues
             .filter( ( i ) => i.severity === 'error' )
-            .filter( ( i ) => typeof i.code === 'string' && [ 'SCN-002', 'SCN-003', 'SCN-004', 'SCN-005', 'SCN-007' ].includes( i.code ) )
+            .filter( ( i ) => typeof i.code === 'string' && [ 'SCN-005', 'SCN-012' ].includes( i.code ) )
             .length
 
         const scope = {
             namespaces: scan.summary.namespaces,
             schemas: scan.summary.schemas,
-            singlesTotal: scan.summary.singles,
             stable,
             pending,
             gaps: schemaGaps
@@ -366,16 +398,53 @@ class ModuleApi {
     }
 
 
+    static async #readNamespaceStatuses( { gradingDataRoot, scan } ) {
+        const providersDir = join( gradingDataRoot, 'providers' )
+        const namespaces = await ModuleApi.#listDirs( { path: providersDir } )
+
+        const perNamespace = await Promise.all(
+            namespaces.map( async ( ns ) => {
+                const nsDir = join( providersDir, ns )
+                let names = []
+                try {
+                    names = await readdir( nsDir )
+                } catch( error ) {
+                    return []
+                }
+                const statusFiles = names.filter( ( n ) => n.endsWith( '--status.json' ) )
+                const entries = await Promise.all(
+                    statusFiles.map( async ( name ) => {
+                        const parsed = await ModuleApi.#readJson( { path: join( nsDir, name ) } )
+                        if( parsed === null ) { return { gradingStatus: null } }
+                        return { gradingStatus: parsed.gradingStatus === undefined ? null : parsed.gradingStatus }
+                    } )
+                )
+                return entries
+            } )
+        )
+
+        const entries = perNamespace.reduce( ( acc, list ) => acc.concat( list ), [] )
+        return { entries, errors: [] }
+    }
+
+
     static async #buildSelectionScope( { gradingDataRoot, scan } ) {
-        const selectionDir = join( gradingDataRoot, 'selection' )
+        // v2: selections live under selections/<sel>/index.json. The frozen
+        // lockSnapshot inside index.json carries the per-member 5-status; the
+        // pre-condition reads that snapshot (no selection.lock.json lifecycle).
+        const selectionDir = join( gradingDataRoot, 'selections' )
         const selectionIds = await ModuleApi.#listDirs( { path: selectionDir } )
 
         const perSelection = await Promise.all(
             selectionIds.map( async ( selectionId ) => {
-                const pre = await PreConditionCheck.check( { gradingDataRoot, selectionId } )
-                const lockRead = await SelectionLockfile.read( { gradingDataRoot, selectionId } )
-                const hasLock = lockRead.lockfile !== null
-                return { selectionId, passed: pre.passed, hasLock, errors: lockRead.errors }
+                const indexPath = join( selectionDir, selectionId, 'index.json' )
+                const index = await ModuleApi.#readJson( { path: indexPath } )
+                const hasLock = index !== null && index.lockSnapshot !== undefined && index.lockSnapshot !== null
+                if( !hasLock ) {
+                    return { passed: false, hasLock: false }
+                }
+                const pre = PreConditionCheck.checkLockfile( { lockfile: index.lockSnapshot } )
+                return { passed: pre.passed, hasLock: true }
             } )
         )
 
@@ -384,7 +453,7 @@ class ModuleApi {
         const pending = perSelection.filter( ( s ) => !s.hasLock ).length
         const selectionGaps = scan.issues
             .filter( ( i ) => i.severity === 'error' )
-            .filter( ( i ) => typeof i.code === 'string' && [ 'SCN-008', 'SCN-009' ].includes( i.code ) )
+            .filter( ( i ) => typeof i.code === 'string' && [ 'SCN-008' ].includes( i.code ) )
             .length
 
         const scope = {
@@ -396,6 +465,20 @@ class ModuleApi {
         }
 
         return { scope, errors: [] }
+    }
+
+
+    static async #readJson( { path } ) {
+        try {
+            const raw = await readFile( path, 'utf-8' )
+            try {
+                return JSON.parse( raw )
+            } catch( parseError ) {
+                return null
+            }
+        } catch( ioError ) {
+            return null
+        }
     }
 
 
@@ -467,28 +550,6 @@ class ModuleApi {
             return { schema, errors: [] }
         } catch( error ) {
             return { schema: null, errors: [ `API-002: Type mismatch for field schemaPath: not importable (${error.message})` ] }
-        }
-    }
-
-
-    static async #readPhaseStatuses( { dir } ) {
-        try {
-            const names = await readdir( dir )
-            const jsons = names.filter( ( n ) => n.endsWith( '.json' ) )
-            const entries = await Promise.all(
-                jsons.map( async ( name ) => {
-                    try {
-                        const raw = await readFile( join( dir, name ), 'utf-8' )
-                        const parsed = JSON.parse( raw )
-                        return { gradingStatus: parsed.gradingStatus === undefined ? null : parsed.gradingStatus }
-                    } catch( error ) {
-                        return { gradingStatus: null }
-                    }
-                } )
-            )
-            return { entries, errors: [] }
-        } catch( error ) {
-            return { entries: [], errors: [] }
         }
     }
 

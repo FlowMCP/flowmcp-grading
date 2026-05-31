@@ -1,15 +1,20 @@
 /**
  * PartialGrading — Partial vs Full grading-mode + mandatory-sequence validator.
  *
- * Per the grading spec (gradingMode field, mandatory sequence):
+ * Per the grading spec (gradingSpec/1.2.0 §06 §8 — gradingMode + 5-status):
  *   - First entry MUST be full
  *   - Last-before-stable MUST be full
  *   - Partial entries MUST NOT change aggregateGrade
+ *   - Only a `full` grading can move a node to the 5-status `stable`; a `partial`
+ *     keeps the node at its last full status.
+ *   - v2 scoping: a partial entry carries the `area` (and `skillId` for per-skill
+ *     areas) it re-grades, so the partial set is scoped to one Area instance.
  *
  * NO SILENT DEFAULTS. Static methods only, object params, object returns.
  */
 
 const VALID_MODES = [ 'full', 'partial' ]
+const NODE_STATUSES = [ 'pending', 'blocked', 'graded', 'stable', 'rejected' ]
 
 
 class PartialGrading {
@@ -18,7 +23,7 @@ class PartialGrading {
     }
 
 
-    static buildPartialEntry( { baseEntry, dimensions, newGradings, grader, schemaHash, schemaVersion } ) {
+    static buildPartialEntry( { baseEntry, dimensions, newGradings, grader, schemaHash, schemaVersion, area, skillId } ) {
         const { status, messages } = PartialGrading.#validationBuildPartial( {
             baseEntry, dimensions, newGradings, grader, schemaHash, schemaVersion
         } )
@@ -62,6 +67,15 @@ class PartialGrading {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             options: baseEntry.options === undefined ? {} : baseEntry.options
+        }
+
+        // v2 scoping: carry the Area (and skillId for per-skill areas) the partial
+        // re-grades. Present only when the caller passes them — no silent default.
+        if( area !== undefined && area !== null ) {
+            entry.area = area
+        }
+        if( skillId !== undefined && skillId !== null ) {
+            entry.skillId = skillId
         }
 
         const warnings = []
@@ -122,6 +136,33 @@ class PartialGrading {
             } )
 
         return { valid: violations.length === 0, violations, errors: [] }
+    }
+
+
+    /**
+     * resolveNodeStatus — express the partial/full × 5-status interaction (§8.3).
+     * `partial` keeps the node at its lastFullStatus; only `full` (above threshold)
+     * may move it to `stable`. No silent default — an unknown mode/status errors.
+     *
+     * @param {Object} params
+     * @param {string} params.mode            — 'full' | 'partial'
+     * @param {string} params.lastFullStatus — the node status of the last full grading
+     * @param {boolean} params.eligibleStable — whether a full grading qualifies for stable
+     * @returns {{ nodeStatus: string|null, errors: string[] }}
+     */
+    static resolveNodeStatus( { mode, lastFullStatus, eligibleStable } ) {
+        if( !VALID_MODES.includes( mode ) ) {
+            return { nodeStatus: null, errors: [ `PRT-002: Invalid gradingMode: ${mode} (expected partial or full)` ] }
+        }
+        if( !NODE_STATUSES.includes( lastFullStatus ) ) {
+            return { nodeStatus: null, errors: [ `PRT-005: Invalid lastFullStatus: ${lastFullStatus}` ] }
+        }
+        if( mode === 'partial' ) {
+            // A partial NEVER promotes; the node stays at its last full status.
+            return { nodeStatus: lastFullStatus, errors: [] }
+        }
+        // mode === 'full': eligible → stable, otherwise graded (a grade exists).
+        return { nodeStatus: eligibleStable === true ? 'stable' : 'graded', errors: [] }
     }
 
 
@@ -211,4 +252,4 @@ class PartialGrading {
 }
 
 
-export { PartialGrading, VALID_MODES }
+export { PartialGrading, VALID_MODES, NODE_STATUSES }

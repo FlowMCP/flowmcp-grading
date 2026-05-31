@@ -19,7 +19,7 @@ import { mkdtemp, rm, mkdir, writeFile, readdir, stat } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 
-import { FleetRunner } from '../../src/FleetRunner.mjs'
+import { FleetRunner, KNOWN_AREAS, HARNESS } from '../../src/FleetRunner.mjs'
 
 
 let tempRoot = null
@@ -50,6 +50,22 @@ const buildLockfile = ( { allStable } ) => {
         generatedAt: '2026-05-30T00:00:00.000Z',
         members: baseMembers
     }
+}
+
+
+const buildLockfileWithSkills = ( { skills } ) => {
+    const lock = buildLockfile( { allStable: true } )
+    lock.skills = skills
+    return lock
+}
+
+
+const prepareCaseWithSkills = async ( { skills } ) => {
+    gradingDataRoot = join( tempRoot, 'grading-data' )
+    await mkdir( gradingDataRoot, { recursive: true } )
+    lockfilePath = join( gradingDataRoot, 'selection', 'crypto-mini', 'selection.lock.json' )
+    const lock = buildLockfileWithSkills( { skills } )
+    await writeLockfile( { content: lock, path: lockfilePath } )
 }
 
 
@@ -280,10 +296,12 @@ describe( 'FleetRunner.run', () => {
 
         expect( actualSingle ).toEqual( expectedSequence )
 
-        // After that come the selection-area calls (always 4 — about-selection + L1/L2/L3)
+        // v2: with no skills[] in the lock, only the singleton selection areas run —
+        // about-selection + the 11th area selection-aggregate. The per-skill areas
+        // (L1/L2/L3) run ONCE PER SKILL, so with zero skills they emit zero calls.
         const selectionCalls = calls.slice( expectedSequence.length )
         const selectionAreas = selectionCalls.map( ( c ) => c.payload.area )
-        expect( selectionAreas ).toEqual( [ 'about-selection', 'selection-skills-L1', 'selection-skills-L2', 'selection-skills-L3' ] )
+        expect( selectionAreas ).toEqual( [ 'about-selection', 'selection-aggregate' ] )
     } )
 
     test( '8) blocker for one member: marks blocked, continues, FLEET-006 warning', async () => {
@@ -331,6 +349,115 @@ describe( 'FleetRunner.run', () => {
             .forEach( ( c ) => {
                 expect( c.payload.personaSlug ).toBe( 'neutral' )
             } )
+    } )
+} )
+
+
+describe( 'FleetRunner — v2: 11 areas, per-skill, harness', () => {
+    test( 'KNOWN_AREAS contains 11 areas including the 11th selection-aggregate', () => {
+        expect( KNOWN_AREAS.length ).toBe( 11 )
+        expect( KNOWN_AREAS ).toContain( 'selection-aggregate' )
+    } )
+
+    test( 'per-skill: each declared skill produces its own L1/L2/L3 run with skillId', async () => {
+        await prepareCaseWithSkills( { skills: [ 'crypto-entry', 'defi-topic' ] } )
+        const calls = []
+        const invoker = makeMockInvoker( { calls } )
+
+        const result = await FleetRunner.run( {
+            selectionPath: lockfilePath,
+            areas: [ 'single-test' ],
+            persona: 'decision-maker--crypto-trader',
+            iterations: 1,
+            outputBase: gradingDataRoot,
+            skillInvoker: invoker
+        } )
+
+        expect( result.status ).toBe( 'ok' )
+
+        // Each L-level area is invoked once per skill (2 skills × 3 levels = 6),
+        // plus the two singleton selection areas.
+        const perSkillCalls = calls
+            .filter( ( c ) => c.payload.area !== undefined && c.payload.area.startsWith( 'selection-skills-' ) )
+        expect( perSkillCalls.length ).toBe( 6 )
+        perSkillCalls
+            .forEach( ( c ) => {
+                expect( typeof c.payload.skillId ).toBe( 'string' )
+            } )
+
+        const skillIds = new Set( perSkillCalls.map( ( c ) => c.payload.skillId ) )
+        expect( skillIds.has( 'crypto-entry' ) ).toBe( true )
+        expect( skillIds.has( 'defi-topic' ) ).toBe( true )
+
+        // The summary records the per-skill graded levels.
+        expect( result.selectionGrading.skills[ 'crypto-entry' ] ).toEqual( [
+            'selection-skills-L1', 'selection-skills-L2', 'selection-skills-L3'
+        ] )
+    } )
+
+    test( 'harness=claude-code is threaded into every skillInvoker payload', async () => {
+        await prepareCaseWithSkills( { skills: [ 'crypto-entry' ] } )
+        const calls = []
+        const invoker = makeMockInvoker( { calls } )
+
+        await FleetRunner.run( {
+            selectionPath: lockfilePath,
+            areas: [ 'single-test' ],
+            persona: 'decision-maker--crypto-trader',
+            iterations: 1,
+            outputBase: gradingDataRoot,
+            skillInvoker: invoker
+        } )
+
+        expect( calls.length ).toBeGreaterThan( 0 )
+        calls
+            .forEach( ( c ) => {
+                expect( c.payload.harness ).toBe( HARNESS )
+            } )
+    } )
+
+    test( 'per-skill predecessor chain blocks L2 when L1 was not graded (FLEET-008)', async () => {
+        await prepareCaseWithSkills( { skills: [ 'crypto-entry' ] } )
+        const calls = []
+        // Block the L1 grading for the skill — L2 and L3 must then be blocked too.
+        const invoker = makeMockInvoker( { calls, blockerForArea: 'selection-skills-L1' } )
+
+        const result = await FleetRunner.run( {
+            selectionPath: lockfilePath,
+            areas: [ 'single-test' ],
+            persona: 'decision-maker--crypto-trader',
+            iterations: 1,
+            outputBase: gradingDataRoot,
+            skillInvoker: invoker
+        } )
+
+        const predecessorBlocks = result.errors
+            .filter( ( e ) => e.code === 'FLEET-008' )
+        expect( predecessorBlocks.length ).toBeGreaterThan( 0 )
+        // L2 was never invoked because its predecessor L1 was blocked.
+        const l2Calls = calls
+            .filter( ( c ) => c.payload.area === 'selection-skills-L2' )
+        expect( l2Calls.length ).toBe( 0 )
+    } )
+
+    test( 'B2 grading filenames start with the area slug (no in-source hash)', async () => {
+        await prepareCase( { allStable: true } )
+        const calls = []
+        const invoker = makeMockInvoker( { calls } )
+
+        const result = await FleetRunner.run( {
+            selectionPath: lockfilePath,
+            areas: [ 'single-test' ],
+            persona: 'decision-maker--crypto-trader',
+            iterations: 1,
+            outputBase: gradingDataRoot,
+            skillInvoker: invoker
+        } )
+
+        const firstPath = result.singleGradings[ 0 ].areas[ 'single-test' ].path
+        const filename = firstPath.split( /[\\/]/ ).pop()
+        expect( filename.startsWith( 'single-test--' ) ).toBe( true )
+        expect( filename.endsWith( '.json' ) ).toBe( true )
     } )
 } )
 

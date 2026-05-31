@@ -1,13 +1,18 @@
 /**
- * AboutConsistencyCheck — text-vs-schema validator for About-Pages.
+ * AboutConsistencyCheck — text-vs-schema validator for About Resources.
  *
- * Per the grading spec:
+ * Per the grading spec (gradingSpec/1.2.0 §4 / §11):
  *   - Step 0 (pre-condition) + Step 1 (consistency check).
+ *   - The About Resource is a markdown Resource declared in ONE schema of the
+ *     namespace, stored at providers/<ns>/<schema>/resources/about/ — NOT a
+ *     namespace route and NOT a namespace.json (F24 drops namespace.json).
+ *   - A Resource never lives at namespace level, so the detector searches the
+ *     About namespace-WIDE (across every schema folder).
  *
  * Checks:
- *   - Every tool-name from schemas is mentioned in About-Text
+ *   - Every tool-name from the namespace schemas is mentioned in the About-Text
  *   - Description keyword overlap >= threshold (default 0.5)
- *   - Selection-About additionally checks personaIds + domainDocId
+ *   - Selection-About additionally checks personaIds + domainDocId (Domain-Knowledge)
  *
  * NO SILENT DEFAULTS. Static methods only, object params, object returns.
  */
@@ -17,6 +22,7 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 import { PreConditionCheck } from './PreConditionCheck.mjs'
+import { SourceSnapshot } from './SourceSnapshot.mjs'
 
 
 const DEFAULT_OVERLAP_THRESHOLD = 0.5
@@ -30,34 +36,19 @@ class AboutConsistencyCheck {
 
         const threshold = keywordOverlapThreshold === undefined ? DEFAULT_OVERLAP_THRESHOLD : keywordOverlapThreshold
 
-        const namespaceDir = join( gradingDataRoot, 'schemas', namespace )
-        const aboutDir = join( namespaceDir, 'about' )
-        const aboutFiles = await AboutConsistencyCheck.#listFiles( { path: aboutDir } )
-        const aboutMd = aboutFiles.find( ( f ) => f.endsWith( '--about.md' ) )
-
-        if( aboutMd === undefined ) {
+        // The About Resource lives in ONE schema; the detector searches namespace-wide
+        // across providers/<ns>/<schema>/resources/about/.
+        const found = await AboutConsistencyCheck.#findNamespaceAbout( { gradingDataRoot, namespace } )
+        if( found === null ) {
             return {
                 passed: false,
-                issues: [ { code: 'ABT-002', severity: 'error', message: `ABT-002: About file not found in ${aboutDir}` } ],
+                issues: [ { code: 'ABT-002', severity: 'error', message: `ABT-002: About Resource not found namespace-wide for ${namespace}` } ],
                 errors: []
             }
         }
-        const aboutPath = join( aboutDir, aboutMd )
-        const aboutText = await readFile( aboutPath, 'utf-8' )
+        const aboutText = await readFile( found.path, 'utf-8' )
 
-        let nsJson = null
-        try {
-            const raw = await readFile( join( namespaceDir, 'namespace.json' ), 'utf-8' )
-            nsJson = JSON.parse( raw )
-        } catch( e ) {
-            return {
-                passed: false,
-                issues: [ { code: 'ABT-003', severity: 'error', message: `ABT-003: namespace.json malformed: ${e.message}` } ],
-                errors: []
-            }
-        }
-
-        // Collect all tools from snapshots
+        // Collect all tools from the namespace snapshots
         const tools = await AboutConsistencyCheck.#extractTools( { gradingDataRoot, namespace } )
 
         const issues = []
@@ -99,27 +90,24 @@ class AboutConsistencyCheck {
 
         const issues = []
 
-        const selectionDir = join( gradingDataRoot, 'selection', selectionId )
-        const selectionJsonPath = join( selectionDir, 'selection.json' )
-        let selectionJson = null
-        try {
-            const raw = await readFile( selectionJsonPath, 'utf-8' )
-            selectionJson = JSON.parse( raw )
-        } catch( e ) {
+        const selectionDir = join( gradingDataRoot, 'selections', selectionId )
+        const selectionDef = await AboutConsistencyCheck.#readSelectionDef( { selectionDir, selectionId } )
+        if( selectionDef === null ) {
             return {
                 passed: false,
-                issues: [ { code: 'ABT-002', severity: 'error', message: `ABT-002: selection.json not readable at ${selectionJsonPath}` } ],
+                issues: [ { code: 'ABT-002', severity: 'error', message: `ABT-002: selection definition not readable in ${selectionDir}` } ],
                 errors: []
             }
         }
+        const selectionJson = selectionDef
 
-        const aboutDir = join( selectionDir, 'about' )
+        const aboutDir = join( selectionDir, 'resources', 'about' )
         const aboutFiles = await AboutConsistencyCheck.#listFiles( { path: aboutDir } )
-        const aboutMd = aboutFiles.find( ( f ) => f.endsWith( '--about.md' ) )
+        const aboutMd = aboutFiles.find( ( f ) => f.endsWith( '.md' ) )
         if( aboutMd === undefined ) {
             return {
                 passed: false,
-                issues: [ { code: 'ABT-002', severity: 'error', message: `ABT-002: About file not found in ${aboutDir}` } ],
+                issues: [ { code: 'ABT-002', severity: 'error', message: `ABT-002: About Resource not found in ${aboutDir}` } ],
                 errors: []
             }
         }
@@ -182,7 +170,12 @@ class AboutConsistencyCheck {
         if( typeof lockfilePath === 'string' && lockfilePath.length > 0 ) {
             try {
                 const raw = await readFile( lockfilePath, 'utf-8' )
-                const lockfile = JSON.parse( raw )
+                const parsed = JSON.parse( raw )
+                // v2: the gate reads index.json.lockSnapshot; accept a raw lockSnapshot
+                // object too for direct callers (no silent guess between the two).
+                const lockfile = parsed.lockSnapshot !== undefined && parsed.lockSnapshot !== null
+                    ? parsed.lockSnapshot
+                    : parsed
                 const preResult = PreConditionCheck.checkLockfile( { lockfile } )
                 preConditionPassed = preResult.passed
                 preIssues = preResult.errors
@@ -211,15 +204,14 @@ class AboutConsistencyCheck {
 
 
     static async #extractTools( { gradingDataRoot, namespace } ) {
-        const namespaceDir = join( gradingDataRoot, 'schemas', namespace )
-        const files = await AboutConsistencyCheck.#listFiles( { path: namespaceDir } )
-        const snapshotFiles = files.filter( ( f ) => /^[0-9a-f]{8}--v\d+\.\d+\.\d+\.mjs$/.test( f ) )
+        // v2: snapshots live in providers/<ns>/<schema>/schema/ (B2 names). Use the
+        // SourceSnapshot listing so the layout stays in one place.
+        const listing = await SourceSnapshot.listForNamespace( { gradingDataRoot, namespace } )
 
         const toolsNested = await Promise.all(
-            snapshotFiles.map( async ( name ) => {
-                const path = join( namespaceDir, name )
+            listing.snapshots.map( async ( snap ) => {
                 try {
-                    const url = pathToFileURL( path ).href
+                    const url = pathToFileURL( snap.path ).href
                     const mod = await import( url )
                     const schemaObj = mod.main !== undefined ? mod.main : mod.schema
                     if( schemaObj === undefined || schemaObj.tools === undefined ) { return [] }
@@ -240,6 +232,59 @@ class AboutConsistencyCheck {
                 seen.add( t.name )
                 return true
             } )
+    }
+
+
+    static async #findNamespaceAbout( { gradingDataRoot, namespace } ) {
+        // Namespace-wide search: the About Resource is declared in exactly one schema.
+        const namespaceDir = join( gradingDataRoot, 'providers', namespace )
+        const schemaNames = await AboutConsistencyCheck.#listDirs( { path: namespaceDir } )
+
+        const found = await schemaNames
+            .reduce( async ( prevPromise, schemaName ) => {
+                const prev = await prevPromise
+                if( prev !== null ) { return prev }
+                const aboutDir = join( namespaceDir, schemaName, 'resources', 'about' )
+                const files = await AboutConsistencyCheck.#listFiles( { path: aboutDir } )
+                const aboutMd = files.find( ( f ) => f.endsWith( '.md' ) )
+                if( aboutMd === undefined ) { return null }
+                return { schemaName, path: join( aboutDir, aboutMd ) }
+            }, Promise.resolve( null ) )
+
+        return found
+    }
+
+
+    static async #readSelectionDef( { selectionDir, selectionId } ) {
+        // The selection definition lives under selections/<sel>/selection/ with a
+        // B2 filename; fall back to a flat selection.json for back-compat reads.
+        const defDir = join( selectionDir, 'selection' )
+        const files = await AboutConsistencyCheck.#listFiles( { path: defDir } )
+        const defFile = files
+            .filter( ( f ) => f.startsWith( `${selectionId}--` ) && f.endsWith( '.json' ) )
+            .sort()
+            .at( -1 )
+        if( defFile !== undefined ) {
+            try {
+                const raw = await readFile( join( defDir, defFile ), 'utf-8' )
+                return JSON.parse( raw )
+            } catch( e ) { return null }
+        }
+        try {
+            const raw = await readFile( join( selectionDir, 'selection.json' ), 'utf-8' )
+            return JSON.parse( raw )
+        } catch( e ) { return null }
+    }
+
+
+    static async #listDirs( { path } ) {
+        try {
+            const entries = await readdir( path, { withFileTypes: true } )
+            return entries
+                .filter( ( e ) => e.isDirectory() )
+                .map( ( e ) => e.name )
+                .sort()
+        } catch( e ) { return [] }
     }
 
 

@@ -40,7 +40,10 @@ describe( 'ModuleApi.getScopes', () => {
         const r = ModuleApi.getScopes()
         expect( r.scopes ).toEqual( [ 'schema', 'selection' ] )
         expect( r.schemaAreas.length ).toBe( 6 )
-        expect( r.selectionAreas.length ).toBe( 4 )
+        // v2: 5 selection areas (lockfile DROPPED, selection-aggregate ADDED) → 6+5 = 11
+        expect( r.selectionAreas.length ).toBe( 5 )
+        expect( r.selectionAreas ).toContain( 'selection-aggregate' )
+        expect( r.schemaAreas.length + r.selectionAreas.length ).toBe( 11 )
     } )
 } )
 
@@ -67,7 +70,7 @@ describe( 'ModuleApi.readState — scope separation', () => {
         const r = await ModuleApi.readState( { gradingDataRoot: root } )
         expect( r.source ).toBe( 'scan' )
         expect( r.schemaScope.namespaces ).toBe( 0 )
-        expect( r.schemaScope.singlesTotal ).toBe( 0 )
+        expect( r.schemaScope.schemas ).toBe( 0 )
         expect( r.selectionScope.selectionsTotal ).toBe( 0 )
         expect( r.schemaScope.selectionsTotal ).toBeUndefined()
         expect( r.selectionScope.namespaces ).toBeUndefined()
@@ -92,12 +95,12 @@ describe( 'ModuleApi.readState — scope separation', () => {
         expect( r.source ).toBe( 'index' )
     } )
 
-    test( 'phase-status singles counted as stable/pending in schemaScope', async () => {
-        const root = join( tempRoot, 'phase-status' )
-        const psDir = join( root, 'phase-status', 'single' )
-        await mkdir( psDir, { recursive: true } )
-        await writeFile( join( psDir, 'ns--a.json' ), JSON.stringify( { gradingStatus: 'stable', schemaHash: 'aaaaaaaa' } ), 'utf-8' )
-        await writeFile( join( psDir, 'ns--b.json' ), JSON.stringify( { gradingStatus: 'pending', schemaHash: 'bbbbbbbb' } ), 'utf-8' )
+    test( 'node-status snapshots in providers/<ns>/ counted as stable/pending in schemaScope', async () => {
+        const root = join( tempRoot, 'node-status' )
+        const nsDir = join( root, 'providers', 'ns' )
+        await mkdir( nsDir, { recursive: true } )
+        await writeFile( join( nsDir, 'ns--a--status.json' ), JSON.stringify( { gradingStatus: 'stable', schemaHash: 'aaaaaaaa' } ), 'utf-8' )
+        await writeFile( join( nsDir, 'ns--b--status.json' ), JSON.stringify( { gradingStatus: 'pending', schemaHash: 'bbbbbbbb' } ), 'utf-8' )
 
         const r = await ModuleApi.readState( { gradingDataRoot: root } )
         expect( r.schemaScope.stable ).toBe( 1 )
@@ -203,7 +206,11 @@ describe( 'ModuleApi.upgradeSchema', () => {
         expect( r.snapshot.hash ).toBe( hashOf( { schema: newSchema } ) )
         expect( r.snapshot.hash ).not.toBe( oldHash )
         expect( r.diff.regradeMarked ).toBe( true )
-        expect( typeof r.diff.bump ).toBe( 'string' )
+        // v2: no SemVer bump classification (BumpHelper DROPPED) — content change
+        // is from-hash → to-hash plus a regrade trigger.
+        expect( r.diff.fromHash ).toBe( oldHash )
+        expect( r.diff.toHash ).toBe( hashOf( { schema: newSchema } ) )
+        expect( typeof r.diff.regradingTrigger ).toBe( 'string' )
 
         // old snapshot still present
         const state = await ModuleApi.readState( { gradingDataRoot: root } )
@@ -225,9 +232,9 @@ describe( 'ModuleApi.stats', () => {
 
     test( 'schema scope returns schema counts only', async () => {
         const root = join( tempRoot, 'stats-schema' )
-        const psDir = join( root, 'phase-status', 'single' )
-        await mkdir( psDir, { recursive: true } )
-        await writeFile( join( psDir, 'ns--a.json' ), JSON.stringify( { gradingStatus: 'stable' } ), 'utf-8' )
+        const nsDir = join( root, 'providers', 'ns' )
+        await mkdir( nsDir, { recursive: true } )
+        await writeFile( join( nsDir, 'ns--a--status.json' ), JSON.stringify( { gradingStatus: 'stable' } ), 'utf-8' )
 
         const r = await ModuleApi.stats( { gradingDataRoot: root, scope: 'schema' } )
         expect( r.scope ).toBe( 'schema' )
@@ -268,12 +275,12 @@ describe( 'ModuleApi.assertFullScopeRule', () => {
         gradingMode: 'full',
         aggregateGrade: 'A',
         gradings: [
-            { dimension: 'schemaStructureValid' },
-            { dimension: 'apiAvailability' },
-            { dimension: 'descriptionNeutrality' },
-            { dimension: 'parametersTyping' },
-            { dimension: 'whenToUseClarity' },
-            { dimension: 'aboutConventionCompliance' }
+            { dimension: 'single-test' },
+            { dimension: 'tools-aggregate-schema' },
+            { dimension: 'tools-aggregate-namespace' },
+            { dimension: 'namespace-description' },
+            { dimension: 'namespace-skills' },
+            { dimension: 'about-namespace' }
         ]
     } )
 
@@ -282,10 +289,11 @@ describe( 'ModuleApi.assertFullScopeRule', () => {
         gradingMode: 'full',
         aggregateGrade: 'A',
         gradings: [
-            { dimension: 'memberConsistency' },
-            { dimension: 'lockfileConsistency' },
-            { dimension: 'skillReferenceValidity' },
-            { dimension: 'personaReferenceCoherence' }
+            { dimension: 'about-selection' },
+            { dimension: 'selection-skills-L1' },
+            { dimension: 'selection-skills-L2' },
+            { dimension: 'selection-skills-L3' },
+            { dimension: 'selection-aggregate' }
         ]
     } )
 
@@ -314,13 +322,13 @@ describe( 'ModuleApi.assertFullScopeRule', () => {
         expect( r.violations.length ).toBeGreaterThan( 0 )
     } )
 
-    test( 'selection-full covering all 4 areas is valid', () => {
+    test( 'selection-full covering all 5 areas is valid', () => {
         const r = ModuleApi.assertFullScopeRule( { entry: fullSelectionEntry(), scope: 'selection' } )
         expect( r.valid ).toBe( true )
-        expect( r.expectedAreas.length ).toBe( 4 )
+        expect( r.expectedAreas.length ).toBe( 5 )
     } )
 
-    test( 'mixed scope (10-in-one-run) → API-005, no combined grading', () => {
+    test( 'mixed scope (11-in-one-run) → API-005, no combined grading', () => {
         const entry = fullSchemaEntry()
         entry.gradings = entry.gradings.concat( fullSelectionEntry().gradings )
         const r = ModuleApi.assertFullScopeRule( { entry, scope: 'schema' } )
@@ -346,16 +354,20 @@ describe( 'ModuleApi.assertSelectionRespectsSchemaFull', () => {
 
     test( 'all members stable → may proceed and respects existing schema-full (no regrade)', async () => {
         const root = join( tempRoot, 'respect-ok' )
-        const selDir = join( root, 'selection', 'sel-1' )
+        const selDir = join( root, 'selections', 'sel-1' )
         await mkdir( selDir, { recursive: true } )
-        const lockfile = {
+        const index = {
+            indexVersion: 2,
             selectionId: 'sel-1',
-            members: [
-                { schemaId: 'ns.a', gradingStatus: 'stable' },
-                { schemaId: 'ns.b', gradingStatus: 'stable' }
-            ]
+            lockSnapshot: {
+                selectionId: 'sel-1',
+                members: [
+                    { schemaId: 'ns.a', gradingStatus: 'stable' },
+                    { schemaId: 'ns.b', gradingStatus: 'stable' }
+                ]
+            }
         }
-        await writeFile( join( selDir, 'selection.lock.json' ), JSON.stringify( lockfile, null, 4 ), 'utf-8' )
+        await writeFile( join( selDir, 'index.json' ), JSON.stringify( index, null, 4 ), 'utf-8' )
 
         const r = await ModuleApi.assertSelectionRespectsSchemaFull( { gradingDataRoot: root, selectionId: 'sel-1' } )
         expect( r.mayProceed ).toBe( true )
@@ -363,18 +375,22 @@ describe( 'ModuleApi.assertSelectionRespectsSchemaFull', () => {
         expect( r.blockedMembers ).toEqual( [] )
     } )
 
-    test( 'a pending member blocks the selection', async () => {
+    test( 'a non-stable (graded) member blocks the selection', async () => {
         const root = join( tempRoot, 'respect-blocked' )
-        const selDir = join( root, 'selection', 'sel-2' )
+        const selDir = join( root, 'selections', 'sel-2' )
         await mkdir( selDir, { recursive: true } )
-        const lockfile = {
+        const index = {
+            indexVersion: 2,
             selectionId: 'sel-2',
-            members: [
-                { schemaId: 'ns.a', gradingStatus: 'stable' },
-                { schemaId: 'ns.b', gradingStatus: 'pending' }
-            ]
+            lockSnapshot: {
+                selectionId: 'sel-2',
+                members: [
+                    { schemaId: 'ns.a', gradingStatus: 'stable' },
+                    { schemaId: 'ns.b', gradingStatus: 'graded' }
+                ]
+            }
         }
-        await writeFile( join( selDir, 'selection.lock.json' ), JSON.stringify( lockfile, null, 4 ), 'utf-8' )
+        await writeFile( join( selDir, 'index.json' ), JSON.stringify( index, null, 4 ), 'utf-8' )
 
         const r = await ModuleApi.assertSelectionRespectsSchemaFull( { gradingDataRoot: root, selectionId: 'sel-2' } )
         expect( r.mayProceed ).toBe( false )

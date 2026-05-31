@@ -1,31 +1,31 @@
 /**
- * SelectionPhases — skill family 2 (group-bound).
+ * SelectionPhases — skill family 2 (group-bound), v2 selection-side Areas.
  *
- * Phases S1-S4:
+ * The legacy S2 (Lockfile-Consistency) check is DROPPED — there is no
+ * selection.lock.json lifecycle any more (pins live in index.json.lockSnapshot).
+ * The remaining checks map to the selection-side Areas:
  *
- * | Phase | Check                             | Tier         |
+ * | Phase | Area mapping                      | Tier         |
  * |-------|-----------------------------------|--------------|
- * | S1    | Member-Coverage                   | group-bound  |
- * | S2    | Lockfile-Consistency              | group-bound  |
- * | S3    | Skills-Coverage (max 4)           | group-bound  |
- * | S4    | Persona-Reference-Coherence       | group-bound  |
+ * | S1    | member-coverage (about-selection) | group-bound  |
+ * | S3    | selection-skills (max 4)          | group-bound  |
+ * | S4    | persona-reference (selection-aggregate) | group-bound |
  *
- * Per the grading spec:
+ * Per the grading spec (gradingSpec/1.2.0):
  *   - There are two skill families sharing one data model.
- *   - The selection validator consumes single-schema entries and writes S1-S4.
+ *   - The selection validator consumes single-schema base units.
  *   - personaIds are required for non-deterministic dimensions.
- *   - S1-S4 form the complete selection-validator phase set.
- *   - The lockfile + selectionHash define the lockfile contract.
+ *   - Member status is read from index.json (the phase-status tree is dropped).
+ *   - MAX_SKILLS = 4 (Spec v4.1.0 SKL018).
  */
 
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { Grading } from '../Grading.mjs'
-import { HashGenerator } from '../HashGenerator.mjs'
 
 
-const PHASES = [ 'S1', 'S2', 'S3', 'S4' ]
+const PHASES = [ 'S1', 'S3', 'S4' ]
 const TIER = 'group-bound'
 const MAX_SKILLS = 4
 
@@ -55,25 +55,25 @@ class SelectionPhases {
             return false
         } )
 
-        const checkResults = await Promise.all(
-            memberIds.map( async ( id ) => {
-                const nsTool = id.replace( /\./g, '--' )
-                const psPath = join( gradingDataRoot, 'phase-status', 'single', `${nsTool}.json` )
-                const exists = await SelectionPhases.#fileExists( { path: psPath } )
-                return { schemaId: id, exists }
-            } )
-        )
+        // v2: member STABLE-status is read from index.json.lockSnapshot, not from a
+        // phase-status tree. S1 here only checks structural coverage (no duplicates,
+        // resolvable members); the "all members stable" gate is PreConditionCheck.
+        const indexPath = join( gradingDataRoot, 'selections', selectionId, 'index.json' )
+        const lockSnapshot = await SelectionPhases.#readLockSnapshot( { path: indexPath } )
+        const pinnedIds = lockSnapshot === null
+            ? []
+            : lockSnapshot.members.map( ( m ) => m.schemaId )
 
-        const missing = checkResults
-            .filter( ( r ) => !r.exists )
-            .map( ( r ) => r.schemaId )
+        const missing = lockSnapshot === null
+            ? []
+            : memberIds.filter( ( id ) => !pinnedIds.includes( id ) )
 
         const violations = []
         if( dupes.length > 0 ) {
             violations.push( `SEL-S1: Selection S1 (Member-Coverage) violation: duplicate members: ${[ ...new Set( dupes ) ].join( ', ' )}` )
         }
         if( missing.length > 0 ) {
-            violations.push( `SEL-S1: Selection S1 (Member-Coverage) violation: missing phase-status for: ${missing.join( ', ' )}` )
+            violations.push( `SEL-S1: Selection S1 (Member-Coverage) violation: members not pinned in index.json.lockSnapshot: ${missing.join( ', ' )}` )
         }
 
         return {
@@ -83,74 +83,6 @@ class SelectionPhases {
             resolved: memberIds.filter( ( id ) => !missing.includes( id ) ),
             missing
         }
-    }
-
-
-    static async runS2( { entry, selectionId, selectionJson, lockfile, gradingDataRoot } ) {
-        const { status, messages } = SelectionPhases.#validationRunPhaseRich( {
-            entry, selectionId, phase: 'S2', selectionJson, gradingDataRoot
-        } )
-        if( !status ) { return { entry, errors: messages } }
-
-        if( lockfile === undefined || lockfile === null ) {
-            return {
-                entry,
-                errors: [ 'SEL-S2: Selection S2 (Lockfile-Consistency) violation: lockfile missing' ],
-                phase: 'S2'
-            }
-        }
-
-        const violations = []
-
-        // Hash recomputation must match
-        const recomputed = HashGenerator.computeSelectionHash( { selection: selectionJson } )
-        if( recomputed.errors.length === 0 && lockfile.selectionHash !== recomputed.hash ) {
-            violations.push(
-                `SEL-S2: Selection S2 (Lockfile-Consistency) violation: selectionHash mismatch (lockfile=${lockfile.selectionHash}, recomputed=${recomputed.hash})`
-            )
-        }
-
-        const selMembers = Array.isArray( selectionJson.members ) ? selectionJson.members.map( ( m ) => m.schemaId ) : []
-        const lockMembers = Array.isArray( lockfile.members ) ? lockfile.members.map( ( m ) => m.schemaId ) : []
-
-        const missingInLock = selMembers.filter( ( id ) => !lockMembers.includes( id ) )
-        const orphanInLock = lockMembers.filter( ( id ) => !selMembers.includes( id ) )
-
-        if( missingInLock.length > 0 ) {
-            violations.push( `SEL-S2: Selection S2 (Lockfile-Consistency) violation: members missing from lockfile: ${missingInLock.join( ', ' )}` )
-        }
-        if( orphanInLock.length > 0 ) {
-            violations.push( `SEL-S2: Selection S2 (Lockfile-Consistency) violation: lockfile-only orphan members: ${orphanInLock.join( ', ' )}` )
-        }
-
-        // Member-level hash consistency vs phase-status
-        const psResults = await Promise.all(
-            ( Array.isArray( lockfile.members ) ? lockfile.members : [] )
-                .map( async ( m ) => {
-                    if( m.schemaHash === null || m.schemaHash === undefined ) {
-                        return { schemaId: m.schemaId, ok: true }
-                    }
-                    const nsTool = m.schemaId.replace( /\./g, '--' )
-                    const psPath = join( gradingDataRoot, 'phase-status', 'single', `${nsTool}.json` )
-                    try {
-                        const raw = await readFile( psPath, 'utf-8' )
-                        const ps = JSON.parse( raw )
-                        return { schemaId: m.schemaId, ok: ps.schemaHash === m.schemaHash, psHash: ps.schemaHash, lockHash: m.schemaHash }
-                    } catch( e ) {
-                        return { schemaId: m.schemaId, ok: false, error: e.message }
-                    }
-                } )
-        )
-
-        const hashMismatches = psResults.filter( ( r ) => !r.ok )
-        hashMismatches
-            .forEach( ( r ) => {
-                violations.push(
-                    `SEL-S2: Selection S2 (Lockfile-Consistency) violation: schemaHash mismatch for ${r.schemaId} (lockfile=${r.lockHash}, phase-status=${r.psHash})`
-                )
-            } )
-
-        return { entry, errors: violations, phase: 'S2' }
     }
 
 
@@ -181,7 +113,7 @@ class SelectionPhases {
             )
         }
 
-        const skillsDir = join( gradingDataRoot, 'selection', selectionId, 'skills' )
+        const skillsDir = join( gradingDataRoot, 'selections', selectionId, 'skills' )
         const fileChecks = await Promise.all(
             skills.map( async ( skillRef ) => {
                 const base = skillRef.split( '/' ).pop()
@@ -246,25 +178,24 @@ class SelectionPhases {
             errors: [],
             phases: [
                 { phase: 'S1', stub: true },
-                { phase: 'S2', stub: true },
                 { phase: 'S3', stub: true },
                 { phase: 'S4', stub: true }
             ],
             tier: TIER,
             stub: true,
-            todo: 'pass selectionJson + lockfile + gradingDataRoot to enable S1-S4'
+            todo: 'pass selectionJson + gradingDataRoot to enable S1/S3/S4'
         }
     }
 
 
-    static async runAll( { entry, selectionId, selectionJson, lockfile, gradingDataRoot, personaIndex, schemaEntries, domainDocPath, personaIds } ) {
+    static async runAll( { entry, selectionId, selectionJson, gradingDataRoot, personaIndex, schemaEntries, domainDocPath, personaIds } ) {
         if( selectionJson === undefined || selectionJson === null ) {
             return SelectionPhases.runAllStub( { entry } )
         }
 
+        // S2 (Lockfile-Consistency) is DROPPED in v2.
         const phaseRuns = [
             { name: 'S1', call: () => SelectionPhases.runS1( { entry, selectionId, selectionJson, gradingDataRoot } ) },
-            { name: 'S2', call: () => SelectionPhases.runS2( { entry, selectionId, selectionJson, lockfile, gradingDataRoot } ) },
             { name: 'S3', call: () => SelectionPhases.runS3( { entry, selectionId, selectionJson, gradingDataRoot } ) },
             { name: 'S4', call: () => SelectionPhases.runS4( { entry, selectionId, selectionJson, personaIndex } ) }
         ]
@@ -296,6 +227,19 @@ class SelectionPhases {
             return true
         } catch( e ) {
             return false
+        }
+    }
+
+
+    static async #readLockSnapshot( { path } ) {
+        try {
+            const raw = await readFile( path, 'utf-8' )
+            const parsed = JSON.parse( raw )
+            if( parsed.lockSnapshot === undefined || parsed.lockSnapshot === null ) { return null }
+            if( !Array.isArray( parsed.lockSnapshot.members ) ) { return null }
+            return parsed.lockSnapshot
+        } catch( e ) {
+            return null
         }
     }
 

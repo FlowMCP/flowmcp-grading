@@ -52,35 +52,69 @@ describe( 'PreConditionCheck.checkLockfile', () => {
         expect( r.errors[ 0 ] ).toContain( 'PRE-WARN-001' )
     } )
 
-    test( 'malformed lockfile yields PRE-003', () => {
+    test( 'graded (not stable) → passed: false (5-status gate, only stable passes)', () => {
+        const lockfile = {
+            members: [
+                { schemaId: 'a.b', gradingStatus: 'stable' },
+                { schemaId: 'c.d', gradingStatus: 'graded' }
+            ]
+        }
+        const r = PreConditionCheck.checkLockfile( { lockfile } )
+        expect( r.passed ).toBe( false )
+        expect( r.missingSingleGradings ).toContain( 'c.d' )
+    } )
+
+    test( 'rejected member → passed: false', () => {
+        const lockfile = {
+            members: [ { schemaId: 'a.b', gradingStatus: 'rejected' } ]
+        }
+        const r = PreConditionCheck.checkLockfile( { lockfile } )
+        expect( r.passed ).toBe( false )
+    } )
+
+    test( 'malformed lockSnapshot yields PRE-003', () => {
         const r = PreConditionCheck.checkLockfile( { lockfile: { something: 'else' } } )
         expect( r.passed ).toBe( false )
         expect( r.errors[ 0 ] ).toContain( 'PRE-003' )
     } )
 
-    test( 'missing lockfile yields PRE-001', () => {
+    test( 'missing lockSnapshot yields PRE-001', () => {
         const r = PreConditionCheck.checkLockfile( {} )
         expect( r.errors[ 0 ] ).toContain( 'PRE-001' )
     } )
 } )
 
 
-describe( 'PreConditionCheck.check (async)', () => {
-    test( 'reads lockfile from disk → passed when stable', async () => {
+describe( 'PreConditionCheck.check (async — reads index.json.lockSnapshot)', () => {
+    test( 'reads lockSnapshot from selections/<sel>/index.json → passed when all stable', async () => {
         const selectionId = 'demo-pre'
-        const lockfilePath = join( tempRoot, 'selection', selectionId )
-        await mkdir( lockfilePath, { recursive: true } )
-        const lockfile = {
+        const indexDir = join( tempRoot, 'selections', selectionId )
+        await mkdir( indexDir, { recursive: true } )
+        const index = {
+            indexVersion: 2,
             selectionId,
-            members: [ { schemaId: 'a.b', gradingStatus: 'stable' } ]
+            lockSnapshot: {
+                selectionId,
+                members: [ { schemaId: 'a.b', gradingStatus: 'stable' } ]
+            }
         }
-        await writeFile( join( lockfilePath, 'selection.lock.json' ), JSON.stringify( lockfile ), 'utf-8' )
+        await writeFile( join( indexDir, 'index.json' ), JSON.stringify( index ), 'utf-8' )
 
         const r = await PreConditionCheck.check( { gradingDataRoot: tempRoot, selectionId } )
         expect( r.passed ).toBe( true )
     } )
 
-    test( 'missing lockfile yields PRE-002', async () => {
+    test( 'index.json present but no lockSnapshot yields PRE-002', async () => {
+        const selectionId = 'no-snapshot'
+        const indexDir = join( tempRoot, 'selections', selectionId )
+        await mkdir( indexDir, { recursive: true } )
+        await writeFile( join( indexDir, 'index.json' ), JSON.stringify( { indexVersion: 2, selectionId } ), 'utf-8' )
+
+        const r = await PreConditionCheck.check( { gradingDataRoot: tempRoot, selectionId } )
+        expect( r.errors[ 0 ] ).toContain( 'PRE-002' )
+    } )
+
+    test( 'missing index.json yields PRE-002', async () => {
         const r = await PreConditionCheck.check( { gradingDataRoot: tempRoot, selectionId: 'no-such' } )
         expect( r.errors[ 0 ] ).toContain( 'PRE-002' )
     } )

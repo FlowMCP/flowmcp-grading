@@ -87,8 +87,27 @@ describe( 'StablePromotion.checkEligibility', () => {
 } )
 
 
+describe( 'StablePromotion.mapReasonToStatus (5-status map, no silent default)', () => {
+    test( 'ok → stable', () => {
+        expect( StablePromotion.mapReasonToStatus( { reason: 'ok' } ).nodeStatus ).toBe( 'stable' )
+    } )
+
+    test( 'no-gradings → pending; last-not-full → graded; sequence-invalid → blocked', () => {
+        expect( StablePromotion.mapReasonToStatus( { reason: 'no-gradings' } ).nodeStatus ).toBe( 'pending' )
+        expect( StablePromotion.mapReasonToStatus( { reason: 'last-not-full' } ).nodeStatus ).toBe( 'graded' )
+        expect( StablePromotion.mapReasonToStatus( { reason: 'sequence-invalid' } ).nodeStatus ).toBe( 'blocked' )
+    } )
+
+    test( 'unknown reason errors STB-004 (no silent default)', () => {
+        const r = StablePromotion.mapReasonToStatus( { reason: 'whatever' } )
+        expect( r.nodeStatus ).toBeNull()
+        expect( r.errors[ 0 ] ).toContain( 'STB-004' )
+    } )
+} )
+
+
 describe( 'StablePromotion.promoteIfEligible', () => {
-    test( 'writes phase-status with status stable on success', async () => {
+    test( 'writes node-status stable into providers/<ns>/ on success', async () => {
         const root = join( tempRoot, 'promote-1' )
         const result = await StablePromotion.promoteIfEligible( {
             gradingDataRoot: root,
@@ -103,14 +122,15 @@ describe( 'StablePromotion.promoteIfEligible', () => {
         } )
         expect( result.written ).toBe( true )
         expect( result.status ).toBe( 'stable' )
-        const path = join( root, 'phase-status', 'single', 'demo--foo.json' )
+        // v2 write-target: providers/<ns>/<ns>--<tool>--status.json (phase-status dropped)
+        const path = join( root, 'providers', 'demo', 'demo--foo--status.json' )
         const raw = await readFile( path, 'utf-8' )
         const ps = JSON.parse( raw )
         expect( ps.gradingStatus ).toBe( 'stable' )
         expect( ps.threshold ).toBe( 'A' )
     } )
 
-    test( 'writes pending when last partial', async () => {
+    test( 'last partial maps to 5-status graded (not stable)', async () => {
         const root = join( tempRoot, 'promote-2' )
         const result = await StablePromotion.promoteIfEligible( {
             gradingDataRoot: root,
@@ -123,7 +143,7 @@ describe( 'StablePromotion.promoteIfEligible', () => {
             } ],
             threshold: 'A'
         } )
-        expect( result.status ).toBe( 'pending' )
+        expect( result.status ).toBe( 'graded' )
     } )
 
     test( 'idempotent: phase-status payload is deterministic per input', async () => {

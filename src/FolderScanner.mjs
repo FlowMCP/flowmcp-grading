@@ -1,17 +1,15 @@
 /**
- * FolderScanner — validates the grading-data/ folder layout against the expected layout.
+ * FolderScanner — validates the grading-data/ folder layout against the v2 layout.
  *
- * Per the grading spec:
- *   - Defines the canonical folder layout.
- *   - Defines the folder-scanner checks SCN-001..010.
- *
- * Layout checks:
- *   - schemas/<ns>/namespace.json MUST exist
- *   - schemas/<ns>/<hash>--v<X.Y.Z>.mjs hash matches recomputed
- *   - single/<ns>--<tool>/ MUST correspond to namespace.json members
- *   - selection/<id>/selection.json MUST exist
- *   - phase-status/single/<ns>--<tool>.json hash matches snapshot hash
- *   - projects/<projectName>/index.json MUST exist and be a valid index (SCN-011)
+ * Per the grading spec (gradingSpec/1.2.0 §19):
+ *   - The canonical roots are providers/ , selections/ and shared-lists/.
+ *   - The legacy schemas/ , single/ , phase-status/ , selection.lock.json and
+ *     namespace.json checks are DROPPED (F24 drops namespace.json).
+ *   - Schema snapshots live under providers/<ns>/<schema>/schema/ in the B2
+ *     grammar; their filename hash MUST match the recomputed schema hash.
+ *   - The source schema is NEUTRAL: an in-source `schemaHash` / `aboutHash` /
+ *     `selectionHash` is flagged (SCN-012) — hashes belong in the filename and
+ *     index.json, never in the source body (§10.2).
  *
  * NO SILENT DEFAULTS. Static methods only, object params, object returns.
  */
@@ -20,7 +18,10 @@ import { readFile, readdir, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 
 import { SourceSnapshot, SNAPSHOT_FILENAME_REGEX } from './SourceSnapshot.mjs'
-import { ProjectIndex } from './ProjectIndex.mjs'
+
+
+// In-source hash keys that must NOT appear in a neutral source schema body.
+const IN_SOURCE_HASH_KEYS = [ 'schemaHash', 'aboutHash', 'selectionHash', 'namespaceHash' ]
 
 
 class FolderScanner {
@@ -39,22 +40,17 @@ class FolderScanner {
             }
         }
 
-        const schemasDir = join( gradingDataRoot, 'schemas' )
-        const singleDir = join( gradingDataRoot, 'single' )
-        const selectionDir = join( gradingDataRoot, 'selection' )
-        const projectsDir = join( gradingDataRoot, 'projects' )
+        const providersDir = join( gradingDataRoot, 'providers' )
+        const selectionsDir = join( gradingDataRoot, 'selections' )
+        const sharedListsDir = join( gradingDataRoot, 'shared-lists' )
 
-        const namespaces = await FolderScanner.#listDirs( { path: schemasDir } )
-        const singles = await FolderScanner.#listDirs( { path: singleDir } )
-        const selections = await FolderScanner.#listDirs( { path: selectionDir } )
-        const projects = await FolderScanner.#listDirs( { path: projectsDir } )
+        const namespaces = await FolderScanner.#listDirs( { path: providersDir } )
+        const selections = await FolderScanner.#listDirs( { path: selectionsDir } )
+        const sharedLists = await FolderScanner.#listDirs( { path: sharedListsDir } )
 
         const issuesNested = await Promise.all( [
             ...namespaces.map( ( ns ) => FolderScanner.checkNamespaceFolder( { gradingDataRoot, namespace: ns } ) ),
-            ...singles.map( ( nsTool ) => FolderScanner.#checkSingleFolder( { gradingDataRoot, namespaceTool: nsTool, namespaces } ) ),
-            ...selections.map( ( id ) => FolderScanner.checkSelectionFolder( { gradingDataRoot, selectionId: id } ) ),
-            ...projects.map( ( name ) => FolderScanner.checkProjectIndex( { gradingDataRoot, projectName: name } ) ),
-            FolderScanner.checkPhaseStatus( { gradingDataRoot } )
+            ...selections.map( ( id ) => FolderScanner.checkSelectionFolder( { gradingDataRoot, selectionId: id } ) )
         ] )
 
         const allIssues = issuesNested
@@ -73,9 +69,8 @@ class FolderScanner {
         const summary = {
             namespaces: namespaces.length,
             schemas: schemasCount,
-            singles: singles.length,
             selections: selections.length,
-            projects: projects.length,
+            sharedLists: sharedLists.length,
             gaps
         }
 
@@ -90,103 +85,41 @@ class FolderScanner {
             return { issues: [], errors: [ 'SCN-002: namespace argument required' ] }
         }
 
-        const issues = []
-        const namespacePath = join( gradingDataRoot, 'schemas', namespace )
-        const namespaceJsonPath = join( namespacePath, 'namespace.json' )
-        const exists = await FolderScanner.#fileExists( { path: namespaceJsonPath } )
-        if( !exists ) {
-            issues.push( { severity: 'error', code: 'SCN-002', path: namespaceJsonPath, message: `SCN-002: namespace.json missing: ${namespaceJsonPath}` } )
-            return { issues, errors: [] }
-        }
-
-        let nsJson = null
-        try {
-            const raw = await readFile( namespaceJsonPath, 'utf-8' )
-            nsJson = JSON.parse( raw )
-        } catch( e ) {
-            issues.push( { severity: 'error', code: 'SCN-003', path: namespaceJsonPath, message: `SCN-003: namespace.json malformed: ${e.message}` } )
-            return { issues, errors: [] }
-        }
-
-        const snapshotIssues = await FolderScanner.checkSchemaSnapshots( { gradingDataRoot, namespace } )
-        snapshotIssues.issues
-            .forEach( ( i ) => issues.push( i ) )
-
-        // About-Page-Hash check (informational warning when present in namespace.json)
-        if( typeof nsJson.aboutHash === 'string' ) {
-            const aboutDir = join( namespacePath, 'about' )
-            const aboutFiles = await FolderScanner.#listFiles( { path: aboutDir } )
-            const matched = aboutFiles
-                .find( ( f ) => f.startsWith( `${nsJson.aboutHash}--about` ) )
-            if( matched === undefined && aboutFiles.length > 0 ) {
-                issues.push( {
-                    severity: 'warning',
-                    code: 'SCN-006',
-                    path: aboutDir,
-                    message: 'SCN-006: About-Page-Hash does not match namespace.json#aboutHash'
-                } )
-            }
-        }
-
-        return { issues, errors: [] }
+        // v2: no namespace.json (F24). Just verify the schema snapshots.
+        return FolderScanner.checkSchemaSnapshots( { gradingDataRoot, namespace } )
     }
 
 
     static async checkSchemaSnapshots( { gradingDataRoot, namespace } ) {
         const issues = []
-        const namespacePath = join( gradingDataRoot, 'schemas', namespace )
-        const namespaceJsonPath = join( namespacePath, 'namespace.json' )
-
-        let nsJson = null
-        try {
-            const raw = await readFile( namespaceJsonPath, 'utf-8' )
-            nsJson = JSON.parse( raw )
-        } catch( e ) {
-            // Already reported by checkNamespaceFolder
-            return { issues: [], errors: [] }
-        }
-
-        const declaredHashes = Array.isArray( nsJson.members )
-            ? nsJson.members.map( ( m ) => m.schemaHash ).filter( ( h ) => typeof h === 'string' )
-            : []
 
         const listing = await SourceSnapshot.listForNamespace( { gradingDataRoot, namespace } )
-        const snapshotHashes = listing.snapshots.map( ( s ) => s.hash )
 
-        // Orphans: snapshot files not in namespace.json members[]
-        if( declaredHashes.length > 0 ) {
-            const orphans = snapshotHashes.filter( ( h ) => !declaredHashes.includes( h ) )
-            orphans
-                .forEach( ( h ) => {
-                    issues.push( {
-                        severity: 'error',
-                        code: 'SCN-004',
-                        path: join( namespacePath, `${h}--v?.?.?.mjs` ),
-                        message: `SCN-004: Orphan schema snapshot — hash not in namespace.json: ${h}`
-                    } )
-                } )
-        }
-
-        // Hash mismatch verification (best-effort: import + recompute)
+        // Hash-Mismatch verification (import + recompute) and in-source hash-leak detection.
         const verifyResults = await Promise.all(
             listing.snapshots.map( async ( snap ) => {
                 const verifyResult = await SourceSnapshot.verify( { snapshotPath: snap.path } )
-                return { snap, verifyResult }
+                const leak = await FolderScanner.#detectInSourceHashLeak( { path: snap.path } )
+                return { snap, verifyResult, leak }
             } )
         )
 
         verifyResults
-            .forEach( ( { snap, verifyResult } ) => {
-                if( verifyResult.errors.length > 0 ) {
-                    // do not duplicate; report only when hashes diverge
-                    return
-                }
-                if( !verifyResult.valid ) {
+            .forEach( ( { snap, verifyResult, leak } ) => {
+                if( verifyResult.errors.length === 0 && !verifyResult.valid ) {
                     issues.push( {
                         severity: 'error',
                         code: 'SCN-005',
                         path: snap.path,
                         message: `SCN-005: Hash-Mismatch — filename hash != recomputed hash: expected ${verifyResult.expectedHash}, got ${verifyResult.actualHash}`
+                    } )
+                }
+                if( leak.leaked ) {
+                    issues.push( {
+                        severity: 'error',
+                        code: 'SCN-012',
+                        path: snap.path,
+                        message: `SCN-012: In-source hash leak — neutral schema must not carry ${leak.keys.join( ', ' )} (hashes belong in the filename + index.json)`
                     } )
                 }
             } )
@@ -197,29 +130,19 @@ class FolderScanner {
 
     static async checkSelectionFolder( { gradingDataRoot, selectionId } ) {
         const issues = []
-        const selectionPath = join( gradingDataRoot, 'selection', selectionId )
-        const selectionJsonPath = join( selectionPath, 'selection.json' )
+        const selectionPath = join( gradingDataRoot, 'selections', selectionId )
+        const indexPath = join( selectionPath, 'index.json' )
 
-        const exists = await FolderScanner.#fileExists( { path: selectionJsonPath } )
+        // v2: a selection folder is valid when it carries an index.json (the rollup
+        // + frozen lockSnapshot). The legacy selection.json / selection.lock.json
+        // checks are dropped.
+        const exists = await FolderScanner.#fileExists( { path: indexPath } )
         if( !exists ) {
             issues.push( {
                 severity: 'error',
                 code: 'SCN-008',
                 path: selectionPath,
-                message: `SCN-008: Dangling selection-folder — selection.json missing: ${selectionPath}`
-            } )
-            return { issues, errors: [] }
-        }
-
-        // Lockfile-consistency check is delegated to the selection validator. Here we only assert the file existence.
-        const lockfilePath = join( selectionPath, 'selection.lock.json' )
-        const lockExists = await FolderScanner.#fileExists( { path: lockfilePath } )
-        if( !lockExists ) {
-            issues.push( {
-                severity: 'error',
-                code: 'SCN-009',
-                path: lockfilePath,
-                message: `SCN-009: Lockfile-Consistency error (delegated): selection.lock.json missing at ${lockfilePath}`
+                message: `SCN-008: Dangling selection-folder — index.json missing: ${selectionPath}`
             } )
         }
 
@@ -227,93 +150,18 @@ class FolderScanner {
     }
 
 
-    static async checkProjectIndex( { gradingDataRoot, projectName } ) {
-        const { status, messages } = FolderScanner.#validation( { gradingDataRoot, key: 'gradingDataRoot' } )
-        if( !status ) { return { issues: [], errors: messages } }
-        if( projectName === undefined || projectName === null || typeof projectName !== 'string' ) {
-            return { issues: [], errors: [ 'SCN-011: projectName argument required' ] }
+    static async #detectInSourceHashLeak( { path } ) {
+        try {
+            const content = await readFile( path, 'utf-8' )
+            const leakedKeys = IN_SOURCE_HASH_KEYS
+                .filter( ( key ) => {
+                    const pattern = new RegExp( `[\\s{,]${key}\\s*:` )
+                    return pattern.test( content )
+                } )
+            return { leaked: leakedKeys.length > 0, keys: leakedKeys }
+        } catch( e ) {
+            return { leaked: false, keys: [] }
         }
-
-        const issues = []
-        const projectDir = join( gradingDataRoot, 'projects', projectName )
-        const indexPath = join( projectDir, 'index.json' )
-
-        const exists = await FolderScanner.#fileExists( { path: indexPath } )
-        if( !exists ) {
-            issues.push( {
-                severity: 'error',
-                code: 'SCN-011',
-                path: indexPath,
-                message: `SCN-011: project index missing: ${indexPath}`
-            } )
-            return { issues, errors: [] }
-        }
-
-        const read = await ProjectIndex.read( { gradingDataRoot, projectName } )
-        if( read.errors.length > 0 ) {
-            issues.push( {
-                severity: 'error',
-                code: 'SCN-011',
-                path: indexPath,
-                message: `SCN-011: project index invalid: ${read.errors.join( '; ' )}`
-            } )
-        }
-
-        return { issues, errors: [] }
-    }
-
-
-    static async checkPhaseStatus( { gradingDataRoot } ) {
-        const issues = []
-        const psDir = join( gradingDataRoot, 'phase-status', 'single' )
-        const exists = await FolderScanner.#dirExists( { path: psDir } )
-        if( !exists ) { return { issues, errors: [] } }
-
-        const entries = await readdir( psDir )
-        const jsons = entries.filter( ( n ) => n.endsWith( '.json' ) )
-
-        await Promise.all(
-            jsons.map( async ( name ) => {
-                const path = join( psDir, name )
-                try {
-                    const raw = await readFile( path, 'utf-8' )
-                    const ps = JSON.parse( raw )
-                    if( ps.schemaHash === undefined || ps.schemaHash === null ) { return }
-                    // verify the hash matches a snapshot somewhere — heuristic: derive namespace from filename
-                    const baseName = name.replace( /\.json$/, '' )
-                    const namespace = baseName.split( '--' )[ 0 ]
-                    const listing = await SourceSnapshot.listForNamespace( { gradingDataRoot, namespace } )
-                    const matched = listing.snapshots.find( ( s ) => s.hash === ps.schemaHash )
-                    if( matched === undefined ) {
-                        issues.push( {
-                            severity: 'warning',
-                            code: 'SCN-010',
-                            path,
-                            message: `SCN-010: phase-status references non-existent schemaHash: ${ps.schemaHash}`
-                        } )
-                    }
-                } catch( e ) {
-                    // ignore malformed; reporting handled elsewhere
-                }
-            } )
-        )
-
-        return { issues, errors: [] }
-    }
-
-
-    static async #checkSingleFolder( { gradingDataRoot, namespaceTool, namespaces } ) {
-        const issues = []
-        const ns = namespaceTool.split( '--' )[ 0 ]
-        if( !namespaces.includes( ns ) ) {
-            issues.push( {
-                severity: 'error',
-                code: 'SCN-007',
-                path: join( gradingDataRoot, 'single', namespaceTool ),
-                message: `SCN-007: Dangling single-folder — no matching namespace: ${namespaceTool}`
-            } )
-        }
-        return { issues, errors: [] }
     }
 
 
@@ -324,14 +172,6 @@ class FolderScanner {
                 .filter( ( e ) => e.isDirectory() )
                 .map( ( e ) => e.name )
                 .sort()
-        } catch( e ) { return [] }
-    }
-
-
-    static async #listFiles( { path } ) {
-        try {
-            const entries = await readdir( path )
-            return entries
         } catch( e ) { return [] }
     }
 

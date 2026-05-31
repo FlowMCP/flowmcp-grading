@@ -25,3 +25,6 @@ scripts/_*.mjs
 # Local environment overrides (no .env should live in this repo — see AGENTS.md)
 .env
 .env.local
+
+# local recovery copies (legacy never deleted; git history is source of truth)
+.trash/

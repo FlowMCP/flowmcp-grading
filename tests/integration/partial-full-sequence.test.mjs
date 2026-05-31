@@ -52,7 +52,7 @@ describe( 'Full → Partial → Full sequence', () => {
         expect( ps.lastGradingMode ).toBe( 'full' )
     } )
 
-    test( 'last partial → stays pending', async () => {
+    test( 'last partial → not stable, maps to 5-status graded (last-not-full)', async () => {
         const sequence = [
             { gradingMode: 'full', aggregateGrade: 'A', schemaVersion: '1.0.0', schemaHash: 'a1b2c3d4', path: 'g1.json' },
             { gradingMode: 'partial', aggregateGrade: 'A', schemaVersion: '1.0.0', schemaHash: 'a1b2c3d4', path: 'g2.json' }
@@ -65,10 +65,11 @@ describe( 'Full → Partial → Full sequence', () => {
             gradingFiles: sequence,
             threshold: 'A'
         } )
-        expect( promotion.status ).toBe( 'pending' )
+        // v2 5-status: a full grade exists but the latest is partial → graded, not stable.
+        expect( promotion.status ).toBe( 'graded' )
     } )
 
-    test( 'last full grade B threshold A → pending', async () => {
+    test( 'last full grade B threshold A → not stable, maps to graded (below-threshold)', async () => {
         const sequence = [
             { gradingMode: 'full', aggregateGrade: 'B', schemaVersion: '1.0.0', schemaHash: 'a1b2c3d4', path: 'g1.json' }
         ]
@@ -80,6 +81,7 @@ describe( 'Full → Partial → Full sequence', () => {
             gradingFiles: sequence,
             threshold: 'A'
         } )
-        expect( promotion.status ).toBe( 'pending' )
+        // v2 5-status: a grade exists (B) but below threshold A → graded.
+        expect( promotion.status ).toBe( 'graded' )
     } )
 } )

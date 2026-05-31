@@ -374,142 +374,148 @@ describe( 'Grading.readEntry: backward-compat', () => {
 } )
 
 
-// Filename helper
-describe( 'Grading.formatGradingFilename: hash', () => {
-    test( 'hash: 8-hex akzeptiert', () => {
+// Filename helper — v2 grammar: ‹area›[--‹basePersona›--‹lens›]--‹ts›.json
+describe( 'Grading.formatGradingFilename: area + timestamp (neutral)', () => {
+    test( 'neutral area produces ‹area›--‹ts›.json (no persona segment)', () => {
         const { filename } = Grading.formatGradingFilename( {
-            hash: 'a1b2c3d4',
-            ts: '2026-05-30T10-15-00Z',
-            persona: 'neutral'
+            area: 'single-test',
+            timestamp: '2026-05-30T10-15-00Z'
         } )
-        expect( filename ).toBe( 'a1b2c3d4--2026-05-30T10-15-00Z--neutral.json' )
+        expect( filename ).toBe( 'single-test--2026-05-30T10-15-00Z.json' )
     } )
 
-    test( 'hash: PLACEHOLDER001 akzeptiert (legacy pilot files)', () => {
+    test( 'selection-aggregate (the 11th area) is accepted', () => {
         const { filename } = Grading.formatGradingFilename( {
-            hash: 'PLACEHOLDER001',
-            ts: '2026-05-29T03-00-00Z',
-            persona: 'neutral'
+            area: 'selection-aggregate',
+            basePersona: 'decision-maker',
+            lens: 'crypto-trader',
+            timestamp: '2026-05-29T03-00-00Z'
         } )
-        expect( filename ).toBe( 'PLACEHOLDER001--2026-05-29T03-00-00Z--neutral.json' )
+        expect( filename ).toBe( 'selection-aggregate--decision-maker--crypto-trader--2026-05-29T03-00-00Z.json' )
     } )
 
-    test( 'hash: \'abc\' (zu kurz) wirft GRD-040', () => {
+    test( 'unknown area throws GRD-043', () => {
         expect( () => Grading.formatGradingFilename( {
-            hash: 'abc',
-            ts: '2026-05-30T10-15-00Z',
-            persona: 'neutral'
-        } ) ).toThrow( /GRD-040/ )
+            area: 'not-an-area',
+            timestamp: '2026-05-30T10-15-00Z'
+        } ) ).toThrow( /GRD-043/ )
     } )
 
-    test( 'hash: \'XYZ123\' (kein hex) wirft GRD-040', () => {
+    test( 'missing area throws GRD-001', () => {
         expect( () => Grading.formatGradingFilename( {
-            hash: 'XYZ123',
-            ts: '2026-05-30T10-15-00Z',
-            persona: 'neutral'
-        } ) ).toThrow( /GRD-040/ )
+            timestamp: '2026-05-30T10-15-00Z'
+        } ) ).toThrow( /GRD-001/ )
     } )
 } )
 
 
-describe( 'Grading.formatGradingFilename: ts', () => {
-    test( 'ts: \'2026-05-30T10-15-00Z\' akzeptiert', () => {
+describe( 'Grading.formatGradingFilename: timestamp', () => {
+    test( 'timestamp is the last segment before .json', () => {
         const { filename } = Grading.formatGradingFilename( {
-            hash: 'a1b2c3d4',
-            ts: '2026-05-30T10-15-00Z',
-            persona: 'neutral'
+            area: 'about-namespace',
+            basePersona: 'ai-engineer',
+            lens: 'defi',
+            timestamp: '2026-05-30T10-15-00Z'
         } )
-        expect( filename ).toContain( '2026-05-30T10-15-00Z' )
+        expect( filename.endsWith( '2026-05-30T10-15-00Z.json' ) ).toBe( true )
     } )
 
-    test( 'ts: \'2026-05-30T10:15:00Z\' (Doppelpunkte) wirft GRD-041', () => {
+    test( 'colons in timestamp throw GRD-041', () => {
         expect( () => Grading.formatGradingFilename( {
-            hash: 'a1b2c3d4',
-            ts: '2026-05-30T10:15:00Z',
-            persona: 'neutral'
+            area: 'single-test',
+            timestamp: '2026-05-30T10:15:00Z'
         } ) ).toThrow( /GRD-041/ )
     } )
 
-    test( 'ts: \'2026-05-30\' (kein Zeit-Anteil) wirft GRD-041', () => {
+    test( 'date-only timestamp throws GRD-041', () => {
         expect( () => Grading.formatGradingFilename( {
-            hash: 'a1b2c3d4',
-            ts: '2026-05-30',
-            persona: 'neutral'
+            area: 'single-test',
+            timestamp: '2026-05-30'
         } ) ).toThrow( /GRD-041/ )
     } )
 } )
 
 
-describe( 'Grading.formatGradingFilename: persona', () => {
-    test( 'persona: \'neutral\' akzeptiert', () => {
+describe( 'Grading.formatGradingFilename: persona pair', () => {
+    test( 'basePersona + lens produce ‹area›--‹base›--‹lens›--‹ts›.json', () => {
         const { filename } = Grading.formatGradingFilename( {
-            hash: 'a1b2c3d4',
-            ts: '2026-05-30T10-15-00Z',
-            persona: 'neutral'
+            area: 'selection-skills-L1',
+            basePersona: 'decision-maker',
+            lens: 'crypto-trader',
+            timestamp: '2026-05-30T10-15-00Z'
         } )
-        expect( filename ).toContain( '--neutral.json' )
+        expect( filename ).toBe( 'selection-skills-L1--decision-maker--crypto-trader--2026-05-30T10-15-00Z.json' )
     } )
 
-    test( 'persona: \'decision-maker--crypto-trader\' akzeptiert', () => {
-        const { filename } = Grading.formatGradingFilename( {
-            hash: 'a1b2c3d4',
-            ts: '2026-05-30T10-15-00Z',
-            persona: 'decision-maker--crypto-trader'
-        } )
-        expect( filename ).toBe( 'a1b2c3d4--2026-05-30T10-15-00Z--decision-maker--crypto-trader.json' )
-    } )
-
-    test( 'persona: \'\' (empty) wirft GRD-001', () => {
+    test( 'basePersona without lens throws GRD-042 (no silent half-persona)', () => {
         expect( () => Grading.formatGradingFilename( {
-            hash: 'a1b2c3d4',
-            ts: '2026-05-30T10-15-00Z',
-            persona: ''
+            area: 'about-selection',
+            basePersona: 'decision-maker',
+            timestamp: '2026-05-30T10-15-00Z'
         } ) ).toThrow( /GRD-042/ )
     } )
 
-    test( 'persona: \'crypto-trader\' (single segment) wirft GRD-042', () => {
+    test( 'uppercase persona segment throws GRD-042', () => {
         expect( () => Grading.formatGradingFilename( {
-            hash: 'a1b2c3d4',
-            ts: '2026-05-30T10-15-00Z',
-            persona: 'crypto-trader'
-        } ) ).toThrow( /GRD-042/ )
-    } )
-
-    test( 'persona: \'Decision-Maker--Crypto\' (uppercase) wirft GRD-042', () => {
-        expect( () => Grading.formatGradingFilename( {
-            hash: 'a1b2c3d4',
-            ts: '2026-05-30T10-15-00Z',
-            persona: 'Decision-Maker--Crypto'
+            area: 'about-selection',
+            basePersona: 'Decision-Maker',
+            lens: 'Crypto',
+            timestamp: '2026-05-30T10-15-00Z'
         } ) ).toThrow( /GRD-042/ )
     } )
 } )
 
 
-describe( 'Grading.formatGradingFilename: output snapshots', () => {
-    test( 'snapshot row 1 — full persona', () => {
-        const { filename } = Grading.formatGradingFilename( {
-            hash: 'a1b2c3d4',
-            ts: '2026-05-30T10-15-00Z',
-            persona: 'decision-maker--crypto-trader'
+describe( 'Grading.createEntry: v2 envelope fields', () => {
+    test( 'accepts area / harness / status / skillId for a per-skill area', () => {
+        const { entry, errors } = Grading.createEntry( {
+            schemaId: 'demo.tool',
+            selectionId: null,
+            gradingTier: 'autonomous',
+            grader: { kind: 'script', name: 'g', version: '1' },
+            area: 'namespace-skills',
+            skillId: 'crypto-price-entry',
+            level: 'L1',
+            status: 'graded',
+            harness: 'claude-code'
         } )
-        expect( filename ).toBe( 'a1b2c3d4--2026-05-30T10-15-00Z--decision-maker--crypto-trader.json' )
+        expect( errors ).toEqual( [] )
+        expect( entry.area ).toBe( 'namespace-skills' )
+        expect( entry.skillId ).toBe( 'crypto-price-entry' )
+        expect( entry.status ).toBe( 'graded' )
+        expect( entry.harness ).toBe( 'claude-code' )
     } )
 
-    test( 'snapshot row 2 — neutral', () => {
-        const { filename } = Grading.formatGradingFilename( {
-            hash: 'abc123',
-            ts: '2026-05-29T03-00-00Z',
-            persona: 'neutral'
+    test( 'per-skill area without skillId yields GRD-037', () => {
+        const { errors } = Grading.createEntry( {
+            schemaId: 'demo.tool',
+            selectionId: null,
+            gradingTier: 'autonomous',
+            grader: { kind: 'script', name: 'g', version: '1' },
+            area: 'selection-skills-L2'
         } )
-        expect( filename ).toBe( 'abc123--2026-05-29T03-00-00Z--neutral.json' )
+        expect( errors[ 0 ] ).toContain( 'GRD-037' )
     } )
 
-    test( 'snapshot row 3 — PLACEHOLDER hash', () => {
-        const { filename } = Grading.formatGradingFilename( {
-            hash: 'PLACEHOLDER001',
-            ts: '2026-05-29T03-00-00Z',
-            persona: 'neutral'
+    test( 'invalid harness yields GRD-034', () => {
+        const { errors } = Grading.createEntry( {
+            schemaId: 'demo.tool',
+            selectionId: null,
+            gradingTier: 'autonomous',
+            grader: { kind: 'script', name: 'g', version: '1' },
+            harness: 'gpt'
         } )
-        expect( filename ).toBe( 'PLACEHOLDER001--2026-05-29T03-00-00Z--neutral.json' )
+        expect( errors[ 0 ] ).toContain( 'GRD-034' )
+    } )
+
+    test( 'invalid status yields GRD-035', () => {
+        const { errors } = Grading.createEntry( {
+            schemaId: 'demo.tool',
+            selectionId: null,
+            gradingTier: 'autonomous',
+            grader: { kind: 'script', name: 'g', version: '1' },
+            status: 'done'
+        } )
+        expect( errors[ 0 ] ).toContain( 'GRD-035' )
     } )
 } )

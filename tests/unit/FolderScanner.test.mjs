@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { FolderScanner } from '../../src/FolderScanner.mjs'
+import { HashGenerator } from '../../src/HashGenerator.mjs'
 
 
 let tempRoot = null
@@ -21,7 +22,22 @@ afterAll( async () => {
 } )
 
 
-describe( 'FolderScanner.scan', () => {
+// Write a valid B2 snapshot whose filename hash matches the recomputed hash.
+const writeValidSnapshot = async ( { root, namespace, schemaName, extraKeys } ) => {
+    const schemaObject = Object.assign(
+        { version: 'flowmcp/4.0.0', namespace, name: schemaName, tools: {} },
+        extraKeys === undefined ? {} : extraKeys
+    )
+    const hash = HashGenerator.computeSchemaHash( { schema: schemaObject } ).hash
+    const dir = join( root, 'providers', namespace, schemaName, 'schema' )
+    await mkdir( dir, { recursive: true } )
+    const fileSource = `export const main = ${JSON.stringify( schemaObject )}`
+    await writeFile( join( dir, `${schemaName}--2026-05-30T10-15-00Z--${hash}.mjs` ), fileSource, 'utf-8' )
+    return { hash }
+}
+
+
+describe( 'FolderScanner.scan (v2: providers/ + selections/ + shared-lists/)', () => {
     test( 'missing gradingDataRoot → SCN-001', async () => {
         const r = await FolderScanner.scan( { gradingDataRoot: '/no/such/path' } )
         const has = r.issues.some( ( i ) => i.code === 'SCN-001' )
@@ -36,98 +52,71 @@ describe( 'FolderScanner.scan', () => {
         expect( r.summary.gaps ).toBe( 0 )
     } )
 
-    test( 'namespace without namespace.json → SCN-002', async () => {
-        const root = join( tempRoot, 'missing-ns-json' )
-        const nsDir = join( root, 'schemas', 'demo' )
-        await mkdir( nsDir, { recursive: true } )
+    test( 'a valid provider schema snapshot scans without errors and is counted', async () => {
+        const root = join( tempRoot, 'valid-provider' )
+        await writeValidSnapshot( { root, namespace: 'demo', schemaName: 'alpha' } )
         const r = await FolderScanner.scan( { gradingDataRoot: root } )
-        const has = r.issues.some( ( i ) => i.code === 'SCN-002' )
+        expect( r.summary.namespaces ).toBe( 1 )
+        expect( r.summary.schemas ).toBe( 1 )
+        const errs = r.issues.filter( ( i ) => i.severity === 'error' )
+        expect( errs.length ).toBe( 0 )
+    } )
+
+    test( 'hash mismatch in filename → SCN-005', async () => {
+        const root = join( tempRoot, 'hash-mismatch' )
+        const dir = join( root, 'providers', 'demo', 'alpha', 'schema' )
+        await mkdir( dir, { recursive: true } )
+        // filename claims hash deadbeef but content recomputes to something else
+        const fileSource = `export const main = { version: 'flowmcp/4.0.0', namespace: 'demo', name: 'alpha', tools: {} }`
+        await writeFile( join( dir, 'alpha--2026-05-30T10-15-00Z--deadbeef.mjs' ), fileSource, 'utf-8' )
+
+        const r = await FolderScanner.scan( { gradingDataRoot: root } )
+        const has = r.issues.some( ( i ) => i.code === 'SCN-005' )
         expect( has ).toBe( true )
     } )
 
-    test( 'orphan snapshot → SCN-004', async () => {
-        const root = join( tempRoot, 'orphan' )
-        const nsDir = join( root, 'schemas', 'demo' )
-        await mkdir( nsDir, { recursive: true } )
-        await writeFile( join( nsDir, 'namespace.json' ), JSON.stringify( { members: [ { schemaHash: 'aaaaaaaa' } ] } ), 'utf-8' )
-        await writeFile( join( nsDir, 'bbbbbbbb--v1.0.0.mjs' ), 'export const main = { version: "4.0.0" }', 'utf-8' )
+    test( 'in-source hash leak → SCN-012 (neutral source must not carry schemaHash)', async () => {
+        const root = join( tempRoot, 'hash-leak' )
+        const dir = join( root, 'providers', 'demo', 'alpha', 'schema' )
+        await mkdir( dir, { recursive: true } )
+        // A neutral schema must NOT carry schemaHash in the source body.
+        const fileSource = `export const main = { version: 'flowmcp/4.0.0', namespace: 'demo', name: 'alpha', schemaHash: 'a1b2c3d4', tools: {} }`
+        await writeFile( join( dir, 'alpha--2026-05-30T10-15-00Z--a1b2c3d4.mjs' ), fileSource, 'utf-8' )
 
         const r = await FolderScanner.scan( { gradingDataRoot: root } )
-        const has = r.issues.some( ( i ) => i.code === 'SCN-004' )
+        const has = r.issues.some( ( i ) => i.code === 'SCN-012' )
         expect( has ).toBe( true )
     } )
 
-    test( 'dangling single-folder → SCN-007', async () => {
-        const root = join( tempRoot, 'dangling-single' )
-        // create only a single-folder, no namespace
-        await mkdir( join( root, 'single', 'nope--tool' ), { recursive: true } )
-        const r = await FolderScanner.scan( { gradingDataRoot: root } )
-        const has = r.issues.some( ( i ) => i.code === 'SCN-007' )
-        expect( has ).toBe( true )
-    } )
-
-    test( 'selection without selection.json → SCN-008', async () => {
+    test( 'selection folder without index.json → SCN-008', async () => {
         const root = join( tempRoot, 'dangling-selection' )
-        await mkdir( join( root, 'selection', 'demo' ), { recursive: true } )
+        await mkdir( join( root, 'selections', 'demo' ), { recursive: true } )
         const r = await FolderScanner.scan( { gradingDataRoot: root } )
         const has = r.issues.some( ( i ) => i.code === 'SCN-008' )
         expect( has ).toBe( true )
+        expect( r.summary.selections ).toBe( 1 )
     } )
 } )
 
 
 describe( 'FolderScanner.checkSelectionFolder', () => {
-    test( 'reports SCN-009 when lockfile missing', async () => {
-        const root = join( tempRoot, 'selfolder-lockmissing' )
-        const selDir = join( root, 'selection', 'demo' )
+    test( 'reports SCN-008 when index.json missing', async () => {
+        const root = join( tempRoot, 'selfolder-no-index' )
+        const selDir = join( root, 'selections', 'demo' )
         await mkdir( selDir, { recursive: true } )
-        await writeFile( join( selDir, 'selection.json' ), JSON.stringify( { members: [] } ), 'utf-8' )
 
         const r = await FolderScanner.checkSelectionFolder( { gradingDataRoot: root, selectionId: 'demo' } )
-        const has = r.issues.some( ( i ) => i.code === 'SCN-009' )
-        expect( has ).toBe( true )
-    } )
-} )
-
-
-describe( 'FolderScanner project index (SCN-011)', () => {
-    const validIndex = ( { projectName } ) => ( {
-        indexVersion: 1,
-        projectName,
-        createdAt: '2026-05-30T10:00:00.000Z',
-        updatedAt: '2026-05-30T10:00:00.000Z',
-        dataPretest: {},
-        singleGradings: {},
-        selectionGradings: {}
-    } )
-
-    test( 'project entry without index.json → SCN-011 in scan', async () => {
-        const root = join( tempRoot, 'project-no-index' )
-        await mkdir( join( root, 'projects', 'demo-project' ), { recursive: true } )
-        const r = await FolderScanner.scan( { gradingDataRoot: root } )
-        const has = r.issues.some( ( i ) => i.code === 'SCN-011' )
-        expect( has ).toBe( true )
-        expect( r.summary.projects ).toBe( 1 )
-    } )
-
-    test( 'invalid index.json → SCN-011 in checkProjectIndex', async () => {
-        const root = join( tempRoot, 'project-bad-index' )
-        const projDir = join( root, 'projects', 'demo-project' )
-        await mkdir( projDir, { recursive: true } )
-        await writeFile( join( projDir, 'index.json' ), JSON.stringify( { indexVersion: 99 } ), 'utf-8' )
-
-        const r = await FolderScanner.checkProjectIndex( { gradingDataRoot: root, projectName: 'demo-project' } )
-        const has = r.issues.some( ( i ) => i.code === 'SCN-011' )
+        const has = r.issues.some( ( i ) => i.code === 'SCN-008' )
         expect( has ).toBe( true )
     } )
 
-    test( 'valid index.json → no SCN-011', async () => {
-        const root = join( tempRoot, 'project-good-index' )
-        const projDir = join( root, 'projects', 'demo-project' )
-        await mkdir( projDir, { recursive: true } )
-        await writeFile( join( projDir, 'index.json' ), JSON.stringify( validIndex( { projectName: 'demo-project' } ) ), 'utf-8' )
+    test( 'index.json present → no SCN-008', async () => {
+        const root = join( tempRoot, 'selfolder-ok' )
+        const selDir = join( root, 'selections', 'demo' )
+        await mkdir( selDir, { recursive: true } )
+        await writeFile( join( selDir, 'index.json' ), JSON.stringify( { indexVersion: 2, selectionId: 'demo' } ), 'utf-8' )
 
-        const r = await FolderScanner.checkProjectIndex( { gradingDataRoot: root, projectName: 'demo-project' } )
+        const r = await FolderScanner.checkSelectionFolder( { gradingDataRoot: root, selectionId: 'demo' } )
         expect( r.issues ).toEqual( [] )
     } )
 } )

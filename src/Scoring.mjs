@@ -6,38 +6,40 @@
  * Encapsulates sub-grades (dimensions with weights, deterministic scores).
  * Static methods only, object params, object returns. NO SILENT DEFAULTS.
  *
- * Per the grading spec:
+ * Per the grading spec (gradingSpec/1.2.0):
  *   - A grading is an array of sub-grades.
- *   - Dimension enum (17 values).
+ *   - The 17 single dimensions plus S1-S4 are replaced by 11 grading Areas.
+ *     Each grading entry targets exactly one Area (const per entry).
  *   - Score value range (1.0-5.0 float OR enum: pass|fail|stale|n/a).
  *   - Multi-grader rule: no automatic consolidation.
  *   - n/a pragma: ignored in weighted sum, not zero.
  *   - Aging: stale, not fail.
+ *   - Per-skill areas (namespace-skills, selection-skills-L1/L2/L3) grade ONE
+ *     skill at a time, not a level cohort — no selectionSkillL* cohort dims.
  */
 
 const SCORING_SYSTEM_VERSION = 'scoringSystem/1.0.0'
 
 
-// Dimensions enum per the grading spec. Closed list, extensions require a spec revision.
-const DIMENSIONS = [
-    'apiAvailability',
-    'apiResponseValid',
-    'schemaStructureValid',
-    'tosCompliance',
-    'descriptionNeutrality',
-    'parametersTyping',
-    'whenToUseClarity',
-    'aboutConventionCompliance',
-    'namespaceSkillValidity',
-    'errorCodePattern',
-    'tosAvailability',
-    'domainConformance',
-    'selectionSkillL1',
-    'selectionSkillL2',
-    'selectionSkillL3',
-    'personaUseCaseFit',
-    'maintainerResponsiveness'
+// The 11 grading Areas per gradingSpec/1.2.0 §5.1 (replaces the legacy 17-dimension
+// enum). Closed list, extensions require a gradingSystem bump. Provider areas 1-6,
+// selection areas 7-11. `scoreDimension` accepts an Area slug as its `dimension`.
+const AREAS = [
+    'single-test',
+    'tools-aggregate-schema',
+    'tools-aggregate-namespace',
+    'namespace-description',
+    'namespace-skills',
+    'about-namespace',
+    'about-selection',
+    'selection-skills-L1',
+    'selection-skills-L2',
+    'selection-skills-L3',
+    'selection-aggregate'
 ]
+
+// Backward-compat alias — the dimension-keyed callers now pass an Area slug.
+const DIMENSIONS = AREAS
 
 
 const SCORE_ENUMS = [ 'pass', 'fail', 'stale', 'n/a' ]
@@ -219,4 +221,4 @@ class Scoring {
 }
 
 
-export { Scoring, DIMENSIONS }
+export { Scoring, DIMENSIONS, AREAS }

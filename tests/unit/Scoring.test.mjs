@@ -1,6 +1,6 @@
 import { describe, test, expect } from '@jest/globals'
 
-import { Scoring } from '../../src/Scoring.mjs'
+import { Scoring, AREAS } from '../../src/Scoring.mjs'
 import { sampleGrading } from '../helpers/fixtures.mjs'
 
 
@@ -12,10 +12,30 @@ describe( 'Scoring.getVersion', () => {
 } )
 
 
+describe( 'Scoring.AREAS (11 areas, v2)', () => {
+    test( 'exports exactly 11 areas including selection-aggregate', () => {
+        expect( AREAS.length ).toBe( 11 )
+        expect( AREAS ).toContain( 'selection-aggregate' )
+    } )
+
+    test( 'no legacy selectionSkillL* cohort dimensions remain', () => {
+        expect( AREAS ).not.toContain( 'selectionSkillL1' )
+        expect( AREAS ).not.toContain( 'selectionSkillL2' )
+        expect( AREAS ).not.toContain( 'selectionSkillL3' )
+    } )
+
+    test( 'per-skill selection-skills areas are present', () => {
+        expect( AREAS ).toContain( 'selection-skills-L1' )
+        expect( AREAS ).toContain( 'selection-skills-L2' )
+        expect( AREAS ).toContain( 'selection-skills-L3' )
+    } )
+} )
+
+
 describe( 'Scoring.scoreDimension', () => {
     test( 'happy path returns object with stub flag', () => {
         const result = Scoring.scoreDimension( {
-            dimension: 'apiAvailability',
+            dimension: 'single-test',
             rawValue: { httpStatus: 200 },
             determinism: 'deterministic'
         } )
@@ -32,9 +52,9 @@ describe( 'Scoring.scoreDimension', () => {
         expect( result.errors[ 0 ] ).toContain( 'GRD-001' )
     } )
 
-    test( 'unknown dimension yields SCO-002', () => {
+    test( 'unknown area yields SCO-002', () => {
         const result = Scoring.scoreDimension( {
-            dimension: 'notADimension',
+            dimension: 'notAnArea',
             rawValue: 1,
             determinism: 'deterministic'
         } )
