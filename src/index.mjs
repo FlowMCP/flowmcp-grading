@@ -12,16 +12,17 @@
  * | Scoring                 | class    | static getVersion / scoreDimension / validateScore / computeWeightedSum                    | SCO-*, GRD-*              |
  * | Veto                    | class    | static getTriggers / applyVeto / isVetoed / validateVeto                                   | VET-*                     |
  * | SingleSchemaPhases      | class    | static getTier / runP1..runP7 / runAll                                                     | GRD-*                     |
- * | SelectionPhases         | class    | static getTier / runS1..runS4 / runAll / runAllStub                                        | GRD-*, SEL-*              |
+ * | SelectionPhases         | class    | static getTier / runS1 / runS3 / runS4 / runAll (S1/S3/S4 chain)                           | GRD-*, SEL-*              |
  * | ErrorCodes              | class    | static getCode / formatMessage / listByPrefix / listBySeverity / validateCodeFormat        | GRD-*                     |
  * | HashGenerator           | class    | static canonicalize / computeHash / computeSchemaHash / computeSelectionHash / ...         | HSH-*                     |
  * | SourceSnapshot          | class    | static create / parseSnapshotFilename / verify / listForNamespace                          | SNP-*                     |
  * | PartialGrading          | class    | static getValidModes / buildPartialEntry / validateSequence / listGradedDimensions         | PRT-*                     |
  * | StablePromotion         | class    | static checkEligibility / promoteIfEligible                                                | STB-*                     |
- * | SelectionLockfile       | class    | static validateOverride (lifecycle generate/read/diff DROPPED in v2)                       | LCK-*                     |
  * | ProjectIndex            | class    | static init / read / write / validateIndex / indexPath                                     | IDX-*                     |
  * | RebuildIndex            | class    | static resolveLatest / rebuildNamespaceIndex / rebuildSelectionIndex / buildLockSnapshot / validateIndex / mapAggregateGradeToStatus | IDX-* |
  * | PromptBuilder           | class    | static build / getValidAreas / isPersonaRequired / buildGoalBlock                          | PB-*                      |
+ * | GradingImport           | class    | static run ( { providerPath, gradingDataRoot, validateGate } ) — IN round-trip             | IMP-*, SEL-004, SNP-*     |
+ * | GradingExport           | class    | static run ( { target, exportDir, includeSchemas } ) — OUT round-trip                      | EXP-*                     |
  * | PreConditionCheck       | class    | static check / checkLockfile                                                               | PRE-*                     |
  * | FolderScanner           | class    | static scan / checkNamespaceFolder / checkSchemaSnapshots / checkSelectionFolder           | SCN-*                     |
  * | AboutConsistencyCheck   | class    | static checkNamespaceAbout / checkSelectionAbout / verifyNamespace                         | ABT-*                     |
@@ -30,8 +31,9 @@
  * | DataPretest             | class    | static getVersion / run                                                                    | DPT-*                     |
  * | ModuleApi               | class    | static readState / stats / addSchema / upgradeSchema / assertFullScopeRule / assertSelectionRespectsSchemaFull / getScopes | API-* |
  * | gradeSingleSchema       | function | ( { schemaPath, schemaId, grader, options } ) → { grading, errors }                        | GRD-001, GRD-002, GRD-003 |
- * | gradeSelection          | function | ( { selectionId, schemaIds, grader, options } ) → { grading, errors }                      | GRD-001, GRD-002, GRD-004 |
+ * | gradeSelection          | function | async ( { selectionId, schemaIds, grader, options } ) → { grading, errors }                | GRD-001, GRD-002, GRD-004 |
  * | validateGradingEntry    | function | ( { entry } ) → { valid, errors }                                                          | GRD-001, GRD-002          |
+ * | validateOverride        | function | ( { override } ) → { valid, errors } (salvage from dropped SelectionLockfile)              | LCK-*                     |
  * | getVersion              | function | () → { scoringSystem, gradingSystem, repoVersion }                                         | —                         |
  *
  * Per the grading spec:
@@ -50,7 +52,6 @@ import { HashGenerator } from './HashGenerator.mjs'
 import { SourceSnapshot } from './SourceSnapshot.mjs'
 import { PartialGrading } from './Phases/PartialGrading.mjs'
 import { StablePromotion } from './StablePromotion.mjs'
-import { SelectionLockfile } from './SelectionLockfile.mjs'
 import { ProjectIndex } from './ProjectIndex.mjs'
 import { PreConditionCheck } from './PreConditionCheck.mjs'
 import { FolderScanner } from './FolderScanner.mjs'
@@ -62,6 +63,9 @@ import { ModuleApi } from './ModuleApi.mjs'
 import { SkillComposition } from './SkillComposition.mjs'
 import { RebuildIndex } from './RebuildIndex.mjs'
 import { PromptBuilder } from './PromptBuilder.mjs'
+import { GradingImport } from './GradingImport.mjs'
+import { GradingExport } from './GradingExport.mjs'
+import { SelectionLockfile, OVERRIDE_WHITELIST } from './SelectionLockfile.mjs'
 
 
 const REPO_VERSION = '1.0.0'
@@ -195,15 +199,21 @@ const gradeSingleSchema = ( { schemaPath, schemaId, grader, options } ) => {
 /**
  * gradeSelection — convenience entry to grade a selection (group-bound tier).
  *
+ * v2: runs the REAL selection-phase chain (SelectionPhases.runAll → S1/S3/S4),
+ * no longer the synchronous `runAllStub`. A neutral selection definition is
+ * assembled from the inputs (members from schemaIds, plus any skills /
+ * personaIds / domainDocId passed through options) and the chain is executed
+ * against the island root. Because the chain is async this function is async.
+ *
  * @param {Object} params
  * @param {string} params.selectionId — id of the selection group
  * @param {string[]} params.schemaIds — schema ids contained in the selection
  * @param {Object} params.grader — graderIdentity object
- * @param {Object} [params.options] — optional options object
- * @returns {{ grading: Object|null, errors: string[] }}
+ * @param {Object} [params.options] — { gradingDataRoot, personaIndex, skills, personaIds, domainDocId, selectionJson }
+ * @returns {Promise<{ grading: Object|null, errors: string[] }>}
  * @throws GRD-001, GRD-002, GRD-004
  */
-const gradeSelection = ( { selectionId, schemaIds, grader, options } ) => {
+const gradeSelection = async ( { selectionId, schemaIds, grader, options } ) => {
     const { status, messages } = validationGradeSelection( { selectionId, schemaIds, grader } )
     if( !status ) { return { grading: null, errors: messages } }
 
@@ -218,14 +228,37 @@ const gradeSelection = ( { selectionId, schemaIds, grader, options } ) => {
         return { grading: created.entry, errors: created.errors }
     }
 
-    const run = SelectionPhases.runAllStub( { entry: created.entry } )
+    const opts = options === undefined || options === null ? {} : options
+    const selectionJson = opts.selectionJson !== undefined
+        ? opts.selectionJson
+        : {
+            selectionId,
+            members: schemaIds.map( ( id ) => ( { schemaId: id } ) ),
+            skills: Array.isArray( opts.skills ) ? opts.skills : [],
+            personaIds: Array.isArray( opts.personaIds ) ? opts.personaIds : [],
+            domainDocId: opts.domainDocId
+        }
+    const gradingDataRoot = typeof opts.gradingDataRoot === 'string' ? opts.gradingDataRoot : process.cwd()
+
+    const run = await SelectionPhases.runAll( {
+        entry: created.entry,
+        selectionId,
+        selectionJson,
+        gradingDataRoot,
+        personaIndex: opts.personaIndex,
+        schemaEntries: opts.schemaEntries,
+        domainDocPath: opts.domainDocPath,
+        personaIds: opts.personaIds
+    } )
     const aggregate = Grading.computeAggregateGrade( { entry: run.entry } )
 
     return {
         grading: Object.assign( {}, run.entry, {
             aggregateGrade: aggregate.aggregateGrade,
             maxAttainableGrade: aggregate.maxAttainableGrade,
-            schemaIds
+            schemaIds,
+            phases: run.phases === undefined ? [] : run.phases,
+            tier: run.tier
         } ),
         errors: run.errors.concat( aggregate.errors === undefined ? [] : aggregate.errors )
     }
@@ -264,6 +297,12 @@ const getVersion = () => {
 }
 
 
+// Salvage export: the SelectionLockfile lifecycle (generate/read/diff) is DROPPED
+// in v2 (pins live in index.json.lockSnapshot, built by RebuildIndex). Only the
+// override validator survives as a salvage helper so callers keep reaching it.
+const validateOverride = SelectionLockfile.validateOverride
+
+
 export {
     Grading,
     Scoring,
@@ -275,7 +314,6 @@ export {
     SourceSnapshot,
     PartialGrading,
     StablePromotion,
-    SelectionLockfile,
     ProjectIndex,
     PreConditionCheck,
     FolderScanner,
@@ -287,8 +325,12 @@ export {
     SkillComposition,
     RebuildIndex,
     PromptBuilder,
+    GradingImport,
+    GradingExport,
     gradeSingleSchema,
     gradeSelection,
     validateGradingEntry,
+    validateOverride,
+    OVERRIDE_WHITELIST,
     getVersion
 }
