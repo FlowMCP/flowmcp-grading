@@ -24,6 +24,13 @@ describe( 'Public API exports', () => {
             .filter( ( k ) => !keys.includes( k ) )
         expect( missing ).toEqual( [] )
     } )
+
+    test( 'exports PromptBuilder on the public surface (G9)', () => {
+        expect( Object.keys( api ) ).toContain( 'PromptBuilder' )
+        expect( typeof api.PromptBuilder.build ).toBe( 'function' )
+        expect( typeof api.PromptBuilder.buildGoalBlock ).toBe( 'function' )
+        expect( typeof api.PromptBuilder.getValidAreas ).toBe( 'function' )
+    } )
 } )
 
 

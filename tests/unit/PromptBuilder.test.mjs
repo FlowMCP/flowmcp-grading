@@ -44,16 +44,20 @@ const samplePersona = {
 
 
 describe( 'PromptBuilder.getValidAreas', () => {
-    test( 'returns exactly 10 areas matching the persona-table', () => {
+    test( 'returns exactly 11 areas matching the persona-table', () => {
         const result = PromptBuilder.getValidAreas()
         expect( Array.isArray( result.areas ) ).toBe( true )
-        expect( result.areas.length ).toBe( 10 )
+        expect( result.areas.length ).toBe( 11 )
         expect( result.areas ).toEqual( VALID_AREAS )
     } )
 
-    test( 'PERSONA_REQUIRED_BY_AREA has 10 entries — 4 neutral, 6 with persona', () => {
+    test( 'VALID_AREAS includes the 11th area selection-aggregate', () => {
+        expect( VALID_AREAS ).toContain( 'selection-aggregate' )
+    } )
+
+    test( 'PERSONA_REQUIRED_BY_AREA has 11 entries — 4 neutral, 7 with persona', () => {
         const entries = Object.entries( PERSONA_REQUIRED_BY_AREA )
-        expect( entries.length ).toBe( 10 )
+        expect( entries.length ).toBe( 11 )
 
         const neutral = entries
             .filter( ( [ , required ] ) => required === false )
@@ -64,9 +68,14 @@ describe( 'PromptBuilder.getValidAreas', () => {
             .map( ( [ key ] ) => key )
 
         expect( neutral.length ).toBe( 4 )
-        expect( withPersona.length ).toBe( 6 )
+        expect( withPersona.length ).toBe( 7 )
         expect( neutral ).toEqual( [ 'single-test', 'tools-aggregate-schema', 'namespace-description', 'tools-aggregate-namespace' ] )
-        expect( withPersona ).toEqual( [ 'about-namespace', 'about-selection', 'selection-skills-L1', 'selection-skills-L2', 'selection-skills-L3', 'namespace-skills' ] )
+        expect( withPersona ).toEqual( [ 'about-namespace', 'about-selection', 'selection-skills-L1', 'selection-skills-L2', 'selection-skills-L3', 'namespace-skills', 'selection-aggregate' ] )
+    } )
+
+    test( 'selection-aggregate is persona-required', () => {
+        const result = PromptBuilder.isPersonaRequired( { area: 'selection-aggregate' } )
+        expect( result.personaRequired ).toBe( true )
     } )
 } )
 
@@ -409,5 +418,134 @@ describe( 'PromptBuilder.build — smoke + metadata integrity', () => {
         expect( result.prompt ).toContain( '"blocker": "<filepath>"' )
         expect( result.prompt ).toContain( '1. {{SCHEMA_PATH}}' )
         expect( result.prompt ).toContain( '2. {{TEST_RESPONSE_PATH}}' )
+    } )
+} )
+
+
+const aggregateTemplate = sampleTemplate
+    + '\n## Predecessor\n\n{{PREDECESSOR_GRADES_BLOCK}}\n\n## Goal\n\n{{GOAL_BLOCK}}\n'
+
+const samplePredecessorGrades = [
+    { id: 'btc-usd/getPrice', grade: 'A', status: 'stable' },
+    { id: 'eth-usd/getPrice', grade: 'B', status: 'graded' }
+]
+
+
+describe( 'PromptBuilder.build — selection-aggregate area', () => {
+    test( 'builds the 11th area with persona, predecessor grades and goal block', () => {
+        const result = PromptBuilder.build( {
+            template: aggregateTemplate,
+            persona: samplePersona,
+            files: sampleFilesWithPersona,
+            questions: sampleQuestions,
+            outputSchema: sampleOutputSchema,
+            policies: samplePolicies,
+            area: 'selection-aggregate',
+            predecessorGrades: samplePredecessorGrades
+        } )
+
+        expect( result.metadata.area ).toBe( 'selection-aggregate' )
+        expect( result.metadata.personaRequired ).toBe( true )
+        expect( result.metadata.predecessorGradeCount ).toBe( 2 )
+        expect( result.prompt ).toContain( 'Persona: decision-maker--crypto-trader' )
+    } )
+
+    test( 'predecessor-grades block lists each predecessor with grade + status', () => {
+        const result = PromptBuilder.build( {
+            template: aggregateTemplate,
+            persona: samplePersona,
+            files: sampleFilesWithPersona,
+            questions: sampleQuestions,
+            outputSchema: sampleOutputSchema,
+            policies: samplePolicies,
+            area: 'selection-aggregate',
+            predecessorGrades: samplePredecessorGrades
+        } )
+        expect( result.prompt ).toContain( '## Predecessor Grades' )
+        expect( result.prompt ).toContain( 'btc-usd/getPrice — grade=A, status=stable' )
+        expect( result.prompt ).toContain( 'eth-usd/getPrice — grade=B, status=graded' )
+    } )
+
+    test( 'absent predecessorGrades yields empty block and zero count', () => {
+        const result = PromptBuilder.build( {
+            template: aggregateTemplate,
+            persona: samplePersona,
+            files: sampleFilesWithPersona,
+            questions: sampleQuestions,
+            outputSchema: sampleOutputSchema,
+            policies: samplePolicies,
+            area: 'selection-aggregate'
+        } )
+        expect( result.metadata.predecessorGradeCount ).toBe( 0 )
+        expect( result.prompt ).not.toContain( '## Predecessor Grades' )
+    } )
+
+    test( 'malformed predecessorGrades entry throws PB-003', () => {
+        expect( () => PromptBuilder.build( {
+            template: aggregateTemplate,
+            persona: samplePersona,
+            files: sampleFilesWithPersona,
+            questions: sampleQuestions,
+            outputSchema: sampleOutputSchema,
+            policies: samplePolicies,
+            area: 'selection-aggregate',
+            predecessorGrades: [ { id: 'x', grade: 'A' } ]
+        } ) ).toThrow( /PB-003.*predecessorGrades\[0\]\.status/ )
+    } )
+} )
+
+
+describe( 'PromptBuilder — Goal-Block + surfacing convention', () => {
+    test( 'goal block contains a completion condition, a turn bound, and is <= 4000 characters', () => {
+        const result = PromptBuilder.buildGoalBlock( { area: 'selection-aggregate' } )
+        expect( result.condition.length ).toBeLessThanOrEqual( 4000 )
+        expect( result.conditionLength ).toBeLessThanOrEqual( 4000 )
+        expect( result.condition ).toMatch( /stop after \d+ turns/ )
+        expect( result.maxTurns ).toBe( 25 )
+        expect( result.goalBlock ).toContain( '## Goal-Block (completion condition)' )
+    } )
+
+    test( 'goal block carries the mandatory [GRADING] surfacing lines', () => {
+        const result = PromptBuilder.buildGoalBlock( { area: 'selection-aggregate' } )
+        expect( result.goalBlock ).toContain( 'Surfacing convention (mandatory)' )
+        expect( result.goalBlock ).toContain( '[GRADING] area=' )
+        expect( result.goalBlock ).toContain( 'schema-valid=✓' )
+        expect( result.goalBlock ).toContain( 'status=' )
+        expect( result.goalBlock ).toContain( '[GRADING] PROGRESS x/y' )
+        expect( result.goalBlock ).toContain( '[GRADING] DONE' )
+    } )
+
+    test( 'goal block is injected into the prompt via {{GOAL_BLOCK}}', () => {
+        const result = PromptBuilder.build( {
+            template: aggregateTemplate,
+            persona: samplePersona,
+            files: sampleFilesWithPersona,
+            questions: sampleQuestions,
+            outputSchema: sampleOutputSchema,
+            policies: samplePolicies,
+            area: 'selection-aggregate',
+            predecessorGrades: samplePredecessorGrades
+        } )
+        expect( result.prompt ).toContain( '[GRADING] DONE' )
+        expect( result.prompt ).toContain( 'or stop after 25 turns' )
+        expect( result.metadata.goalConditionLength ).toBeLessThanOrEqual( 4000 )
+    } )
+
+    test( 'custom condition + turn bound are honoured', () => {
+        const result = PromptBuilder.buildGoalBlock( {
+            condition: 'Grade every area in scope until schema-valid',
+            maxTurns: 12
+        } )
+        expect( result.condition ).toContain( 'or stop after 12 turns' )
+        expect( result.maxTurns ).toBe( 12 )
+    } )
+
+    test( 'over-length condition throws PB-007', () => {
+        const tooLong = 'x'.repeat( 4001 )
+        expect( () => PromptBuilder.buildGoalBlock( { condition: tooLong } ) ).toThrow( /PB-007/ )
+    } )
+
+    test( 'non-integer maxTurns throws PB-008', () => {
+        expect( () => PromptBuilder.buildGoalBlock( { area: 'single-test', maxTurns: 2.5 } ) ).toThrow( /PB-008/ )
     } )
 } )

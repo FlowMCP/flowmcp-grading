@@ -21,6 +21,7 @@
  * | SelectionLockfile       | class    | static validateOverride (lifecycle generate/read/diff DROPPED in v2)                       | LCK-*                     |
  * | ProjectIndex            | class    | static init / read / write / validateIndex / indexPath                                     | IDX-*                     |
  * | RebuildIndex            | class    | static resolveLatest / rebuildNamespaceIndex / rebuildSelectionIndex / buildLockSnapshot / validateIndex / mapAggregateGradeToStatus | IDX-* |
+ * | PromptBuilder           | class    | static build / getValidAreas / isPersonaRequired / buildGoalBlock                          | PB-*                      |
  * | PreConditionCheck       | class    | static check / checkLockfile                                                               | PRE-*                     |
  * | FolderScanner           | class    | static scan / checkNamespaceFolder / checkSchemaSnapshots / checkSelectionFolder           | SCN-*                     |
  * | AboutConsistencyCheck   | class    | static checkNamespaceAbout / checkSelectionAbout / verifyNamespace                         | ABT-*                     |
@@ -60,6 +61,7 @@ import { DataPretest } from './DataPretest.mjs'
 import { ModuleApi } from './ModuleApi.mjs'
 import { SkillComposition } from './SkillComposition.mjs'
 import { RebuildIndex } from './RebuildIndex.mjs'
+import { PromptBuilder } from './PromptBuilder.mjs'
 
 
 const REPO_VERSION = '1.0.0'
@@ -284,6 +286,7 @@ export {
     ModuleApi,
     SkillComposition,
     RebuildIndex,
+    PromptBuilder,
     gradeSingleSchema,
     gradeSelection,
     validateGradingEntry,

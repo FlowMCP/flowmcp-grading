@@ -1,0 +1,59 @@
+{
+    "gradingId": "a1b2c3d4--2026-05-30T12-00-00Z",
+    "schemaHash": "a1b2c3d4",
+    "area": "selection-aggregate",
+    "iteration": 1,
+    "timestamp": "2026-05-30T12:00:00.000Z",
+    "persona": {
+        "basePersonaId": "decision-maker",
+        "lensId": "crypto-trader"
+    },
+    "harness": "claude-code",
+    "answers": [
+        {
+            "questionId": "Q-selection-aggregate-01",
+            "score": "pass",
+            "reasoning": "Deterministic selection-wide check 1 passes (threshold / cascade-stop).",
+            "evidence": {
+                "memberCount": 8,
+                "softThreshold": 5,
+                "hardThreshold": 7
+            }
+        },
+        {
+            "questionId": "Q-selection-aggregate-02",
+            "score": 4.5,
+            "reasoning": "Non-deterministic judgment 2 (coherence / conformance / persona fit / tier).",
+            "evidence": "/tmp/selection-aggregate/source.md:1"
+        },
+        {
+            "questionId": "Q-selection-aggregate-03",
+            "score": 4.5,
+            "reasoning": "Non-deterministic judgment 3 (coherence / conformance / persona fit / tier).",
+            "evidence": "/tmp/selection-aggregate/source.md:1"
+        },
+        {
+            "questionId": "Q-selection-aggregate-04",
+            "score": 4.5,
+            "reasoning": "Non-deterministic judgment 4 (coherence / conformance / persona fit / tier).",
+            "evidence": "/tmp/selection-aggregate/source.md:1"
+        },
+        {
+            "questionId": "Q-selection-aggregate-05",
+            "score": 4.5,
+            "reasoning": "Non-deterministic judgment 5 (coherence / conformance / persona fit / tier).",
+            "evidence": "/tmp/selection-aggregate/source.md:1"
+        },
+        {
+            "questionId": "Q-selection-aggregate-06",
+            "score": "pass",
+            "reasoning": "Deterministic selection-wide check 6 passes (threshold / cascade-stop).",
+            "evidence": {
+                "memberCount": 8,
+                "softThreshold": 5,
+                "hardThreshold": 7
+            }
+        }
+    ],
+    "improvementHints": []
+}
