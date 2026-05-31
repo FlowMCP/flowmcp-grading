@@ -2,11 +2,12 @@
 
 # flowmcp-grading
 
-Reference implementation of the FlowMCP Grading-Spec. The active spec is `gradingSpec/1.1.0`
-(extended with the Source-of-Truth layout and the Pre-Condition rule).
-The repository hosts the spec documents (`flowmcp-spec/grading/1.1.0/`), the source modules that implement Scoring,
-Grading, and Veto logic, LLM grader prompts, and the unit test suite. The spec is a **living
-document** and evolves with the FlowMCP schema corpus.
+Reference implementation of the FlowMCP Grading-Spec. The active spec is `gradingSpec/1.2.0`
+(the v2 break: eleven grading areas, a five-status node model, the workbench island, the derived
+`index.json` rollup, and a `/goal`-driven harness). The repository hosts the source modules that
+implement Scoring, Grading, Veto, the index rollup, the area prompt builder, and the workbench
+IN/OUT round-trip, plus the LLM grader prompts and the unit test suite. The spec lives in
+`flowmcp-spec/grading/1.2.0/` and is a **living document** — it evolves with the FlowMCP schema corpus.
 
 ## Documentation
 
@@ -22,116 +23,234 @@ Both artifacts are complementary: code tests check the engine, eval questions
 check the schemas. They are frequently confused — the two catalogs make
 the difference explicit.
 
-## Starting a Grading
+## Running a Grading
 
-A grading is run in an empty LLM context. The empty-context requirement
-is conventional (see [Spec §3](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/02-eligibility.md) + [Spec §18](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/20-entry-point-prompt.md))
-and is ensured by the following entry-point prompt.
+A grading is no longer started by pasting a prompt into an empty LLM context. In v2 the run is
+**CLI-driven** via [flowmcp-cli](https://github.com/FlowMCP/flowmcp-cli): the CLI owns the
+deterministic stages and drives the non-deterministic stage through the Claude Code harness.
 
-### Entry-Point Prompt (binding)
+The flow is a four-stage loop. The CLI owns Stages 0, 1, and 3; the harness (your Claude Code
+agent loop) owns Stage 2:
 
-```text
-You are performing a FlowMCP grading. Instructions:
+| Stage | Owner | What happens |
+|-------|-------|--------------|
+| 0 — Intake | CLI | `flowmcp grading import <provider-path>` validates the schemas, snapshots them into the island, normalises resources/skills |
+| 1 — Deterministic | CLI | `flowmcp grading run <target> --emit-prompts` runs the deterministic pretest (live HTTP checks — the request is never persisted) and the deterministic graders, then emits `prompts.json` + `state.json` for the handoff |
+| 2 — Non-deterministic | Harness | The agent loop reads `prompts.json` / `state.json` and grades each area (`start-grade → evaluate → apply-improvement`) — the only stage outside the CLI |
+| 3 — Finalize | CLI | `flowmcp grading run <target> --consume-scores <path>` reads the harness scores, computes grades, rebuilds `index.json` (5-status rollup), and finalizes the state for `export` |
 
-1. Persona: crypto-trader-2026
-2. Selection: crypto-domain-full, lockfile hash: <sha>
-3. Mode: Full (initial baseline)
-4. Spec version: gradingSpec/1.1.0
-5. Pre-Condition: all member schemas have gradingStatus: stable
-6. Output format: gradings/<selection-hash>--<timestamp>.json
+```bash
+# Stage 0 — import a provider folder into the island
+flowmcp grading import providers/defillama
+
+# Stage 1 — deterministic pretest + emit grading prompts (handoff)
+flowmcp grading run providers/defillama --emit-prompts
+
+# Stage 2 — the harness grades each area (outside the CLI), writing scores
+
+# Stage 3 — consume the harness scores, rebuild index.json, finalize
+flowmcp grading run providers/defillama --consume-scores scores.json
+
+# Inspect the rollup, then export the graded state back to the source
+flowmcp grading state providers/defillama
+flowmcp grading export providers/defillama
 ```
 
-This prompt block must be adopted **verbatim**. Only the following are adjustable:
+The target's path decides the flow, the tier, and the maximum reachable grade:
 
-- `Persona` — one of the personas registered in the repo (mandatory, see below)
-- `Selection` — `<selectionId>`, plus `lockfile hash` from the current `selection.lock.json`
-- `Mode` — `Full` (initial / stable promotion) or `Partial` (iteration step)
-- `Spec version` — currently `gradingSpec/1.1.0`
+- `providers/<target>/` → **provider test** — tier `autonomous`, max **grade B**.
+- `selections/<target>/` → **selection test** — tier `group-bound`, **grade A** reachable.
 
-For **single gradings**, replace line 2 with:
+### The Entry-Point Prompt and the Goal-Block
+
+The entry-point prompt and the per-area Goal-Block are no longer copied by hand — they are
+produced by `PromptBuilder` and emitted into `prompts.json` during Stage 1. The harness drives
+each area's prompt against the `/goal` completion condition. Because the small, fast evaluator
+model reads **only the transcript** (it calls no tools and cannot inspect disk), the grading loop
+**must surface its progress into the transcript** with `[GRADING]` lines:
 
 ```text
-2. Schema: <namespace>.<tool>, schema hash: <sha>, schemaVersion: <X.Y.Z>
+[GRADING] area=single-test/getFirstPrice schema-valid=ok status=graded written=ok
+[GRADING] PROGRESS 7/12
+[GRADING] DONE
 ```
 
-And line 5 is dropped (single schemas have no member pre-condition).
+The full definition is in
+[Spec §25](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/25-harness-and-goal.md)
+(harness + `/goal` + surfacing convention),
+[Spec §20](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/20-entry-point-prompt.md)
+(entry-point prompt + personas obligation), and
+[Spec §21](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/21-pre-conditions.md)
+(the "all members stable" pre-condition for selection runs).
 
-### Persona Requirement
+### Personas
 
-In the entry-point prompt, **persona is mandatory** — for single and selection alike.
-A grading without a persona entry is rejected by the schema validator.
+Persona-bearing areas (skills, About, and the selection-side areas) carry a
+`{ basePersonaId, lensId }` pair in the grading envelope. The base personas are `ai-engineer`,
+`decision-maker`, `hackathon-builder`, and `schema-maintainer`; the lens selects the perspective.
+Deterministic provider-side areas (`single-test`, the tool aggregates, `namespace-description`)
+run without a persona.
 
-Registered personas live under `grading-data/personas/<persona-id>.md`.
+## The Eleven Grading Areas
 
-## Quick-Start
+v2 replaces the linear phase model with **eleven self-contained areas**. Each area is a grading
+rubric attached to the primitive it evaluates and writes to a `_gradings/` folder next to that
+primitive. Six are provider-side (`autonomous`, max grade B), five are selection-side
+(`group-bound`, grade A reachable).
 
-For a clean grading run:
+| # | Area | Side | Evaluates |
+|---|------|------|-----------|
+| 1 | `single-test` | provider | one tool |
+| 2 | `tools-aggregate-schema` | provider | the tools collection of one schema |
+| 3 | `tools-aggregate-namespace` | provider | tools across the namespace |
+| 4 | `namespace-description` | provider | namespace metadata |
+| 5 | `namespace-skills` | provider | one namespace skill (per skill) |
+| 6 | `about-namespace` | provider | the About Resource (declared in one schema) |
+| 7 | `about-selection` | selection | the selection's About / Domain-Knowledge document |
+| 8 | `selection-skills-L1` | selection | one L1 skill (per skill) |
+| 9 | `selection-skills-L2` | selection | one L2 skill (per skill) |
+| 10 | `selection-skills-L3` | selection | one L3 skill (per skill) |
+| 11 | `selection-aggregate` | selection | the selection as a whole (the only path to grade A) |
 
-1. Run `/clear` in the LLM client (establish an empty context)
-2. Copy the entry-point prompt from the section above **in full**
-3. Fill in the fields in the copied prompt:
-   - **Persona** (mandatory) — from `grading-data/personas/`
-   - **Selection** + **lockfile hash** — from `selection/<id>/selection.lock.json`
-   - **Mode** — `Full` (default) or `Partial`
-4. Send the prompt — the agent runs the grading sequence
-5. The result lands under `grading-data/{single,selection}/.../gradings/<hash>--<timestamp>.json`
+See [Spec §4](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/04-phases-single.md)
+(provider-side areas),
+[Spec §5](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/05-phases-selection.md)
+(selection-side areas), and
+[Spec §24](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/24-selection-aggregate.md)
+(the 11th area).
 
-See [Spec §18](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/20-entry-point-prompt.md) (entry-point prompt) and [Spec §20](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/21-pre-conditions.md) (pre-conditions) for the formal definition. The empty-context convention is anchored in [Spec §3](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.1.0/02-eligibility.md).
+## Status, Tier, and Grade
 
-## Status — Phase 2 complete
+### Node status (the 5-status enum)
 
-Three pilot gradings have been migrated to the new Source-of-Truth layout:
+Each graded primitive node (a tool, a schema, an About, a skill, a member) carries one of five
+statuses, derived by the index rollup:
 
-- `brightsky.bright-sky`
-- `etherscan.getContractEthereum`
-- `abgeordnetenwatch.abgeordnetenwatch`
+| Status | Meaning |
+|--------|---------|
+| `pending` | Not yet graded |
+| `blocked` | Cannot be graded right now, with a `reason` (fewer than 3 working tests, no About, API unreachable) — repairable |
+| `graded` | A grade exists |
+| `stable` | Fully graded via a `mode: "full"` operation and above threshold — only this status passes the selection pre-condition |
+| `rejected` | Veto raised — **terminal and irreversible** |
 
-Each pilot now has:
+### Tier and grade thresholds
 
-- A frozen schema snapshot under `grading-data/schemas/<namespace>/PLACEHOLDER###--v1.0.0.mjs`
-  (placeholder hashes will be replaced by deterministic sha256 values in a later phase).
-- A namespace payload at `grading-data/schemas/<namespace>/namespace.json` with `namespaceHash`
-  and `aboutHash: "PENDING"` (about pages arrive in a later phase).
-- A grading entry under `grading-data/single/<namespace>--<tool>/gradings/<schemaHash>--<timestamp>.json`.
-- A phase-status file at `grading-data/phase-status/single/<namespace>--<tool>.json`.
+The aggregate grade is the weighted mean of the per-answer scores on the `1.0`–`5.0` scale
+(`gradingSystem/1.0.0`); `n/a` and `stale` answers are excluded from the mean. The banded grade is
+then capped at the tier maximum (`autonomous` → `B`, `group-bound` → `A`); the pre-trim band is
+preserved as `rawGrade`. A categorical veto overrides the whole computation with `REJECTED`.
 
-Migration scripts that produced this state:
+| Weighted mean | Grade |
+|---------------|-------|
+| ≥ 4.5 | A |
+| ≥ 3.5 | B |
+| ≥ 2.5 | C |
+| ≥ 1.5 | D |
+| < 1.5 | F |
 
-- `scripts/migrate-080-phase-2.mjs` — Pilot → SoT layout, schema snapshotting, skeleton creation.
-- `scripts/generate-namespace-json.mjs` — auto-generates `namespace.json` per namespace.
-- `scripts/separate-phase-status.mjs` — splits `phase-status/` into `single/` and `selection/`.
+See [Spec §6](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/06-determinism-and-tier.md)
+(determinism + tier) and
+[Spec §7 §4.1](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/07-scoring-vs-grading.md)
+(score-to-grade thresholds).
 
-All scripts are idempotent and support `--dry-run`.
+## The Workbench Island
 
-## Do-Not-Push Convention for `grading-data/`
+The grading data directory is a **workbench island**: an internal working area where schemas and
+selections are iterated daily, deliberately separate from the shipped repositories. Inside the
+island, names are verbose — a logical name plus a timestamp plus a content hash — which buys
+predictability, linkability, and version tracking. On the way **out** to the real repositories,
+names are stripped to clean spec names.
 
-> **WARNING — DO NOT PUSH `grading-data/`.**
->
-> The folder `grading-data/` contains all grading-run results, schema snapshots, namespace
-> payloads, phase-status, and the `.migration-backup/` archive. It is **explicitly listed in
-> `.gitignore`** and **MUST NEVER be pushed** to the remote. This convention keeps grading
-> results inside the repo (so AI tools can find them via a predictable relative path) while
-> preventing accidental leakage of data and intermediate states to the public.
->
-> Documented in three places: this README, `AGENTS.md`, and the commented entry in `.gitignore`. If you add new tooling that writes grading results, write them only to `grading-data/` — never anywhere else.
+The island is connected by a two-way, non-destructive **IN/OUT round-trip**:
 
-The red line that prevents writing data under `~/.flowmcp/` is documented in `AGENTS.md`. AI tools have caused damage in the user-home in the past; this repo provides the **correct** location instead.
+- **IN — `grading import`** — source → workbench: validate, assert a single namespace, snapshot any
+  changed source *alongside* the old one (never overwrite), normalise into the island structure,
+  rebuild `index.json`.
+- **OUT — `grading export`** — workbench → source: the primary hand-off is `index.json` (the
+  complete graded state); clean stripped `.mjs` files may accompany it. The export never overwrites
+  the source.
+
+### Island location and the safety line
+
+> **Safety — the module never writes to the real `~/.flowmcp/.env`, and an API request is never
+> persisted to disk.** The deterministic pretest performs live HTTP checks but discards the request.
+> Grading artifacts (which can carry response data) and snapshots are never committed or pushed.
+
+The island defaults to **`~/.flowmcp/grading`** — global, alongside the single source of truth
+`~/.flowmcp/.env` and `~/.flowmcp/config.json`. It lives in the user home by **default**, not in
+the repo. The resolution order is explicit (no silent fallback):
+
+1. `--grading-data <path>` flag (resolved against the current directory)
+2. `FLOWMCP_GRADING_DATA` env var (resolved against the current directory)
+3. `"gradingDataDir"` in `~/.flowmcp/config.json` (resolved against `~/.flowmcp`)
+4. default `~/.flowmcp/grading`
+
+If you point an override at an in-repo `grading-data/` directory, that directory stays
+`.gitignored` — grading artifacts and snapshots are never pushed regardless of where the island lives.
+
+The full category is defined in
+[Spec §22](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/22-workbench-island.md)
+(workbench island) and
+[Spec §19](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/19-folder-layout.md)
+(folder layout).
+
+## The `index.json` Rollup
+
+There is exactly **one `index.json` per namespace and one per selection**. It is the derived
+rollup — a tree of `tool → schema → namespace` (provider flow) or `member → selection` (selection
+flow) — where each node carries its newest grade (resolved via `resolveLatest`) and a rolled-up
+status. It replaces the v1 phase-status files and the Kanban contract.
+
+`index.json` has two distinct parts:
+
+- **Live rollup** — recomputed on every rebuild by `RebuildIndex`. It is the **only overwritable
+  artifact** in the island; the underlying grading entries and snapshots are never overwritten.
+- **Frozen `lockSnapshot`** — written exactly once at grading start and preserved byte-for-byte by
+  every later rebuild. It is the point-in-time pin of the member set (`selectionId`,
+  `selectionVersion`, `selectionHash`, `generatedAt`, and per member
+  `{ schemaId, schemaVersion, schemaHash, gradingStatus, override }`). The selection pre-condition
+  gate reads only this frozen snapshot. It folds in the v1 lockfile and the authored
+  `namespace.json`, both of which are dropped.
+
+For a selection, the rollup also carries a **member-resolution manifest** — for each member it
+records `schemaId → resolved provider artifact + grade + status`, which is what lets the selection
+aggregate reproduce its "M of N members PASS" verdict.
+
+See [Spec §23](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/23-index-json.md).
+
+## Status — v2 break landed
+
+The v2 grading system is implemented and exercised end-to-end:
+
+- **Provider flow proven end-to-end** on the `defillama` namespace — import → deterministic pretest
+  → emit prompts → harness areas → consume scores → computed grades → rebuilt `index.json`.
+- **Selection flow** runs the real area chain (`about-selection`, `selection-skills-L1/L2/L3`,
+  `selection-aggregate`); selection members are auto-chained from the selection definition.
+- **`oparl`** is graded as a second provider namespace.
+
+The eleven area output schemas live under `prompts/output-schemas/`; the area prompt builder,
+the index rollup, and the IN/OUT round-trip are covered by the unit test suite (`npm test`).
 
 ## Architecture
 
-Two skill families (F13) — one shared data model, two evaluation paths with different tier ceilings.
+Two area families — one shared data model, two evaluation paths with different tier ceilings — feed
+a derived `index.json` rollup.
 
 ```mermaid
 flowchart TD
-    A[Schema or Selection] --> B{gradingTier}
-    B -- autonomous --> C[SingleSchemaPhases<br/>P1-P7]
-    B -- group-bound --> D[SelectionPhases<br/>S1-S4]
-    C --> E[Scoring<br/>scoreDimension]
-    D --> E
-    E --> F[Grading<br/>computeAggregateGrade]
-    F --> G{Veto?}
-    G -- yes --> H[applyVeto<br/>aggregateGrade = REJECTED]
-    G -- no --> I[Grading entry<br/>autonomous: max B<br/>group-bound: A possible]
+    A[grading import<br/>providers/ or selections/] --> B[Workbench island<br/>~/.flowmcp/grading]
+    B --> C{Flow auto-detect}
+    C -- providers/ --> D[Provider-side areas<br/>autonomous: max B]
+    C -- selections/ --> E[Selection-side areas<br/>group-bound: A possible]
+    D --> F[Scoring<br/>per-answer 1.0-5.0]
+    E --> F
+    F --> G[Grading<br/>weighted mean + tier trim]
+    G --> H{Veto?}
+    H -- yes --> I[aggregateGrade = REJECTED<br/>node status rejected]
+    H -- no --> J[RebuildIndex<br/>index.json 5-status rollup]
+    I --> J
+    J --> K[grading export<br/>index.json + clean .mjs]
 ```
 
 ## Quickstart
@@ -144,6 +263,9 @@ cd flowmcp-grading
 npm install
 ```
 
+The recommended way to run a real grading is the CLI stage model above. The module also exposes
+convenience functions for programmatic use against the island root:
+
 ```javascript
 import { gradeSingleSchema } from './src/index.mjs'
 
@@ -153,34 +275,41 @@ const { grading, errors } = gradeSingleSchema( {
     grader: { kind: 'human', name: 'andreas', version: '1' }
 } )
 
-console.log( grading.aggregateGrade )
+console.log( grading.aggregateGrade, grading.maxAttainableGrade )
 ```
 
-Results are written to `grading-data/single/<namespace>--<tool>/gradings/<schemaHash>--<timestamp>.json` (Source-of-Truth layout) — never pushed.
+Results are rolled up into `index.json` under the island (default `~/.flowmcp/grading`) — never pushed.
 
 ## Features
 
-- **Two-tier model (F13)** — Single-Schema (autonomous, max grade B) vs. Selection (group-bound, grade A possible)
-- **Versioned namespaces** — `gradingSpec/1.1.0`, `scoringSystem/1.0.0`, `gradingSystem/1.0.0` evolve independently
-- **Categorical-Veto** — closed list of four triggers (`malicious-module`, `api-key-domain-mismatch`, `illegal-content`, `ai-security-veto`) halts the pipeline
-- **Aging-aware** — defaults at 14/30/180 days, gradings turn `stale` (never `fail`) when aged
-- **`n/a`-Pragma** — dimensions that cannot be evaluated are ignored in the weighted sum
-- **Structured error codes** — `GRD-`, `SCO-`, `VET-` prefixes per `node-error-codes` pattern
-- **Pilot gradings included** — three reference gradings (Brightsky, Etherscan, Abgeordnetenwatch) under `grading-data/`
+- **Eleven grading areas** — six provider-side (`autonomous`, max grade B) plus five selection-side
+  (`group-bound`, grade A reachable), each attached to the primitive it grades
+- **Five-status node model** — `pending` / `blocked` / `graded` / `stable` / `rejected`, derived by
+  the index rollup
+- **Derived `index.json` rollup** — one per namespace/selection; a live, reproducible rollup plus a
+  frozen `lockSnapshot` and a member-resolution manifest
+- **Workbench island + IN/OUT round-trip** — verbose internal naming, stripped on mirror-out;
+  `import` and `export` are both non-destructive
+- **Versioned namespaces** — `gradingSpec/1.2.0`, `scoringSystem/1.0.0`, `gradingSystem/1.0.0`
+  evolve independently
+- **Categorical Veto** — closed list of four triggers halts the pipeline; `REJECTED` maps to the
+  terminal node status `rejected`
+- **Structured error codes** — `GRD-`, `SCO-`, `VET-`, `IDX-`, `IMP-`, `PB-` prefixes per the
+  `node-error-codes` pattern
 
 ## Table of Contents
 
 - [flowmcp-grading](#flowmcp-grading)
-  - [Do-Not-Push Convention for grading-data/](#do-not-push-convention-for-grading-data)
+  - [Documentation](#documentation)
+  - [Running a Grading](#running-a-grading)
+  - [The Eleven Grading Areas](#the-eleven-grading-areas)
+  - [Status, Tier, and Grade](#status-tier-and-grade)
+  - [The Workbench Island](#the-workbench-island)
+  - [The index.json Rollup](#the-indexjson-rollup)
   - [Architecture](#architecture)
   - [Quickstart](#quickstart)
   - [Features](#features)
   - [Methods](#methods)
-    - [.gradeSingleSchema()](#gradesingleschema)
-    - [.gradeSelection()](#gradeselection)
-    - [.validateGradingEntry()](#validategradingentry)
-    - [.getVersion()](#getversion)
-    - [Class Exports](#class-exports)
   - [Repository Layout](#repository-layout)
   - [Versioning](#versioning)
   - [Hierarchy](#hierarchy)
@@ -189,13 +318,14 @@ Results are written to `grading-data/single/<namespace>--<tool>/gradings/<schema
 
 ## Methods
 
-The public API consists of four convenience functions for common grading flows, plus six classes for direct access to the underlying primitives. All methods are static with object parameters and object returns.
+The public surface is `src/index.mjs` — consumers program against this module only. It exposes
+convenience functions plus a set of classes for the underlying primitives. All methods are static
+with object parameters and object returns.
 
 ### `.gradeSingleSchema()`
 
-Runs the autonomous Single-Schema pipeline (P1-P7) for one schema. Returns a grading entry with `aggregateGrade` and `maxAttainableGrade` (capped at `B` per F13).
-
-**Method**
+Runs the autonomous provider-side path for one schema. Returns a grading entry with `aggregateGrade`
+and `maxAttainableGrade` (capped at `B` on the `autonomous` tier).
 
 ```
 .gradeSingleSchema( { schemaPath, schemaId, grader, options } )
@@ -206,17 +336,7 @@ Runs the autonomous Single-Schema pipeline (P1-P7) for one schema. Returns a gra
 | schemaPath | string | Filesystem path to the schema `.mjs` file | Yes |
 | schemaId | string | Stable identifier for the schema (e.g. `provider.schemaName`) | Yes |
 | grader | object | Grader identity (`{ kind, name, version, ... }`) | Yes |
-| options | object | Optional flags forwarded to phase runners | No |
-
-**Example**
-
-```javascript
-const { grading, errors } = gradeSingleSchema( {
-    schemaPath: './schemas/brightsky/bright-sky.mjs',
-    schemaId: 'brightsky.bright-sky',
-    grader: { kind: 'human', name: 'andreas', version: '1' }
-} )
-```
+| options | object | Optional flags forwarded to the area runners | No |
 
 **Returns**
 
@@ -231,9 +351,10 @@ returns { grading, errors }
 
 ### `.gradeSelection()`
 
-Runs the group-bound Selection pipeline (S1-S4) for a set of schemas evaluated as a coherent group. Grade `A` is possible (unlike `gradeSingleSchema`).
-
-**Method**
+Async. Runs the group-bound selection-side area chain for a set of schemas evaluated as a coherent
+group. A neutral selection definition is assembled from the inputs (members from `schemaIds`, plus
+any `skills` / `personaIds` / `domainDocId` passed through `options`) and the chain runs against the
+island root. Grade `A` is reachable (unlike `gradeSingleSchema`).
 
 ```
 .gradeSelection( { selectionId, schemaIds, grader, options } )
@@ -244,34 +365,24 @@ Runs the group-bound Selection pipeline (S1-S4) for a set of schemas evaluated a
 | selectionId | string | Identifier of the selection group | Yes |
 | schemaIds | array of strings | Schema ids contained in the selection | Yes |
 | grader | object | Grader identity (`{ kind, name, version, ... }`) | Yes |
-| options | object | Optional flags forwarded to phase runners | No |
-
-**Example**
-
-```javascript
-const { grading, errors } = gradeSelection( {
-    selectionId: 'crypto-onchain',
-    schemaIds: [ 'etherscan.getContractEthereum', 'moralis.getNftPrices' ],
-    grader: { kind: 'human', name: 'andreas', version: '1' }
-} )
-```
+| options | object | `{ gradingDataRoot, personaIndex, skills, personaIds, domainDocId, selectionJson, ... }` | No |
 
 **Returns**
 
 ```
-returns { grading, errors }
+returns { grading, errors }   // Promise
 ```
 
 | Key | Type | Description |
 |-----|------|-------------|
-| grading | object \| null | Grading entry with `selectionId`, `schemaIds`, `aggregateGrade`, `maxAttainableGrade` |
+| grading | object \| null | Grading entry with `selectionId`, `schemaIds`, `aggregateGrade`, `maxAttainableGrade`, `phases`, `tier` |
 | errors | array of strings | Error codes (`GRD-001`, `GRD-002`, `GRD-004`) if validation failed |
 
 ### `.validateGradingEntry()`
 
-Structural validation of a grading entry against the data model defined in `flowmcp-spec/grading/1.1.0/08-grading-model.md`. Use to verify externally generated grading JSON before downstream consumption.
-
-**Method**
+Structural validation of a grading entry against the data model defined in
+`flowmcp-spec/grading/1.2.0/08-grading-model.md`. Use to verify externally generated grading JSON
+before downstream consumption.
 
 ```
 .validateGradingEntry( { entry } )
@@ -280,13 +391,6 @@ Structural validation of a grading entry against the data model defined in `flow
 | Key | Type | Description | Required |
 |-----|------|-------------|----------|
 | entry | object | The grading entry to validate (must contain `schemaId`, `gradings[]`, `gradingTier`) | Yes |
-
-**Example**
-
-```javascript
-const { valid, errors } = validateGradingEntry( { entry: someGradingObject } )
-if( !valid ) { console.error( errors ) }
-```
 
 **Returns**
 
@@ -301,21 +405,13 @@ returns { valid, errors }
 
 ### `.getVersion()`
 
-Returns the version triple for the three independent namespaces.
-
-**Method**
+Returns the version triple for the independent system namespaces.
 
 ```
 .getVersion()
 ```
 
 No input parameters.
-
-**Example**
-
-```javascript
-const { scoringSystem, gradingSystem, repoVersion } = getVersion()
-```
 
 **Returns**
 
@@ -331,94 +427,93 @@ returns { scoringSystem, gradingSystem, repoVersion }
 
 ### Class Exports
 
-Six classes expose the underlying primitives for advanced use. All methods are static with object parameters.
+The module exposes the underlying primitives for advanced use. All methods are static with object
+parameters. The most relevant for v2:
 
-| Class | Purpose | Key Static Methods | Error Prefix |
-|-------|---------|--------------------|--------------|
-| `Grading` | Grading entry lifecycle, aggregation, aging, re-grading | `createEntry`, `addGrading`, `computeAggregateGrade`, `applyRegradingTrigger`, `checkAging` | `GRD-` |
-| `Scoring` | Per-dimension scoring + weighted sum aggregation | `scoreDimension`, `validateScore`, `computeWeightedSum` | `SCO-` |
-| `Veto` | Categorical veto application (closed 4-trigger list) | `getTriggers`, `applyVeto`, `isVetoed`, `validateVeto` | `VET-` |
-| `SingleSchemaPhases` | Autonomous P1-P7 phase runners | `runP1` .. `runP7`, `runAll`, `getTier` | `GRD-` |
-| `SelectionPhases` | Group-bound S1-S4 phase runners | `runS1` .. `runS4`, `runAll`, `getTier` | `GRD-` |
-| `ErrorCodes` | Error code lookup, formatting, listing | `getCode`, `formatMessage`, `listByPrefix`, `listBySeverity`, `validateCodeFormat` | `GRD-`, `SCO-`, `VET-` |
+| Class | Purpose | Error Prefix |
+|-------|---------|--------------|
+| `Grading` | Grading entry lifecycle, aggregation, tier trim, aging, re-grading | `GRD-` |
+| `Scoring` | Per-dimension scoring + weighted-mean aggregation | `SCO-` |
+| `Veto` | Categorical-veto application (closed 4-trigger list) | `VET-` |
+| `SingleSchemaPhases` / `SelectionPhases` | Provider-side / selection-side area runners | `GRD-`, `SEL-` |
+| `RebuildIndex` | Build the derived `index.json` rollup (5-status, lockSnapshot, member resolution) | `IDX-` |
+| `PromptBuilder` | Build the entry-point prompt, area prompts, and Goal-Block | `PB-` |
+| `GradingImport` / `GradingExport` | The IN/OUT workbench round-trip | `IMP-`, `EXP-` |
+| `PreConditionCheck` | The "all members stable" gate (reads `lockSnapshot`) | `PRE-` |
+| `HashGenerator` / `SourceSnapshot` | Canonical hashing + neutral source snapshots | `HSH-`, `SNP-` |
+| `SharedLists` | Shared-list loader + hash + filename | `SL-` |
+| `ErrorCodes` | Error-code lookup, formatting, listing | all prefixes |
 
-See `flowmcp-spec/grading/1.1.0/08-grading-model.md` for the full data model and `src/` for in-source JSDoc.
+See `src/index.mjs` for the full public inventory and `flowmcp-spec/grading/1.2.0/08-grading-model.md`
+for the data model.
 
 ## Repository Layout
 
 ```
 flowmcp-grading/
-├── README.md                 # This file (Do-Not-Push note for grading-data/)
-├── AGENTS.md                 # Convention for AI tools (hard line "no data under ~/.flowmcp/")
-├── .gitignore                # With commented grading-data/ entry
+├── README.md                 # This file
+├── AGENTS.md                 # Convention for AI tools (island lives in user home, never push artifacts)
+├── .gitignore                # Ignores any in-repo grading-data/ override
 ├── package.json              # ES Modules, Node 22
 ├── src/
 │   ├── index.mjs             # Public API entry point
-│   ├── Scoring.mjs           # Scoring System
-│   ├── Grading.mjs           # Grading System
+│   ├── Scoring.mjs           # Scoring System (per-answer scores)
+│   ├── Grading.mjs           # Grading System (weighted mean, tier trim, veto)
 │   ├── Veto.mjs              # Categorical-Veto logic
-│   ├── ErrorCodes.mjs        # GRD-/SCO-/VET- code tables
+│   ├── RebuildIndex.mjs      # index.json rollup builders
+│   ├── PromptBuilder.mjs     # entry-point prompt + area prompts + Goal-Block
+│   ├── GradingImport.mjs     # IN round-trip (import)
+│   ├── GradingExport.mjs     # OUT round-trip (export)
+│   ├── ErrorCodes.mjs        # error-code tables
 │   └── Phases/
-│       ├── SingleSchema.mjs  # P1-P7 (Skill-Family 1, autonomous)
-│       └── Selection.mjs     # S1-S4 (Skill-Family 2, group-bound)
-├── scripts/
-│   ├── migrate-080-phase-2.mjs       # Source-of-Truth migration
-│   ├── generate-namespace-json.mjs   # namespace.json generator
-│   └── separate-phase-status.mjs     # phase-status split (single/selection)
-├── spec/
-│   ├── 1.0.0/                # Grading-Spec chapters 00-overview .. 14-kanban + JSON-Schemas
-│   └── 1.1.0/                # Active spec (additions: SoT, Pre-Condition, namespace.json)
-├── prompts/                  # Versioned LLM grader prompts
+│       ├── SingleSchema.mjs  # provider-side area runners (autonomous)
+│       └── Selection.mjs     # selection-side area runners (group-bound)
+├── prompts/
+│   └── output-schemas/       # the eleven area output schemas + _master.schema.json
 ├── tests/
 │   ├── unit/                 # Jest unit tests
 │   ├── integration/
 │   └── helpers/              # Shared fixtures
-└── grading-data/             # .gitignored — Source-of-Truth layout
-    ├── schemas/<namespace>/<schemaHash>--v<X.Y.Z>.mjs
-    ├── schemas/<namespace>/namespace.json
-    ├── schemas/<namespace>/about/<aboutHash>--about.md   # Phase 4
-    ├── single/<namespace>--<tool>/gradings/<schemaHash>--<timestamp>.json
-    ├── selection/<selectionId>/...                       # Phase 4
-    ├── shared-lists/                                     # Phase 5
-    ├── phase-status/single/<namespace>--<tool>.json
-    ├── phase-status/selection/<selectionId>.json         # Phase 4
-    └── .migration-backup/pre-080-phase-2*                # Pre-migration originals
+└── (workbench island)        # NOT in the repo by default — lives at ~/.flowmcp/grading
+    ├── providers/<namespace>/
+    │   ├── index.json                                       ← derived rollup (5-status, lockSnapshot, member resolution)
+    │   ├── _gradings/                                       ← tools-aggregate-namespace, namespace-description
+    │   └── <schema>/
+    │       ├── schema/<schema>--<ts>--<hash8>.mjs           (neutral: no in-source hashes)
+    │       ├── _gradings/                                   ← tools-aggregate-schema
+    │       ├── resources/about/...                          (about-namespace)
+    │       ├── skills/<skill>/...                           (namespace-skills)
+    │       └── tools/<tool>/{ tests/, _gradings/ }          (single-test)
+    ├── selections/<selection>/
+    │   ├── index.json
+    │   ├── selection/<sel>--<ts>--<hash8>.json              (neutral definition: members[], skills[], personaIds[])
+    │   ├── _gradings/                                       ← selection-aggregate
+    │   ├── resources/about/...                              (about-selection)
+    │   └── skills/<skill>/...                               (selection-skills-L1/L2/L3)
+    └── shared-lists/<listname>/<listname>--<ts>--<hash8>.json
 ```
 
-## Migration notes — Phase 2
-
-Phase 2 moved the pilot gradings from a flat layout into the Source-of-Truth layout:
-
-| Aspect              | Before                                        | After                                                                |
-|---------------------|-----------------------------------------------|----------------------------------------------------------------------|
-| Grading entry       | `grading-data/gradings/<ns>--<tool>/<ts>.json`| `grading-data/single/<ns>--<tool>/gradings/<schemaHash>--<ts>.json`  |
-| Schema snapshot     | not frozen (only original in `flowmcp-schemas-private`) | `grading-data/schemas/<ns>/<schemaHash>--v<X.Y.Z>.mjs` (frozen) |
-| Namespace payload   | did not exist                                 | `grading-data/schemas/<ns>/namespace.json`                           |
-| Phase-status        | `grading-data/phase-status/<ns>--<tool>.json` | `grading-data/phase-status/single/<ns>--<tool>.json`                 |
-| Phase-status split  | flat (single + selection mixed)               | `phase-status/single/` and `phase-status/selection/`                 |
-
-Pre-migration originals are preserved byte-identical under `grading-data/.migration-backup/pre-080-phase-2/`
-and `grading-data/.migration-backup/pre-080-phase-2-status/`.
-
-Hashes in filenames currently use `PLACEHOLDER###` markers — they will be replaced by deterministic
-sha256(8) values in a later phase via the HashGenerator. The placeholders are explicit so any future
-diff highlights the replacement clearly.
+Filenames inside the island follow the naming grammar `<name>--<YYYY-MM-DDTHH-MM-SSZ>--<hash8>.<ext>`
+(date before hash, so a naive `sort().at(-1)` always yields the newest version); gradings use
+`<area>[--<basePersona>--<lens>]--<ts>.json`. Source files carry **no** in-source hashes — all hash
+bindings live in the derived `index.json`.
 
 ## Versioning
 
-Three independent namespaces (F5):
+Three independent namespaces; none is coupled to the others — bumping one does not imply bumping the others:
 
-- `gradingSpec/1.1.0` — the active specification documents under `flowmcp-spec/grading/1.1.0/`
-  (additions: Source-of-Truth layout, Pre-Condition rule, namespace payload, partial-mode).
-  The previous `gradingSpec/1.0.0` under `flowmcp-spec/grading/1.0.0/` is preserved read-only for traceability.
-- `scoringSystem/1.0.0` — the scoring rules and dimensions
-- `gradingSystem/1.0.0` — the grading rules, veto logic, and tier mapping
-
-These versions are **never coupled**. Bumping one does not imply bumping the others.
+- `gradingSpec/1.2.0` — the active specification documents under `flowmcp-spec/grading/1.2.0/`.
+  This is the **v2 break**: the eleven-area model, the five-status node enum, the workbench island,
+  and the `index.json` rollup. Earlier `1.0.0` / `1.1.0` gradings are treated as legacy.
+- `scoringSystem/1.0.0` — the scoring rules and dimensions (how a test is evidenced).
+- `gradingSystem/1.0.0` — the grading rules (thresholds, weights, tier trim, veto list).
 
 ## Hierarchy
 
-The [FlowMCP Schemas Specification](https://github.com/FlowMCP/flowmcp-spec) at `spec/v4.1.0/` is the highest instance — it defines what a schema, a selection, and the primitives are. This Grading-Spec sits below and describes **how** schemas and selections are evaluated. See `flowmcp-spec/grading/1.1.0/00-overview.md` for the full hierarchy table.
+The [FlowMCP Schemas Specification](https://github.com/FlowMCP/flowmcp-spec) at `spec/v4.1.0/` is the
+highest instance — it defines what a schema, a selection, and the primitives are. This Grading-Spec
+sits below and describes **how** schemas and selections are evaluated. See
+`flowmcp-spec/grading/1.2.0/00-overview.md` for the full hierarchy table.
 
 ## Contributing
 
