@@ -2,12 +2,12 @@
 
 # flowmcp-grading
 
-Reference implementation of the FlowMCP Grading-Spec. The active spec is `gradingSpec/1.2.0`
+Reference implementation of the FlowMCP Grading-Spec. The active spec is `gradingSpec/2.0.0`
 (the v2 break: eleven grading areas, a five-status node model, the workbench island, the derived
 `index.json` rollup, and a `/goal`-driven harness). The repository hosts the source modules that
 implement Scoring, Grading, Veto, the index rollup, the area prompt builder, and the workbench
 IN/OUT round-trip, plus the LLM grader prompts and the unit test suite. The spec lives in
-`flowmcp-spec/grading/1.2.0/` and is a **living document** — it evolves with the FlowMCP schema corpus.
+`flowmcp-spec/grading/2.0.0/` and is a **living document** — it evolves with the FlowMCP schema corpus.
 
 ## Documentation
 
@@ -76,11 +76,11 @@ model reads **only the transcript** (it calls no tools and cannot inspect disk),
 ```
 
 The full definition is in
-[Spec §25](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/25-harness-and-goal.md)
+[Spec §25](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/2.0.0/25-harness-and-goal.md)
 (harness + `/goal` + surfacing convention),
-[Spec §20](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/20-entry-point-prompt.md)
+[Spec §20](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/2.0.0/20-entry-point-prompt.md)
 (entry-point prompt + personas obligation), and
-[Spec §21](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/21-pre-conditions.md)
+[Spec §21](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/2.0.0/21-pre-conditions.md)
 (the "all members stable" pre-condition for selection runs).
 
 ### Personas
@@ -112,11 +112,11 @@ primitive. Six are provider-side (`autonomous`, max grade B), five are selection
 | 10 | `selection-skills-L3` | selection | one L3 skill (per skill) |
 | 11 | `selection-aggregate` | selection | the selection as a whole (the only path to grade A) |
 
-See [Spec §4](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/04-phases-single.md)
+See [Spec §4](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/2.0.0/04-phases-single.md)
 (provider-side areas),
-[Spec §5](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/05-phases-selection.md)
+[Spec §5](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/2.0.0/05-phases-selection.md)
 (selection-side areas), and
-[Spec §24](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/24-selection-aggregate.md)
+[Spec §24](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/2.0.0/24-selection-aggregate.md)
 (the 11th area).
 
 ## Status, Tier, and Grade
@@ -149,9 +149,9 @@ preserved as `rawGrade`. A categorical veto overrides the whole computation with
 | ≥ 1.5 | D |
 | < 1.5 | F |
 
-See [Spec §6](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/06-determinism-and-tier.md)
+See [Spec §6](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/2.0.0/06-determinism-and-tier.md)
 (determinism + tier) and
-[Spec §7 §4.1](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/07-scoring-vs-grading.md)
+[Spec §7 §4.1](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/2.0.0/07-scoring-vs-grading.md)
 (score-to-grade thresholds).
 
 ## The Workbench Island
@@ -190,9 +190,9 @@ If you point an override at an in-repo `grading-data/` directory, that directory
 `.gitignored` — grading artifacts and snapshots are never pushed regardless of where the island lives.
 
 The full category is defined in
-[Spec §22](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/22-workbench-island.md)
+[Spec §22](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/2.0.0/22-workbench-island.md)
 (workbench island) and
-[Spec §19](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/19-folder-layout.md)
+[Spec §19](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/2.0.0/19-folder-layout.md)
 (folder layout).
 
 ## The `index.json` Rollup
@@ -217,7 +217,7 @@ For a selection, the rollup also carries a **member-resolution manifest** — fo
 records `schemaId → resolved provider artifact + grade + status`, which is what lets the selection
 aggregate reproduce its "M of N members PASS" verdict.
 
-See [Spec §23](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/1.2.0/23-index-json.md).
+See [Spec §23](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/2.0.0/23-index-json.md).
 
 ## Status — v2 break landed
 
@@ -290,7 +290,7 @@ Results are rolled up into `index.json` under the island (default `~/.flowmcp/gr
   frozen `lockSnapshot` and a member-resolution manifest
 - **Workbench island + IN/OUT round-trip** — verbose internal naming, stripped on mirror-out;
   `import` and `export` are both non-destructive
-- **Versioned namespaces** — `gradingSpec/1.2.0`, `scoringSystem/1.0.0`, `gradingSystem/1.0.0`
+- **Versioned namespaces** — `gradingSpec/2.0.0`, `scoringSystem/1.0.0`, `gradingSystem/1.0.0`
   evolve independently
 - **Categorical Veto** — closed list of four triggers halts the pipeline; `REJECTED` maps to the
   terminal node status `rejected`
@@ -381,7 +381,7 @@ returns { grading, errors }   // Promise
 ### `.validateGradingEntry()`
 
 Structural validation of a grading entry against the data model defined in
-`flowmcp-spec/grading/1.2.0/08-grading-model.md`. Use to verify externally generated grading JSON
+`flowmcp-spec/grading/2.0.0/08-grading-model.md`. Use to verify externally generated grading JSON
 before downstream consumption.
 
 ```
@@ -444,7 +444,7 @@ parameters. The most relevant for v2:
 | `SharedLists` | Shared-list loader + hash + filename | `SL-` |
 | `ErrorCodes` | Error-code lookup, formatting, listing | all prefixes |
 
-See `src/index.mjs` for the full public inventory and `flowmcp-spec/grading/1.2.0/08-grading-model.md`
+See `src/index.mjs` for the full public inventory and `flowmcp-spec/grading/2.0.0/08-grading-model.md`
 for the data model.
 
 ## Repository Layout
@@ -502,7 +502,7 @@ bindings live in the derived `index.json`.
 
 Three independent namespaces; none is coupled to the others — bumping one does not imply bumping the others:
 
-- `gradingSpec/1.2.0` — the active specification documents under `flowmcp-spec/grading/1.2.0/`.
+- `gradingSpec/2.0.0` — the active specification documents under `flowmcp-spec/grading/2.0.0/`.
   This is the **v2 break**: the eleven-area model, the five-status node enum, the workbench island,
   and the `index.json` rollup. Earlier `1.0.0` / `1.1.0` gradings are treated as legacy.
 - `scoringSystem/1.0.0` — the scoring rules and dimensions (how a test is evidenced).
@@ -513,7 +513,7 @@ Three independent namespaces; none is coupled to the others — bumping one does
 The [FlowMCP Schemas Specification](https://github.com/FlowMCP/flowmcp-spec) at `spec/v4.1.0/` is the
 highest instance — it defines what a schema, a selection, and the primitives are. This Grading-Spec
 sits below and describes **how** schemas and selections are evaluated. See
-`flowmcp-spec/grading/1.2.0/00-overview.md` for the full hierarchy table.
+`flowmcp-spec/grading/2.0.0/00-overview.md` for the full hierarchy table.
 
 ## Contributing
 
