@@ -243,6 +243,24 @@ describe( 'AreaScorer.resolveGradingsDir (gradings-dir mapping)', () => {
         expect( r.dir ).toBe( '/tmp/providers/openmeteo/openMeteoAirQuality/resources/about/_gradings' )
     } )
 
+    test( 'namespace-description -> <ns>/_gradings (shared with ns aggregate)', () => {
+        const r = AreaScorer.resolveGradingsDir( { providersRoot: root, ns: 'openmeteo', area: 'namespace-description' } )
+        expect( r.errors ).toEqual( [] )
+        expect( r.dir ).toBe( '/tmp/providers/openmeteo/_gradings' )
+    } )
+
+    test( 'namespace-skills -> <schema>/skills/<skill>/_gradings', () => {
+        const r = AreaScorer.resolveGradingsDir( { providersRoot: root, ns: 'openmeteo', schemaId: 'openMeteoAirQuality', skill: 'summariseAirQuality', area: 'namespace-skills' } )
+        expect( r.errors ).toEqual( [] )
+        expect( r.dir ).toBe( '/tmp/providers/openmeteo/openMeteoAirQuality/skills/summariseAirQuality/_gradings' )
+    } )
+
+    test( 'namespace-skills without skill errors (no silent default)', () => {
+        const r = AreaScorer.resolveGradingsDir( { providersRoot: root, ns: 'openmeteo', schemaId: 'openMeteoAirQuality', area: 'namespace-skills' } )
+        expect( r.dir ).toBeNull()
+        expect( r.errors.some( ( m ) => m.startsWith( 'ASC-001' ) ) ).toBe( true )
+    } )
+
     test( 'single-test without tool errors (no silent default)', () => {
         const r = AreaScorer.resolveGradingsDir( { providersRoot: root, ns: 'openmeteo', schemaId: 'openMeteoAirQuality', area: 'single-test' } )
         expect( r.dir ).toBeNull()

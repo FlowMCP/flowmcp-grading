@@ -79,6 +79,12 @@ describe( 'RebuildIndex — answer-envelope rolls up to a graded node', () => {
         const tool = rebuilt.index.schemas.sample.tools.getThing
         expect( tool.status ).toBe( 'graded' )
         expect( tool.grade ).toBe( 'B' )
+
+        // no description/skills graded in this fixture -> pending node + empty subtree
+        expect( rebuilt.index.description.status ).toBe( 'pending' )
+        expect( rebuilt.index.skills ).toEqual( {} )
+        expect( rebuilt.index.summary.skills ).toBe( 0 )
+        expect( rebuilt.index.summary.description ).toBe( 'pending' )
     } )
 
     test( 'weak scores -> a genuinely lower grade (real computation, not always tier-max)', async () => {

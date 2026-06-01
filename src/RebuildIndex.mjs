@@ -117,6 +117,8 @@ class RebuildIndex {
             nodePath: 'namespaceAggregate',
             blockers
         } )
+        const descriptionNode = await RebuildIndex.#resolveNamespaceDescription( { namespaceDir, blockers } )
+        const skillsNode = await RebuildIndex.#resolveNamespaceSkills( { namespaceDir, blockers } )
 
         const schemaNames = await RebuildIndex.#listSchemaDirs( { namespaceDir } )
         const schemas = {}
@@ -128,10 +130,10 @@ class RebuildIndex {
                 schemas[ schemaName ] = schemaNode
             }, Promise.resolve() )
 
-        const summary = RebuildIndex.#buildNamespaceSummary( { schemas, aboutNode } )
-        const allNodeStatuses = RebuildIndex.#collectNamespaceNodeStatuses( { schemas, aboutNode, namespaceAggregate } )
+        const summary = RebuildIndex.#buildNamespaceSummary( { schemas, aboutNode, descriptionNode, skillsNode } )
+        const allNodeStatuses = RebuildIndex.#collectNamespaceNodeStatuses( { schemas, aboutNode, descriptionNode, skillsNode, namespaceAggregate } )
         const rollupStatus = RebuildIndex.#rollupStatus( { nodeStatuses: allNodeStatuses } )
-        const rollupGrade = RebuildIndex.#rollupGrade( { schemas, namespaceAggregate } )
+        const rollupGrade = RebuildIndex.#rollupGrade( { schemas, descriptionNode, skillsNode, namespaceAggregate } )
 
         const existing = await RebuildIndex.#readExistingIndex( { path: indexFilePath } )
         const preservedLock = existing === null ? undefined : existing.lockSnapshot
@@ -144,6 +146,8 @@ class RebuildIndex {
             grade: rollupGrade,
             summary,
             about: aboutNode,
+            description: descriptionNode,
+            skills: skillsNode,
             namespaceAggregate,
             schemas,
             blockers
@@ -337,6 +341,26 @@ class RebuildIndex {
             errors.push( 'IDX-001: Required field missing: index.updatedAt' )
         }
 
+        // Namespace indices must carry the full 6-area rollup: a `description`
+        // single-node and a `skills` subtree ({ '<schema>.<skill>': node }).
+        // An empty skills subtree {} is valid (no skills graded).
+        if( typeof index.namespace === 'string' ) {
+            if( index.description === undefined || typeof index.description !== 'object' || Array.isArray( index.description ) ) {
+                errors.push( 'IDX-001: Required field missing: index.description' )
+            } else if( !NODE_STATUSES.includes( index.description.status ) ) {
+                errors.push( `IDX-007: Invalid node status for index.description: ${index.description.status}` )
+            }
+            if( index.skills === undefined || typeof index.skills !== 'object' || Array.isArray( index.skills ) ) {
+                errors.push( 'IDX-001: Required field missing: index.skills' )
+            } else {
+                Object.entries( index.skills )
+                    .filter( ( [ , node ] ) => !NODE_STATUSES.includes( node.status ) )
+                    .forEach( ( [ key, node ] ) => {
+                        errors.push( `IDX-007: Invalid node status for index.skills.${key}: ${node.status}` )
+                    } )
+            }
+        }
+
         return { valid: errors.length === 0, errors }
     }
 
@@ -473,6 +497,66 @@ class RebuildIndex {
 
         if( found === null ) { return { status: 'pending', reason: 'no about graded' } }
         return found
+    }
+
+
+    /**
+     * #resolveNamespaceDescription — reads the namespace-description grading from
+     * providers/<ns>/_gradings/ (the SAME dir as tools-aggregate-namespace).
+     * resolveLatest filters on the `namespace-description--` prefix, so the two
+     * coexist conflict-free. Returns a single node (no subtree).
+     */
+    static async #resolveNamespaceDescription( { namespaceDir, blockers } ) {
+        const gradingsDir = join( namespaceDir, GRADINGS_DIR )
+        const resolved = await RebuildIndex.resolveLatest( { dir: gradingsDir, logicalName: 'namespace-description' } )
+        if( !resolved.status ) { return { status: 'pending', reason: 'no description graded' } }
+        const parsed = await RebuildIndex.#readGradingFile( { path: resolved.path } )
+        return RebuildIndex.#gradingToNode( {
+            parsed,
+            ref: RebuildIndex.#relativeGradingRef( { gradingsDir, file: resolved.file, levels: 2 } ),
+            nodePath: 'description',
+            blockers
+        } )
+    }
+
+
+    /**
+     * #resolveNamespaceSkills — namespace-skills is schemaId- AND skill-scoped:
+     * providers/<ns>/<schemaId>/skills/<skill>/_gradings/ (AreaScorer). There can
+     * be many skill gradings per namespace (one per <schemaId>/<skill>), so this
+     * builds a SUBTREE keyed by `<schemaId>.<skill>` -> node. An empty subtree {}
+     * is valid (no skills graded). No silent default.
+     */
+    static async #resolveNamespaceSkills( { namespaceDir, blockers } ) {
+        const schemaNames = await RebuildIndex.#listSchemaDirs( { namespaceDir } )
+        const skills = {}
+
+        await schemaNames
+            .reduce( async ( prevSchema, schemaName ) => {
+                await prevSchema
+                const skillsRoot = join( namespaceDir, schemaName, 'skills' )
+                const skillNames = await RebuildIndex.#listSubDirs( { dir: skillsRoot } )
+                await skillNames
+                    .reduce( async ( prevSkill, skillName ) => {
+                        await prevSkill
+                        const gradingsDir = join( skillsRoot, skillName, GRADINGS_DIR )
+                        const key = `${schemaName}.${skillName}`
+                        const resolved = await RebuildIndex.resolveLatest( { dir: gradingsDir, logicalName: 'namespace-skills' } )
+                        if( !resolved.status ) {
+                            skills[ key ] = { status: 'pending', reason: 'no skills graded' }
+                            return
+                        }
+                        const parsed = await RebuildIndex.#readGradingFile( { path: resolved.path } )
+                        skills[ key ] = RebuildIndex.#gradingToNode( {
+                            parsed,
+                            ref: `${schemaName}/skills/${skillName}/${GRADINGS_DIR}/${resolved.file}`,
+                            nodePath: `skills.${key}`,
+                            blockers
+                        } )
+                    }, Promise.resolve() )
+            }, Promise.resolve() )
+
+        return skills
     }
 
 
@@ -625,12 +709,21 @@ class RebuildIndex {
     }
 
 
-    static #rollupGrade( { schemas, namespaceAggregate } ) {
+    static #rollupGrade( { schemas, descriptionNode, skillsNode, namespaceAggregate } ) {
         const grades = Object.values( schemas )
             .map( ( s ) => s.grade )
             .filter( ( g ) => g !== undefined && g !== null )
         if( namespaceAggregate !== undefined && namespaceAggregate.grade !== undefined ) {
             grades.push( namespaceAggregate.grade )
+        }
+        if( descriptionNode !== undefined && descriptionNode.grade !== undefined ) {
+            grades.push( descriptionNode.grade )
+        }
+        if( skillsNode !== undefined ) {
+            Object.values( skillsNode )
+                .map( ( n ) => n.grade )
+                .filter( ( g ) => g !== undefined && g !== null )
+                .forEach( ( g ) => grades.push( g ) )
         }
         if( grades.includes( 'REJECTED' ) ) { return 'REJECTED' }
         const ORDER = [ 'A', 'B', 'C', 'D', 'F' ]
@@ -641,7 +734,7 @@ class RebuildIndex {
     }
 
 
-    static #buildNamespaceSummary( { schemas, aboutNode } ) {
+    static #buildNamespaceSummary( { schemas, aboutNode, descriptionNode, skillsNode } ) {
         const schemaNames = Object.keys( schemas )
         const toolCounts = schemaNames
             .map( ( name ) => Object.keys( schemas[ name ].tools === undefined ? {} : schemas[ name ].tools ) )
@@ -655,25 +748,35 @@ class RebuildIndex {
             .filter( ( t ) => t.status === 'stable' )
             .length
 
+        // namespace-skills is schemaId+skill scoped -> real count of graded
+        // skill entries (graded/stable), not a hardcoded 0.
+        const skillsGraded = Object.values( skillsNode )
+            .filter( ( n ) => n.status === 'graded' || n.status === 'stable' )
+            .length
+
         return {
             schemas: schemaNames.length,
             tools,
             toolsStable,
             about: aboutNode.status,
-            skills: 0
+            description: descriptionNode.status,
+            skills: skillsGraded
         }
     }
 
 
-    static #collectNamespaceNodeStatuses( { schemas, aboutNode, namespaceAggregate } ) {
+    static #collectNamespaceNodeStatuses( { schemas, aboutNode, descriptionNode, skillsNode, namespaceAggregate } ) {
         const schemaStatuses = Object.values( schemas )
             .map( ( s ) => s.status )
         const toolStatuses = Object.values( schemas )
             .flatMap( ( s ) => Object.values( s.tools === undefined ? {} : s.tools ) )
             .map( ( t ) => t.status )
+        const skillStatuses = Object.values( skillsNode )
+            .map( ( n ) => n.status )
         return schemaStatuses
             .concat( toolStatuses )
-            .concat( [ aboutNode.status, namespaceAggregate.status ] )
+            .concat( skillStatuses )
+            .concat( [ aboutNode.status, descriptionNode.status, namespaceAggregate.status ] )
     }
 
 

@@ -135,6 +135,12 @@ describe( 'RebuildIndex.rebuildNamespaceIndex (rollup + 5-status)', () => {
             path: join( nsDir, '_gradings', 'tools-aggregate-namespace--2026-05-31T11-22-00Z.json' ),
             json: { area: 'tools-aggregate-namespace', grade: 'B' }
         } )
+        // namespace-description shares the <ns>/_gradings/ dir with the namespace
+        // aggregate, distinguished only by the logicalName prefix.
+        await writeJson( {
+            path: join( nsDir, '_gradings', 'namespace-description--2026-05-31T11-22-00Z.json' ),
+            json: { area: 'namespace-description', grade: 'B' }
+        } )
 
         const pricesDir = join( nsDir, 'prices' )
         await mkdir( join( pricesDir, 'schema' ), { recursive: true } )
@@ -158,6 +164,13 @@ describe( 'RebuildIndex.rebuildNamespaceIndex (rollup + 5-status)', () => {
             json: { area: 'single-test', status: 'stable', grade: 'A' }
         } )
 
+        // namespace-skills is schemaId+skill scoped: <ns>/<schema>/skills/<skill>/_gradings/
+        await mkdir( join( pricesDir, 'skills', 'summarisePrices', '_gradings' ), { recursive: true } )
+        await writeJson( {
+            path: join( pricesDir, 'skills', 'summarisePrices', '_gradings', 'namespace-skills--2026-05-31T11-25-00Z.json' ),
+            json: { area: 'namespace-skills', grade: 'B' }
+        } )
+
         await mkdir( join( nsDir, 'coins' ), { recursive: true } )
     } )
 
@@ -175,6 +188,14 @@ describe( 'RebuildIndex.rebuildNamespaceIndex (rollup + 5-status)', () => {
         expect( index.about.status ).toBe( 'graded' )
         expect( index.about.grade ).toBe( 'B' )
         expect( index.namespaceAggregate.status ).toBe( 'graded' )
+
+        // all 6 areas roll up: description node + skills subtree (no data loss)
+        expect( index.description.status ).toBe( 'graded' )
+        expect( index.description.grade ).toBe( 'B' )
+        expect( index.skills[ 'prices.summarisePrices' ].status ).toBe( 'graded' )
+        expect( index.skills[ 'prices.summarisePrices' ].grade ).toBe( 'B' )
+        expect( index.summary.description ).toBe( 'graded' )
+        expect( index.summary.skills ).toBe( 1 )
 
         expect( index.schemas.prices.status ).toBe( 'graded' )
         expect( index.schemas.prices.snapshot.hash ).toBe( '93baef35' )
@@ -349,9 +370,43 @@ describe( 'RebuildIndex.buildLockSnapshot (salvaged from SelectionLockfile)', ()
 describe( 'RebuildIndex.validateIndex (indexVersion 2 + rollup vocab)', () => {
     test( 'valid namespace index passes', () => {
         const result = RebuildIndex.validateIndex( {
-            index: { indexVersion: 2, namespace: 'x', status: 'partial', updatedAt: '2026-05-31T12-00-00Z' }
+            index: {
+                indexVersion: 2,
+                namespace: 'x',
+                status: 'partial',
+                updatedAt: '2026-05-31T12-00-00Z',
+                description: { status: 'pending' },
+                skills: {}
+            }
         } )
         expect( result.valid ).toBe( true )
+    } )
+
+    test( 'rejects a namespace index missing description/skills', () => {
+        const result = RebuildIndex.validateIndex( {
+            index: { indexVersion: 2, namespace: 'x', status: 'partial', updatedAt: 'x' }
+        } )
+        expect( result.valid ).toBe( false )
+        expect( result.errors.some( ( e ) => e.includes( 'index.description' ) ) ).toBe( true )
+        expect( result.errors.some( ( e ) => e.includes( 'index.skills' ) ) ).toBe( true )
+    } )
+
+    test( 'accepts an empty skills subtree but rejects a bad skill node status', () => {
+        const ok = RebuildIndex.validateIndex( {
+            index: {
+                indexVersion: 2, namespace: 'x', status: 'partial', updatedAt: 'x',
+                description: { status: 'graded' }, skills: {}
+            }
+        } )
+        expect( ok.valid ).toBe( true )
+        const bad = RebuildIndex.validateIndex( {
+            index: {
+                indexVersion: 2, namespace: 'x', status: 'partial', updatedAt: 'x',
+                description: { status: 'graded' }, skills: { 'a.b': { status: 'made-up' } }
+            }
+        } )
+        expect( bad.valid ).toBe( false )
+        expect( bad.errors.some( ( e ) => e.includes( 'index.skills.a.b' ) ) ).toBe( true )
     } )
 
     test( 'rejects indexVersion 1', () => {

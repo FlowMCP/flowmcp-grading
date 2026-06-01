@@ -1,0 +1,71 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://flowmcp.org/grading/2.0.1/index.schema.json",
+    "title": "FlowMCP Grading index.json",
+    "description": "Derived, reproducible rollup of grading entries for a namespace or selection. index.json is the ONLY overwritable artifact.",
+    "type": "object",
+    "additionalProperties": false,
+    "$defs": {
+        "node": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "enum": [ "pending", "blocked", "graded", "stable", "rejected" ]
+                },
+                "grade": { "type": "string" },
+                "ref": { "type": "string" },
+                "reason": { "type": "string" },
+                "boundTo": { "type": "string" },
+                "snapshot": {
+                    "type": "object",
+                    "additionalProperties": true
+                }
+            },
+            "required": [ "status" ],
+            "additionalProperties": true
+        }
+    },
+    "properties": {
+        "indexVersion": {
+            "const": 2
+        },
+        "namespace": { "type": "string" },
+        "selectionId": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "status": {
+            "type": "string",
+            "enum": [ "operational", "partial", "blocked", "pending", "rejected" ]
+        },
+        "grade": { "type": "string" },
+        "summary": {
+            "type": "object",
+            "additionalProperties": true
+        },
+        "about": { "$ref": "#/$defs/node" },
+        "description": { "$ref": "#/$defs/node" },
+        "skills": {
+            "type": "object",
+            "description": "Provider rollup: '<schema>.<skill>' -> node. Recomputed on every rebuild.",
+            "additionalProperties": { "$ref": "#/$defs/node" }
+        },
+        "namespaceAggregate": { "$ref": "#/$defs/node" },
+        "selectionAggregate": { "$ref": "#/$defs/node" },
+        "schemas": {
+            "type": "object",
+            "additionalProperties": true
+        },
+        "members": {
+            "type": "object",
+            "additionalProperties": true
+        },
+        "lockSnapshot": {
+            "type": "object",
+            "additionalProperties": true
+        },
+        "blockers": {
+            "type": "array",
+            "additionalProperties": true
+        }
+    }
+}
