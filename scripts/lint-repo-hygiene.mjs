@@ -28,7 +28,7 @@ import { fileURLToPath } from 'node:url'
 
 const REPO_ROOT = join( fileURLToPath( import.meta.url ), '..', '..' )
 
-const SCAN_DIRS = [ 'src', 'skills', 'prompts', 'docs', 'bin', 'scripts', 'tests' ]
+const SCAN_DIRS = [ 'src', 'prompts', 'docs', 'bin', 'scripts', 'tests' ]
 const SCAN_ROOT_FILES = [ 'README.md', 'AGENTS.md' ]
 const SCAN_EXTENSIONS = [ '.md', '.mjs', '.json', '.mdx' ]
 

@@ -5,10 +5,11 @@
  *  - selection-aggregate.schema.json validates a good envelope (det + non-det
  *    answers, shared _master envelope, area const) via Ajv2020 + ajv-formats.
  *  - it rejects a bad envelope (missing persona / missing naReason on n/a).
- *  - the skill triad (start-grade / evaluate / apply-improvement) exists.
- *  - the evaluate skill mirrors the sibling contract (Read-only tools, neutral
- *    sub-agent, HTTP-4xx rule, blocker pattern, schema reference, wiring).
  *  - the integration fixtures exist and the HTTP-4xx fixture never scores PASS.
+ *
+ * The per-area SKILL.md triad was removed in the PA-2 cleanup; the composed
+ * prompt now comes from prompts.json.areas[]. The harness contract is pinned
+ * here against the output-schema + fixtures.
  *
  * No real LLM/network — fixtures only.
  */
@@ -23,7 +24,6 @@ import addFormats from 'ajv-formats'
 
 const HERE = dirname( fileURLToPath( import.meta.url ) )
 const ROOT = join( HERE, '..', '..' )
-const SKILLS_DIR = join( ROOT, 'skills' )
 const SCHEMAS_DIR = join( ROOT, 'prompts', 'output-schemas' )
 const FIXTURE_DIR = join( HERE, 'fixtures', 'skills', 'selection-aggregate' )
 
@@ -135,52 +135,6 @@ describe( 'selection-aggregate — output schema (Ajv2020 + ajv-formats)', () =>
         const validate = ajv.compile( loadSchema() )
         const blocker = loadFixture( { name: 'mock-response-blocker.json' } )
         expect( validate( blocker ) ).toBe( true )
-    } )
-
-} )
-
-
-describe( 'selection-aggregate — skill triad', () => {
-
-    const phases = [ 'start-grade', 'evaluate', 'apply-improvement' ]
-
-    phases
-        .forEach( ( phase ) => {
-            it( `skill ${ AREA }-${ phase }/SKILL.md exists`, () => {
-                const path = join( SKILLS_DIR, `${ AREA }-${ phase }`, 'SKILL.md' )
-                expect( existsSync( path ) ).toBe( true )
-            } )
-        } )
-
-    it( 'evaluate skill is Read-only and mirrors the sibling contract', () => {
-        const content = readFileSync(
-            join( SKILLS_DIR, `${ AREA }-evaluate`, 'SKILL.md' ),
-            'utf-8'
-        )
-        const fmMatch = content.match( /^---\n([\s\S]*?)\n---/ )
-        expect( fmMatch ).not.toBeNull()
-        const fm = fmMatch[ 1 ]
-        expect( fm ).toContain( `name: ${ AREA }-evaluate` )
-        expect( fm ).toContain( 'allowed-tools: Read, Grep, Glob' )
-        expect( fm ).toContain( 'model: inherit' )
-
-        expect( content ).toMatch( /NOT know the optimization goal/i )
-        expect( content ).toMatch( /4xx/ )
-        expect( content ).toMatch( /never PASS/i )
-        expect( content ).toMatch( /"blocker"/ )
-        expect( content ).toMatch( /"reason"/ )
-        expect( content ).toMatch( new RegExp( `${ AREA }-start-grade` ) )
-        expect( content ).toMatch( new RegExp( `${ AREA }-apply-improvement` ) )
-        expect( content ).toMatch( new RegExp( `prompts/output-schemas/${ AREA }\\.schema\\.json` ) )
-    } )
-
-    it( 'start-grade skill surfaces the [GRADING] convention', () => {
-        const content = readFileSync(
-            join( SKILLS_DIR, `${ AREA }-start-grade`, 'SKILL.md' ),
-            'utf-8'
-        )
-        expect( content ).toContain( '[GRADING] area=selection-aggregate' )
-        expect( content ).toContain( '[GRADING] DONE' )
     } )
 
 } )

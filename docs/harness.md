@@ -49,8 +49,10 @@ the sub-agent; the two answer sets are merged into the full area grading.
 
 ## Persona-path rule
 
-Sourced from `skills/*-start-grade/SKILL.md` (files scheduled for removal per
-Memo 097 Kap. 9.0.1 — preserved here before deletion).
+The per-area `start-grade`/`evaluate`/`apply-improvement` SKILL.md files were
+removed in the PA-2 cleanup; the composed prompt now comes from
+`prompts.json.areas[]` (PromptBuilder.build). This section is the
+canonical surviving record of the persona-path rule.
 
 **Persona slug format:** `<basePersona>--<lens>`
 
@@ -84,8 +86,9 @@ confuse the two. See the Spec Glossary for the authoritative definitions.
 
 ## selection-aggregate: predecessor-grades rule
 
-Sourced from `skills/selection-aggregate-start-grade/SKILL.md` (scheduled for
-removal per Memo 097 Kap. 9.0.1 — preserved here before deletion).
+The `selection-aggregate-start-grade` SKILL.md was removed in the PA-2 cleanup
+(prompt now composed via `prompts.json.areas[]`). This section is the
+canonical surviving record of the predecessor-grades rule.
 
 The `selection-aggregate` area loads **predecessor grades** as evidence before
 building its prompt. This is the only area that does so.

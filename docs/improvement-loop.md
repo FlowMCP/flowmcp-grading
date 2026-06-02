@@ -1,8 +1,8 @@
 # Per-Area Iteration Loop (Improvement Loop)
 
-**Source:** Sourced from `skills/*-apply-improvement/SKILL.md` and
-`skills/*-start-grade/SKILL.md` (READ-ONLY — those files are scheduled for
-removal after this knowledge is extracted; see Memo 097 Kap. 9.0.1). The loop
+**Source:** The per-area `apply-improvement`/`start-grade` SKILL.md files were
+removed in the PA-2 cleanup after this knowledge was extracted; the composed
+prompt now comes from `prompts.json.areas[]` (PromptBuilder.build). The loop
 behavior documented here is the canonical surviving record.
 
 **Critical note:** `src/harness/ImprovementLoop.mjs` is a DIFFERENT, separate
@@ -16,12 +16,13 @@ files.
 ## Overview
 
 Each grading area runs its evaluation through a **start → evaluate → apply-improvement**
-cycle. The cycle is controlled by two skills per area:
+cycle. The cycle is driven by the composed per-area prompt (`prompts.json.areas[]`,
+PromptBuilder.build) carrying two roles:
 
-| Skill role | File pattern |
-|------------|--------------|
-| start + evaluate | `skills/<area>-start-grade/SKILL.md` |
-| decide + re-iterate or finalize | `skills/<area>-apply-improvement/SKILL.md` |
+| Role | Composed-prompt section |
+|------|-------------------------|
+| start + evaluate | area questions + output-schema (`prompts/output-schemas/<area>.schema.json`) |
+| decide + re-iterate or finalize | iteration directive (`maxIterations`, default 1) |
 
 One complete pass (iteration 1) runs:
 

@@ -1,18 +1,23 @@
 /**
- * Integration tests for the evaluator skills.
+ * Integration tests for the evaluator-area contract (fixture-driven).
+ *
+ * The per-area instructions are no longer carried by 33 SKILL.md files
+ * (removed in the PA-2 cleanup). The composed per-area prompt now comes from
+ * `prompts.json.areas[]` (PromptBuilder.build); the harness contract is
+ * pinned here against the per-area output-schemas + mock fixtures.
  *
  * Verifies:
- *  - SKILL.md frontmatter (name, description, allowed-tools, model)
- *  - allowed-tools is Read-only (Read/Grep/Glob) — no Write/Bash/Edit
- *  - persona flag per area matches the persona-application table
  *  - mock-response-pass conforms to per-area output-schema (ajv 2020-12)
- *  - blocker shape: { blocker, reason }
- *  - HTTP-4xx-never-PASS rule
+ *  - answer count per area matches the schema
+ *  - persona field matches the persona-application table
+ *  - blocker shape: { blocker, reason } and validates the oneOf blocker branch
+ *  - HTTP-4xx-never-PASS rule across all areas
+ *  - persona-required distribution (4 neutral + 6 persona)
  *
  * Sub-agent calls are mocked via fixture files — no real LLM/network.
  */
 
-import { describe, it, expect, beforeAll } from '@jest/globals'
+import { describe, it, expect } from '@jest/globals'
 import { readFileSync, existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -22,7 +27,6 @@ import addFormats from 'ajv-formats'
 
 const HERE = dirname( fileURLToPath( import.meta.url ) )
 const ROOT = join( HERE, '..', '..' )
-const SKILLS_DIR = join( ROOT, 'skills' )
 const FIXTURES_DIR = join( HERE, 'fixtures', 'skills' )
 const SCHEMAS_DIR = join( ROOT, 'prompts', 'output-schemas' )
 
@@ -39,27 +43,6 @@ const AREAS = [
     { area: 'selection-skills-L3',       personaRequired: true,  answerCount: 6 },
     { area: 'namespace-skills',          personaRequired: true,  answerCount: 6 }
 ]
-
-
-const FRONTMATTER_FIELDS = [ 'name', 'description', 'allowed-tools', 'model' ]
-
-
-const parseFrontmatter = ( { content } ) => {
-    const match = content.match( /^---\n([\s\S]*?)\n---/ )
-    if( match === null ) { return null }
-    const body = match[ 1 ]
-    const fields = {}
-    const lines = body.split( '\n' )
-    lines
-        .forEach( ( line ) => {
-            const idx = line.indexOf( ':' )
-            if( idx === -1 ) { return }
-            const key = line.slice( 0, idx ).trim()
-            const value = line.slice( idx + 1 ).trim()
-            fields[ key ] = value
-        } )
-    return fields
-}
 
 
 const loadSchema = ( { area } ) => {
@@ -84,7 +67,7 @@ const buildAjv = () => {
 }
 
 
-describe( 'Evaluator Skills — Integration', () => {
+describe( 'Evaluator Areas — Integration', () => {
 
     AREAS
         .forEach( ( spec ) => {
@@ -92,86 +75,7 @@ describe( 'Evaluator Skills — Integration', () => {
 
             describe( `area: ${ area }`, () => {
 
-                const skillDir = join( SKILLS_DIR, `${ area }-evaluate` )
-                const skillPath = join( skillDir, 'SKILL.md' )
                 const fixtureDir = join( FIXTURES_DIR, area )
-
-                let skillContent = null
-                let frontmatter = null
-
-
-                beforeAll( () => {
-                    skillContent = readFileSync( skillPath, 'utf-8' )
-                    frontmatter = parseFrontmatter( { content: skillContent } )
-                } )
-
-
-                it( 'SKILL.md file exists', () => {
-                    expect( existsSync( skillPath ) ).toBe( true )
-                } )
-
-
-                it( 'frontmatter parses with required fields', () => {
-                    expect( frontmatter ).not.toBeNull()
-                    FRONTMATTER_FIELDS
-                        .forEach( ( field ) => {
-                            expect( frontmatter ).toHaveProperty( field )
-                            expect( frontmatter[ field ].length ).toBeGreaterThan( 0 )
-                        } )
-                } )
-
-
-                it( 'name matches <area>-evaluate', () => {
-                    expect( frontmatter.name ).toBe( `${ area }-evaluate` )
-                } )
-
-
-                it( 'allowed-tools is exactly "Read, Grep, Glob" (Read-only)', () => {
-                    expect( frontmatter[ 'allowed-tools' ] ).toBe( 'Read, Grep, Glob' )
-                } )
-
-
-                it( 'allowed-tools rejects forbidden tools (Write/Bash/Edit)', () => {
-                    const tools = frontmatter[ 'allowed-tools' ]
-                    expect( tools ).not.toMatch( /\bWrite\b/ )
-                    expect( tools ).not.toMatch( /\bBash\b/ )
-                    expect( tools ).not.toMatch( /\bEdit\b/ )
-                } )
-
-
-                it( 'model frontmatter is "inherit"', () => {
-                    expect( frontmatter.model ).toBe( 'inherit' )
-                } )
-
-
-                it( 'body contains neutrality assertion (does NOT know the optimization goal)', () => {
-                    expect( skillContent ).toMatch( /NOT know the optimization goal/i )
-                } )
-
-
-                it( 'body contains HTTP-4xx rule', () => {
-                    expect( skillContent ).toMatch( /4xx/ )
-                    expect( skillContent ).toMatch( /never PASS/i )
-                } )
-
-
-                it( 'body contains blocker pattern documentation', () => {
-                    expect( skillContent ).toMatch( /"blocker"/ )
-                    expect( skillContent ).toMatch( /"reason"/ )
-                } )
-
-
-                it( 'body references invoker <area>-start-grade and consumer <area>-apply-improvement', () => {
-                    expect( skillContent ).toMatch( new RegExp( `${ area }-start-grade` ) )
-                    expect( skillContent ).toMatch( new RegExp( `${ area }-apply-improvement` ) )
-                } )
-
-
-                it( 'body references the area-specific output-schema', () => {
-                    expect( skillContent ).toMatch(
-                        new RegExp( `prompts/output-schemas/${ area }\\.schema\\.json` )
-                    )
-                } )
 
 
                 it( 'prompt-artifact fixture exists', () => {
@@ -325,16 +229,6 @@ describe( 'Evaluator Skills — Integration', () => {
 
     describe( 'Cross-area structural assertions', () => {
 
-        it( 'all 10 evaluator skill directories exist', () => {
-            AREAS
-                .forEach( ( { area } ) => {
-                    const skillDir = join( SKILLS_DIR, `${ area }-evaluate` )
-                    expect( existsSync( skillDir ) ).toBe( true )
-                    expect( existsSync( join( skillDir, 'SKILL.md' ) ) ).toBe( true )
-                } )
-        } )
-
-
         it( 'all 10 areas have prompt-artifact + pass + blocker + http-4xx fixtures', () => {
             AREAS
                 .forEach( ( { area } ) => {
@@ -354,19 +248,6 @@ describe( 'Evaluator Skills — Integration', () => {
                 .filter( ( a ) => a.personaRequired === true ).length
             expect( neutralCount ).toBe( 4 )
             expect( personaCount ).toBe( 6 )
-        } )
-
-
-        it( 'all evaluator skills frontmatter are Read-only (no Write/Bash/Edit anywhere)', () => {
-            AREAS
-                .forEach( ( { area } ) => {
-                    const content = readFileSync(
-                        join( SKILLS_DIR, `${ area }-evaluate`, 'SKILL.md' ),
-                        'utf-8'
-                    )
-                    const fm = parseFrontmatter( { content } )
-                    expect( fm[ 'allowed-tools' ] ).toBe( 'Read, Grep, Glob' )
-                } )
         } )
 
     } )
