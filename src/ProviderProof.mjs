@@ -1,16 +1,16 @@
 /**
- * ProviderProof — the Provider-Proof producer (Memo 093 Phase 3a, PRD-006).
+ * ProviderProof — the Provider-Proof producer.
  *
  * Renders `providers/<ns>/grade.json` as a DERIVED PROJECTION of the island
  * namespace `index.json` that RebuildIndex.rebuildNamespaceIndex returns. It
  * NEVER recomputes grading: it copies the rollup `status`, the `namespaceAggregate`
- * node (the provider grade per Memo F3), the per-schema 5-status, and the
+ * node (the provider grade), the per-schema 5-status, and the
  * `blockers[]` list — including emit-on-failure `blocked`/`validation-failed`
  * entries — into a committable, CI-visible subset.
  *
  * Two guarantees:
  *   - A blocked-only namespace STILL produces a complete `grade.json`
- *     (status: blocked + blockers[]) — the scaling lever (Memo Kap. 6).
+ *     (status: blocked + blockers[]) — the scaling lever.
  *   - The `monitoring` backref block (githubIssue / boardColumn) is emitted with
  *     null placeholders on first write, and any existing NON-NULL value written
  *     by the P3b sync is PRESERVED on re-run (the duplicate-issue guard). This
