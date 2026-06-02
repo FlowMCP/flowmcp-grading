@@ -20,6 +20,7 @@
  *   DPT-* — DataPretest (live test runner + abort rule + payload persistence)
  *   API-* — ModuleApi (public state-read + schema add/upgrade + scope-rule guard)
  *   SKC-* — SkillComposition (selection-skill cross-reference rules A/B)
+ *   IMP-* — GradingImport (scan/load/gate, namespace derivation + foldername-fallback + rename-later)
  *
  * Code format (strict):
  *   ERROR    → ^[A-Z]{3}-\d{3}$           (e.g. GRD-001)
@@ -50,6 +51,14 @@
  * | VET-003         | ERROR    | reasoning required for ai-security-veto       |
  * | VET-004         | ERROR    | graderIdentity required for categoricalVeto   |
  * | VET-INFO-001    | INFO     | Entry marked as REJECTED via categoricalVeto  |
+ * | IMP-001         | ERROR    | Import input/scan: missing path or no .mjs    |
+ * | IMP-002         | ERROR    | Structural validate gate failed               |
+ * | IMP-003         | ERROR    | Invalid schema slug from filename             |
+ * | IMP-004         | ERROR    | No namespace derivable (pre-fallback marker)  |
+ * | IMP-005         | ERROR    | Single-namespace assertion failed (disagree)  |
+ * | IMP-006         | ERROR    | Foldername-fallback name not a valid namespace|
+ * | IMP-007         | ERROR    | Folder<->namespace invariant violation        |
+ * | IMP-008         | ERROR    | Rename-later target exists with diff content  |
  */
 
 const ERROR_CODE_TABLE = Object.freeze( {
@@ -88,6 +97,16 @@ const ERROR_CODE_TABLE = Object.freeze( {
             code: 'GRD-007',
             severity: 'ERROR',
             message: 'llmModel required when graderIdentity.kind=llm'
+        } ),
+        'GRD-038': Object.freeze( {
+            code: 'GRD-038',
+            severity: 'ERROR',
+            message: "createEntry: blockedReason requires status='blocked'"
+        } ),
+        'GRD-039': Object.freeze( {
+            code: 'GRD-039',
+            severity: 'ERROR',
+            message: 'createEntry: blockedReason must be from the closed reason set: {detail}'
         } ),
         'GRD-WARN-001': Object.freeze( {
             code: 'GRD-WARN-001',
@@ -543,12 +562,54 @@ const ERROR_CODE_TABLE = Object.freeze( {
             severity: 'ERROR',
             message: 'Cross-reference rule B violation: each L3 skill must be mentioned in at least one L2 skill: {detail}'
         } )
+    } ),
+    IMP: Object.freeze( {
+        'IMP-001': Object.freeze( {
+            code: 'IMP-001',
+            severity: 'ERROR',
+            message: 'Import input/scan error: {detail}'
+        } ),
+        'IMP-002': Object.freeze( {
+            code: 'IMP-002',
+            severity: 'ERROR',
+            message: 'Structural validate gate failed: {detail}'
+        } ),
+        'IMP-003': Object.freeze( {
+            code: 'IMP-003',
+            severity: 'ERROR',
+            message: 'Invalid schema slug from filename: {detail}'
+        } ),
+        'IMP-004': Object.freeze( {
+            code: 'IMP-004',
+            severity: 'ERROR',
+            message: 'One or more schemas declare no namespace: {detail}'
+        } ),
+        'IMP-005': Object.freeze( {
+            code: 'IMP-005',
+            severity: 'ERROR',
+            message: 'Single-namespace assertion failed — folder declares multiple namespaces: {detail}'
+        } ),
+        'IMP-006': Object.freeze( {
+            code: 'IMP-006',
+            severity: 'ERROR',
+            message: 'Foldername-fallback name is not a valid namespace (must match /^[a-z][a-z0-9-]*$/): {detail}'
+        } ),
+        'IMP-007': Object.freeze( {
+            code: 'IMP-007',
+            severity: 'ERROR',
+            message: 'Folder<->namespace invariant violation — folder name differs from declared namespace: {detail}'
+        } ),
+        'IMP-008': Object.freeze( {
+            code: 'IMP-008',
+            severity: 'ERROR',
+            message: 'Rename-later conflict — target namespace folder already exists with different content: {detail}'
+        } )
     } )
 } )
 
 
 const CODE_FORMAT_REGEX = /^[A-Z]{2,3}(-WARN|-INFO)?-(\d{3}|S\d)$/
-const VALID_PREFIXES = [ 'GRD', 'SCO', 'VET', 'HSH', 'SNP', 'PRT', 'STB', 'LCK', 'PRE', 'SEL', 'BMP', 'SCN', 'ABT', 'SL', 'NA', 'DPT', 'API', 'SKC' ]
+const VALID_PREFIXES = [ 'GRD', 'SCO', 'VET', 'HSH', 'SNP', 'PRT', 'STB', 'LCK', 'PRE', 'SEL', 'BMP', 'SCN', 'ABT', 'SL', 'NA', 'DPT', 'API', 'SKC', 'IMP' ]
 const VALID_SEVERITIES = [ 'ERROR', 'WARNING', 'INFO' ]
 
 

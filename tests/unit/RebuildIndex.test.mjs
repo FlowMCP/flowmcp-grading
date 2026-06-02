@@ -9,6 +9,7 @@ import {
     NODE_STATUSES,
     ROLLUP_STATUSES
 } from '../../src/RebuildIndex.mjs'
+import { GradingImport } from '../../src/GradingImport.mjs'
 
 
 let tempRoot = null
@@ -234,6 +235,49 @@ describe( 'RebuildIndex.rebuildNamespaceIndex (rollup + 5-status)', () => {
         const result = await RebuildIndex.rebuildNamespaceIndex( { namespaceDir: join( tempRoot, 'providers', 'ghost' ) } )
         expect( result.status ).toBe( false )
         expect( result.errors[ 0 ] ).toContain( 'IDX-006' )
+    } )
+
+    // PRD-001 AC-5: a no-grade blocked record flows through #gradingToNode.
+    test( 'a blocked/validation-failed namespace-description record rolls up blocked', async () => {
+        const blockedNs = join( tempRoot, 'providers', 'blockedns' )
+        await mkdir( join( blockedNs, '_gradings' ), { recursive: true } )
+        await writeJson( {
+            path: join( blockedNs, '_gradings', 'namespace-description--2026-06-02T09-00-00Z.json' ),
+            json: { area: 'namespace-description', blocked: true, blockedReason: 'validation-failed' }
+        } )
+
+        const result = await RebuildIndex.rebuildNamespaceIndex( { namespaceDir: blockedNs } )
+        expect( result.status ).toBe( true )
+        // #gradingToNode maps blocked:true -> { status:'blocked', reason }.
+        expect( result.index.description.status ).toBe( 'blocked' )
+        expect( result.index.description.reason ).toBe( 'validation-failed' )
+        // rollup is blocked (no graded/stable, a blocker present).
+        expect( result.index.status ).toBe( 'blocked' )
+        const blocker = result.index.blockers.find( ( b ) => b.reason === 'validation-failed' )
+        expect( blocker ).toBeDefined()
+    } )
+} )
+
+
+// PRD-002 AC-3: folder<->namespace invariant (§09) — the single consistency seam.
+describe( 'folder<->namespace invariant (PRD-002 AC-3)', () => {
+    test( 'a folder whose declared namespace differs from basename is flagged (no fallback)', () => {
+        const r = GradingImport.assertFolderNamespaceConsistency( {
+            folderName: 'coingecko',
+            declaredNamespace: 'coingecko-com',
+            fallbackUsed: false
+        } )
+        expect( r.valid ).toBe( false )
+        expect( r.errors.some( ( e ) => e.includes( 'IMP-007' ) ) ).toBe( true )
+    } )
+
+    test( 'a matching folder name passes the invariant (idiom CAT002/AGT001/SKL003)', () => {
+        const r = GradingImport.assertFolderNamespaceConsistency( {
+            folderName: 'coingecko-com',
+            declaredNamespace: 'coingecko-com',
+            fallbackUsed: false
+        } )
+        expect( r.valid ).toBe( true )
     } )
 } )
 
