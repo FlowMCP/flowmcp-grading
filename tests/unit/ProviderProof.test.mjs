@@ -244,16 +244,29 @@ describe( 'ProviderProof.write', () => {
     } )
 
 
-    test( 'T8 — produced proof validates against index.schema.json monitoring field', async () => {
+    test( 'T8 — produced proof validates against the monitoring backref schema', async () => {
         await ProviderProof.write( { namespaceIndex: blockedOnlyIndex(), providerDir } )
         const proof = await readProof( providerDir )
 
+        // Canonical shape is published by flowmcp-spec grading/3.0.0 ($defs.monitoring).
+        // Validate against the live spec when the sibling repo is checked out (local dev);
+        // otherwise fall back to this committed snapshot so the unit suite stays
+        // self-contained in CI (where only this repo is checked out). Never skipped.
+        const snapshotMonitoringSchema = {
+            type: 'object',
+            properties: {
+                githubIssue: { type: [ 'integer', 'null' ] },
+                boardColumn: { type: [ 'string', 'null' ] }
+            },
+            additionalProperties: false
+        }
         const schemaPath = new URL(
             '../../../flowmcp-spec/grading/3.0.0/index.schema.json',
             import.meta.url
         )
-        const indexSchema = JSON.parse( await readFile( schemaPath, 'utf-8' ) )
-        const monitoringSchema = indexSchema.$defs.monitoring
+        const monitoringSchema = await readFile( schemaPath, 'utf-8' )
+            .then( ( raw ) => JSON.parse( raw ).$defs.monitoring )
+            .catch( () => snapshotMonitoringSchema )
 
         expect( monitoringSchema ).toBeDefined()
 
