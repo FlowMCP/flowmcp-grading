@@ -519,3 +519,63 @@ describe( 'Grading.createEntry: v2 envelope fields', () => {
         expect( errors[ 0 ] ).toContain( 'GRD-035' )
     } )
 } )
+
+
+// ----- PRD-001 — no-grade blocked record (status-record class admits blockedReason) -----
+
+describe( 'Grading.createEntry: blocked record (PRD-001 AC-4)', () => {
+    test( 'admits a no-grade blocked record with status=blocked + blockedReason=validation-failed', () => {
+        const { entry, errors } = Grading.createEntry( {
+            schemaId: 'etherscan',
+            selectionId: null,
+            gradingTier: 'autonomous',
+            grader: { kind: 'script', name: 'grading-import', version: '1.0.0' },
+            status: 'blocked',
+            blockedReason: 'validation-failed'
+        } )
+        expect( errors ).toEqual( [] )
+        // No grade present: gradings empty, aggregateGrade null.
+        expect( entry.gradings ).toEqual( [] )
+        expect( entry.aggregateGrade ).toBeNull()
+        expect( entry.status ).toBe( 'blocked' )
+        expect( entry.blockedReason ).toBe( 'validation-failed' )
+        // Distinguishable from a clean import: explicit top-level blocked flag
+        // (read by RebuildIndex.#gradingToNode).
+        expect( entry.blocked ).toBe( true )
+    } )
+
+    test( 'free-text blockedReason is rejected with GRD-039 (closed reason set, no silent default)', () => {
+        const { errors } = Grading.createEntry( {
+            schemaId: 'etherscan',
+            selectionId: null,
+            gradingTier: 'autonomous',
+            grader: { kind: 'script', name: 'g', version: '1' },
+            status: 'blocked',
+            blockedReason: 'because reasons'
+        } )
+        expect( errors.some( ( e ) => e.includes( 'GRD-039' ) ) ).toBe( true )
+    } )
+
+    test( 'blockedReason without status=blocked is rejected with GRD-038 (all-or-nothing)', () => {
+        const { errors } = Grading.createEntry( {
+            schemaId: 'etherscan',
+            selectionId: null,
+            gradingTier: 'autonomous',
+            grader: { kind: 'script', name: 'g', version: '1' },
+            blockedReason: 'validation-failed'
+        } )
+        expect( errors.some( ( e ) => e.includes( 'GRD-038' ) ) ).toBe( true )
+    } )
+
+    test( 'a clean entry (no blockedReason) has no blocked flag — emit is distinguishable', () => {
+        const { entry, errors } = Grading.createEntry( {
+            schemaId: 'demo',
+            selectionId: null,
+            gradingTier: 'autonomous',
+            grader: { kind: 'script', name: 'g', version: '1' }
+        } )
+        expect( errors ).toEqual( [] )
+        expect( entry.blocked ).toBeUndefined()
+        expect( entry.blockedReason ).toBeUndefined()
+    } )
+} )

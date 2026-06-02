@@ -74,6 +74,9 @@ const GRADE_THRESHOLDS = Object.freeze( [
 // v2 envelope vocabularies (gradingSpec/1.2.0 §3.Y / §5.1).
 const VALID_HARNESSES = [ 'claude-code' ]
 const VALID_NODE_STATUSES = [ 'pending', 'blocked', 'graded', 'stable', 'rejected' ]
+// Closed reason set for a no-grade blocked record (emit-on-failure, PRD-001).
+// Free-text reasons are rejected (no silent default).
+const VALID_BLOCKED_REASONS = [ 'validation-failed' ]
 const VALID_AREAS = [
     'single-test',
     'tools-aggregate-schema',
@@ -102,11 +105,11 @@ class Grading {
     }
 
 
-    static createEntry( { schemaId, selectionId, gradingTier, grader, options, iteration, improvementHints, persona, area, skillId, level, status, harness } ) {
+    static createEntry( { schemaId, selectionId, gradingTier, grader, options, iteration, improvementHints, persona, area, skillId, level, status, harness, blockedReason } ) {
         const { status: ok, messages } = Grading.#validationCreateEntry( {
             schemaId, selectionId, gradingTier, grader,
             iteration, improvementHints, persona,
-            area, skillId, level, status, harness
+            area, skillId, level, status, harness, blockedReason
         } )
         if( !ok ) { return { entry: null, errors: messages } }
 
@@ -153,6 +156,17 @@ class Grading {
         }
         if( harness !== undefined && harness !== null ) {
             entry.harness = harness
+        }
+
+        // No-grade blocked record (emit-on-failure, PRD-001). When a blockedReason is
+        // present (validated in #validationCreateEntry as status==='blocked' +
+        // closed-set), the entry also carries the top-level `blocked: true` flag
+        // so RebuildIndex.#gradingToNode reads it as a blocked node. Explicit
+        // field — the blocked-emit is distinguishable from a clean entry, never
+        // inferred. gradings stays [] and aggregateGrade stays null.
+        if( blockedReason !== undefined && blockedReason !== null ) {
+            entry.blocked = true
+            entry.blockedReason = blockedReason
         }
 
         return { entry, errors: [] }
@@ -347,7 +361,7 @@ class Grading {
     }
 
 
-    static #validationCreateEntry( { schemaId, selectionId, gradingTier, grader, iteration, improvementHints, persona, area, skillId, level, status, harness } ) {
+    static #validationCreateEntry( { schemaId, selectionId, gradingTier, grader, iteration, improvementHints, persona, area, skillId, level, status, harness, blockedReason } ) {
         const messages = []
         const struct = { status: false, messages }
 
@@ -478,6 +492,20 @@ class Grading {
         if( area !== undefined && area !== null && PER_SKILL_AREAS.includes( area ) ) {
             if( skillId === undefined || skillId === null ) {
                 messages.push( `GRD-037: createEntry: skillId required for per-skill area '${area}'` )
+                return struct
+            }
+        }
+
+        // No-grade blocked record (emit-on-failure, PRD-001): blockedReason is an
+        // all-or-nothing pair with status==='blocked' and is restricted to a
+        // closed reason set. No free text, no silent default.
+        if( blockedReason !== undefined && blockedReason !== null ) {
+            if( status !== 'blocked' ) {
+                messages.push( `GRD-038: createEntry: blockedReason requires status='blocked', was status='${status}'` )
+                return struct
+            }
+            if( typeof blockedReason !== 'string' || !VALID_BLOCKED_REASONS.includes( blockedReason ) ) {
+                messages.push( `GRD-039: createEntry: blockedReason must be one of [${VALID_BLOCKED_REASONS.join( ', ' )}], was: '${blockedReason}'` )
                 return struct
             }
         }
@@ -691,4 +719,4 @@ class Grading {
 }
 
 
-export { Grading, AGING_DEFAULTS, VALID_AREAS, VALID_NODE_STATUSES, VALID_HARNESSES, PER_SKILL_AREAS }
+export { Grading, AGING_DEFAULTS, VALID_AREAS, VALID_NODE_STATUSES, VALID_HARNESSES, PER_SKILL_AREAS, VALID_BLOCKED_REASONS }

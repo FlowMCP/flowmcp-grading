@@ -40,6 +40,13 @@ describe( 'Public API exports', () => {
         expect( typeof api.GradingExport.run ).toBe( 'function' )
     } )
 
+
+    test( 'exports ProviderProof (derived grade.json producer)', () => {
+        const keys = Object.keys( api )
+        expect( keys ).toContain( 'ProviderProof' )
+        expect( typeof api.ProviderProof.write ).toBe( 'function' )
+    } )
+
     test( 'SelectionLockfile is NOT exported (lifecycle dropped in v2)', () => {
         expect( Object.keys( api ) ).not.toContain( 'SelectionLockfile' )
     } )

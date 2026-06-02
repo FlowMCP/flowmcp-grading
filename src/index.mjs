@@ -23,6 +23,7 @@
  * | PromptBuilder           | class    | static build / getValidAreas / isPersonaRequired / buildGoalBlock                          | PB-*                      |
  * | GradingImport           | class    | static run ( { providerPath, gradingDataRoot, validateGate } ) — IN round-trip             | IMP-*, SEL-004, SNP-*     |
  * | GradingExport           | class    | static run ( { target, exportDir, includeSchemas } ) — OUT round-trip                      | EXP-*                     |
+ * | ProviderProof           | class    | static write ( { namespaceIndex, providerDir } ) — derived grade.json projection           | PRF-*                     |
  * | PreConditionCheck       | class    | static check / checkLockfile                                                               | PRE-*                     |
  * | FolderScanner           | class    | static scan / checkNamespaceFolder / checkSchemaSnapshots / checkSelectionFolder           | SCN-*                     |
  * | AboutConsistencyCheck   | class    | static checkNamespaceAbout / checkSelectionAbout / verifyNamespace                         | ABT-*                     |
@@ -65,6 +66,7 @@ import { RebuildIndex } from './RebuildIndex.mjs'
 import { PromptBuilder } from './PromptBuilder.mjs'
 import { GradingImport } from './GradingImport.mjs'
 import { GradingExport } from './GradingExport.mjs'
+import { ProviderProof } from './ProviderProof.mjs'
 import { SelectionLockfile, OVERRIDE_WHITELIST } from './SelectionLockfile.mjs'
 
 
@@ -327,6 +329,7 @@ export {
     PromptBuilder,
     GradingImport,
     GradingExport,
+    ProviderProof,
     gradeSingleSchema,
     gradeSelection,
     validateGradingEntry,
