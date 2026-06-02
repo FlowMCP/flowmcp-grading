@@ -5,7 +5,7 @@
  *   - Pre-instructions and persona application are named concepts.
  *   - In the architecture, the builder is a code-only node.
  *   - The builder is the prompt-composition building block and makes NO LLM call.
- *   - The persona-application table covers 10 areas (4 neutral, 6 with persona).
+ *   - The persona-application table covers 11 areas (4 neutral, 7 with persona).
  *   - The pre-instructions block is a mandatory verbatim file-preparation block.
  *   - The output schema has a defined location and is marked as binding.
  *
