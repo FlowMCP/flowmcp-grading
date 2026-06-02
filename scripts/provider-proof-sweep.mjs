@@ -30,7 +30,37 @@ import { ProviderProof } from '../src/ProviderProof.mjs'
 const HERE = dirname( fileURLToPath( import.meta.url ) )
 const DEFAULT_SCHEMAS_ROOT = resolve( HERE, '../../flowmcp-schemas-private/schemas/v4.0.0/providers' )
 const DEFAULT_PROOFS_OUT = resolve( HERE, '../../flowmcp-schemas-private/providers' )
-const DEFAULT_GRADING_DATA = join( homedir(), '.flowmcp', 'grading' )
+
+
+// Memo 097 PA-6 (Kap. 4): the island root MUST resolve the SAME way the CLI does
+// (FlowMcpCli.#gradingDataRoot) — no divergent hardcode. Precedence (all explicit,
+// no silent default), mirroring the CLI exactly:
+//   1. --grading-data flag                 (cwd-relative / absolute)
+//   2. FLOWMCP_GRADING_DATA env var         (cwd-relative / absolute)
+//   3. "gradingDataDir" in GLOBAL ~/.flowmcp/config.json (home-relative / absolute)
+//   4. built-in default ~/.flowmcp/grading
+// There is only ONE global config (no local repo config for grading paths).
+const resolveGradingDataRoot = async ( { cwd, flagValue } ) => {
+    if( typeof flagValue === 'string' && flagValue.length > 0 ) {
+        return resolve( cwd, flagValue )
+    }
+    const envDir = process.env[ 'FLOWMCP_GRADING_DATA' ]
+    if( typeof envDir === 'string' && envDir.length > 0 ) {
+        return resolve( cwd, envDir )
+    }
+    const globalConfigDir = join( homedir(), '.flowmcp' )
+    try {
+        const raw = await readFile( join( globalConfigDir, 'config.json' ), 'utf-8' )
+        const globalConfig = JSON.parse( raw )
+        if( globalConfig !== null && typeof globalConfig[ 'gradingDataDir' ] === 'string' && globalConfig[ 'gradingDataDir' ].length > 0 ) {
+            return resolve( globalConfigDir, globalConfig[ 'gradingDataDir' ] )
+        }
+    } catch {
+        // No global config / unreadable -> fall through to the documented default.
+    }
+
+    return join( globalConfigDir, 'grading' )
+}
 
 
 class ProviderProofSweep {
@@ -130,7 +160,9 @@ const parseArgs = ( { argv } ) => {
     return {
         schemasRoot: flag( 'schemas-root' ) === null ? DEFAULT_SCHEMAS_ROOT : flag( 'schemas-root' ),
         proofsOut: flag( 'proofs-out' ) === null ? DEFAULT_PROOFS_OUT : flag( 'proofs-out' ),
-        gradingDataRoot: flag( 'grading-data' ) === null ? DEFAULT_GRADING_DATA : flag( 'grading-data' ),
+        // PA-6: do NOT resolve a hardcoded default here. The raw flag value (or
+        // null) flows into resolveGradingDataRoot, which mirrors the CLI precedence.
+        gradingDataFlag: flag( 'grading-data' ),
         only: flag( 'only' ),
         limit: limitRaw === null ? null : Number.parseInt( limitRaw, 10 ),
         freshIsland: argv.includes( '--fresh-island' )
@@ -146,18 +178,28 @@ const cli = async () => {
         process.exit( 1 )
     }
 
+    // PA-6: resolve the island via the exact CLI precedence (flag -> env ->
+    // global config -> default), not a divergent hardcode.
+    const gradingDataRoot = await resolveGradingDataRoot( { cwd: process.cwd(), flagValue: args.gradingDataFlag } )
+
     process.stdout.write( `=== Provider-Proof Sweep (Memo 095 P2) ===\n` )
     process.stdout.write( `schemas-root: ${args.schemasRoot}\n` )
     process.stdout.write( `proofs-out:   ${args.proofsOut}\n` )
-    process.stdout.write( `grading-data: ${args.gradingDataRoot}\n` )
+    process.stdout.write( `grading-data: ${gradingDataRoot}\n` )
     process.stdout.write( `filter:       only=${args.only === null ? '(all)' : args.only} limit=${args.limit === null ? '(none)' : args.limit}\n\n` )
 
     if( args.freshIsland === true ) {
-        await rm( args.gradingDataRoot, { recursive: true, force: true } )
+        await rm( gradingDataRoot, { recursive: true, force: true } )
         process.stdout.write( 'fresh-island: island wiped before sweep\n' )
     }
 
-    const result = await ProviderProofSweep.run( args )
+    const result = await ProviderProofSweep.run( {
+        schemasRoot: args.schemasRoot,
+        proofsOut: args.proofsOut,
+        gradingDataRoot,
+        only: args.only,
+        limit: args.limit
+    } )
 
     const byStatus = result.results
         .reduce( ( acc, r ) => { acc[ r.status ] = ( acc[ r.status ] === undefined ? 0 : acc[ r.status ] ) + 1; return acc }, {} )
