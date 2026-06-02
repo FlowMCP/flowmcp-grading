@@ -31,6 +31,21 @@ import { join } from 'node:path'
 const PROOF_VERSION = 1
 const PROOF_FILENAME = 'grade.json'
 
+// The committed proof's node `reason` is a blockedReason and MUST be a member of the
+// closed grading-spec enum (gradingSpec index.schema.json $defs.blockedReason). The
+// island index also carries free-text pending annotations on `reason` (e.g. "no
+// grading yet", "not yet imported") — those are INTERNAL and are dropped from the
+// committed projection so a pending proof still validates against the spec. NO SILENT
+// DEFAULTS: a non-enum reason is omitted, never rewritten.
+const SPEC_BLOCKED_REASONS = [
+    'validation-failed',
+    'fewer-than-three-tests',
+    'no-about',
+    'api-down',
+    'all-schemas-unparseable',
+    'not-imported'
+]
+
 
 class ProviderProof {
     /**
@@ -99,10 +114,28 @@ class ProviderProof {
             .reduce( ( acc, [ name, node ] ) => {
                 const projected = { status: node.status }
                 if( node.grade !== undefined ) { projected.grade = node.grade }
-                if( node.reason !== undefined ) { projected.reason = node.reason }
+                const reason = ProviderProof.#specReason( { reason: node.reason } )
+                if( reason !== null ) { projected.reason = reason }
                 acc[ name ] = projected
                 return acc
             }, {} )
+    }
+
+
+    /**
+     * #specReason — normalise an island node reason to its exact grading-spec
+     * blockedReason. The island carries either the bare enum value
+     * ('validation-failed') or a detailed prefix ('validation-failed: bad schema');
+     * the committed proof must use the EXACT enum value (the detail survives in
+     * blockers[], which the spec leaves unconstrained). Free-text pending reasons
+     * ('no grading yet') match nothing and are dropped. Returns null when no spec
+     * blockedReason matches — NO SILENT DEFAULTS.
+     */
+    static #specReason( { reason } ) {
+        if( typeof reason !== 'string' ) { return null }
+        const match = SPEC_BLOCKED_REASONS
+            .find( ( r ) => reason === r || reason.startsWith( `${r}:` ) || reason.startsWith( `${r} ` ) )
+        return match === undefined ? null : match
     }
 
 
@@ -119,7 +152,8 @@ class ProviderProof {
         // the namespace is pending/blocked — NO SILENT DEFAULTS.
         if( node.normalizedScore !== undefined ) { projected.normalizedScore = node.normalizedScore }
         if( node.ref !== undefined ) { projected.ref = node.ref }
-        if( node.reason !== undefined ) { projected.reason = node.reason }
+        const reason = ProviderProof.#specReason( { reason: node.reason } )
+        if( reason !== null ) { projected.reason = reason }
         return projected
     }
 

@@ -145,6 +145,20 @@ describe( 'ProviderProof.write', () => {
     } )
 
 
+    test( 'T3e — node reason normalized to exact spec blockedReason; free-text dropped', async () => {
+        const idx = blockedOnlyIndex()
+        // island carries a detailed prefix on the schema node and a free-text pending
+        // annotation on the aggregate — proof must normalize the first, drop the second.
+        idx.namespaceAggregate = { status: 'pending', reason: 'no grading yet' }
+        idx.schemas.openMeteoAirQuality = { status: 'blocked', reason: 'validation-failed: bad schema' }
+        await ProviderProof.write( { namespaceIndex: idx, providerDir } )
+        const proof = await readProof( providerDir )
+
+        expect( proof.schemas.openMeteoAirQuality.reason ).toBe( 'validation-failed' )
+        expect( proof.namespaceAggregate.reason ).toBeUndefined()
+    } )
+
+
     test( 'T-projection — producer never recomputes grade (projection only)', async () => {
         // Feed an aggregate whose grade is deliberately inconsistent with the
         // per-schema grades. A projection copies it verbatim; a recompute would
