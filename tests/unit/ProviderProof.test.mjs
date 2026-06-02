@@ -127,6 +127,24 @@ describe( 'ProviderProof.write', () => {
     } )
 
 
+    test( 'T3c — normalizedScore projected when present (F11, Memo 095)', async () => {
+        const idx = gradedIndex()
+        idx.namespaceAggregate = { status: 'graded', grade: 'A', ref: 'providers/openmeteo/_gradings/x.json', normalizedScore: 4.75 }
+        await ProviderProof.write( { namespaceIndex: idx, providerDir } )
+        const proof = await readProof( providerDir )
+
+        expect( proof.namespaceAggregate.normalizedScore ).toBe( 4.75 )
+    } )
+
+
+    test( 'T3d — normalizedScore omitted when absent (NO SILENT DEFAULTS)', async () => {
+        await ProviderProof.write( { namespaceIndex: blockedOnlyIndex(), providerDir } )
+        const proof = await readProof( providerDir )
+
+        expect( proof.namespaceAggregate.normalizedScore ).toBeUndefined()
+    } )
+
+
     test( 'T-projection — producer never recomputes grade (projection only)', async () => {
         // Feed an aggregate whose grade is deliberately inconsistent with the
         // per-schema grades. A projection copies it verbatim; a recompute would

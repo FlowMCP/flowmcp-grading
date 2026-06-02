@@ -611,6 +611,9 @@ class RebuildIndex {
         if( entry.status === 'stable' ) {
             const node = { status: 'stable', ref }
             if( entry.grade !== undefined ) { node.grade = entry.grade }
+            // F11 (Memo 095): carry the numeric normalizedScore into the node when
+            // the grading entry persisted one (AreaScorer writes it alongside grade).
+            if( typeof entry.normalizedScore === 'number' ) { node.normalizedScore = entry.normalizedScore }
             return node
         }
 
@@ -621,7 +624,9 @@ class RebuildIndex {
                 blockers.push( { node: nodePath, reason: mapped.errors[ 0 ] } )
                 return { status: 'blocked', reason: mapped.errors[ 0 ], ref }
             }
-            return { status: mapped.status, grade: gradeValue, ref }
+            const node = { status: mapped.status, grade: gradeValue, ref }
+            if( typeof entry.normalizedScore === 'number' ) { node.normalizedScore = entry.normalizedScore }
+            return node
         }
 
         // Derived path: the entry is an answer-envelope (answers[], no explicit
@@ -648,7 +653,9 @@ class RebuildIndex {
                 blockers.push( { node: nodePath, reason: mapped.errors[ 0 ] } )
                 return { status: 'blocked', reason: mapped.errors[ 0 ], ref }
             }
-            return { status: mapped.status, grade: computed.aggregateGrade, ref }
+            const node = { status: mapped.status, grade: computed.aggregateGrade, ref }
+            if( typeof computed.normalizedScore === 'number' ) { node.normalizedScore = computed.normalizedScore }
+            return node
         }
 
         return { status: 'pending', reason: 'no grade in entry', ref }
