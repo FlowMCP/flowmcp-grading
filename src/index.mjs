@@ -64,6 +64,7 @@ import { ModuleApi } from './ModuleApi.mjs'
 import { SkillComposition } from './SkillComposition.mjs'
 import { RebuildIndex } from './RebuildIndex.mjs'
 import { PromptBuilder } from './PromptBuilder.mjs'
+import { AreaPromptLoader } from './AreaPromptLoader.mjs'
 import { GradingImport } from './GradingImport.mjs'
 import { GradingExport } from './GradingExport.mjs'
 import { ProviderProof } from './ProviderProof.mjs'
@@ -327,6 +328,7 @@ export {
     SkillComposition,
     RebuildIndex,
     PromptBuilder,
+    AreaPromptLoader,
     GradingImport,
     GradingExport,
     ProviderProof,
