@@ -1,0 +1,94 @@
+{
+    "version": "1.1.0",
+    "description": "Area dependency graph: per-area dependsOn descriptor + requiredLevel gate + classification (deterministic = CLI can finish it for free; non-deterministic = needs an LLM scoring round). Graph lives as DATA so new edges/classifications are a data edit, not a code change. Provider-Namespace-Gate is encoded here as namespace-areas depending on all-namespace-schemas at requiredLevel deterministic-green.",
+    "entries": [
+        {
+            "area": "single-test",
+            "group": "schema-areas",
+            "dependsOn": { "kind": "none" },
+            "requiredLevel": "structural-valid",
+            "classification": "deterministic",
+            "deferred": false
+        },
+        {
+            "area": "tools-aggregate-schema",
+            "group": "schema-areas",
+            "dependsOn": { "kind": "none" },
+            "requiredLevel": "structural-valid",
+            "classification": "deterministic",
+            "deferred": false
+        },
+        {
+            "area": "tools-aggregate-namespace",
+            "group": "namespace-areas",
+            "dependsOn": { "kind": "all-namespace-schemas" },
+            "requiredLevel": "deterministic-green",
+            "classification": "non-deterministic",
+            "deferred": false
+        },
+        {
+            "area": "namespace-description",
+            "group": "namespace-areas",
+            "dependsOn": { "kind": "all-namespace-schemas" },
+            "requiredLevel": "deterministic-green",
+            "classification": "non-deterministic",
+            "deferred": false
+        },
+        {
+            "area": "namespace-skills",
+            "group": "namespace-areas",
+            "dependsOn": { "kind": "all-namespace-schemas" },
+            "requiredLevel": "deterministic-green",
+            "classification": "non-deterministic",
+            "deferred": false
+        },
+        {
+            "area": "about-namespace",
+            "group": "about-namespace",
+            "dependsOn": { "kind": "about-resource-present" },
+            "requiredLevel": "structural-valid",
+            "classification": "non-deterministic",
+            "deferred": false
+        },
+        {
+            "area": "about-selection",
+            "group": "selection-areas",
+            "dependsOn": { "kind": "all-member-schemas" },
+            "requiredLevel": "stable",
+            "classification": "non-deterministic",
+            "deferred": true
+        },
+        {
+            "area": "selection-skills-L1",
+            "group": "selection-areas",
+            "dependsOn": { "kind": "all-member-schemas" },
+            "requiredLevel": "stable",
+            "classification": "non-deterministic",
+            "deferred": true
+        },
+        {
+            "area": "selection-skills-L2",
+            "group": "selection-areas",
+            "dependsOn": { "kind": "all-member-schemas" },
+            "requiredLevel": "stable",
+            "classification": "non-deterministic",
+            "deferred": true
+        },
+        {
+            "area": "selection-skills-L3",
+            "group": "selection-areas",
+            "dependsOn": { "kind": "all-member-schemas" },
+            "requiredLevel": "stable",
+            "classification": "non-deterministic",
+            "deferred": true
+        },
+        {
+            "area": "selection-aggregate",
+            "group": "selection-areas",
+            "dependsOn": { "kind": "all-member-schemas" },
+            "requiredLevel": "stable",
+            "classification": "non-deterministic",
+            "deferred": true
+        }
+    ]
+}

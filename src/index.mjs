@@ -24,6 +24,9 @@
  * | GradingImport           | class    | static run ( { providerPath, gradingDataRoot, validateGate } ) — IN round-trip             | IMP-*, SEL-004, SNP-*     |
  * | GradingExport           | class    | static run ( { target, exportDir, includeSchemas } ) — OUT round-trip                      | EXP-*                     |
  * | ProviderProof           | class    | static write ( { namespaceIndex, providerDir } ) — derived grade.json projection           | PRF-*                     |
+ * | RequiredLevel           | class    | static getLadder / derive / meets (4-level ladder, derived; no persisted field)            | RLV-*                     |
+ * | AreaDependencyGraph     | class    | static loadGraph / requiredLevelFor / dependsOnFor / classifyArea / evaluate (data-driven dependsOn graph) | ADG-*     |
+ * | TaskId                  | class    | static generate / parse / matchesAreaSet (`schemaIdSlug--areaSetHash`, set semantics)      | TID-*                     |
  * | PreConditionCheck       | class    | static check / checkLockfile                                                               | PRE-*                     |
  * | FolderScanner           | class    | static scan / checkNamespaceFolder / checkSchemaSnapshots / checkSelectionFolder           | SCN-*                     |
  * | AboutConsistencyCheck   | class    | static checkNamespaceAbout / checkSelectionAbout / verifyNamespace                         | ABT-*                     |
@@ -69,6 +72,9 @@ import { GradingImport } from './GradingImport.mjs'
 import { GradingExport } from './GradingExport.mjs'
 import { ProviderProof } from './ProviderProof.mjs'
 import { SelectionLockfile, OVERRIDE_WHITELIST } from './SelectionLockfile.mjs'
+import { RequiredLevel } from './RequiredLevel.mjs'
+import { AreaDependencyGraph } from './AreaDependencyGraph.mjs'
+import { TaskId } from './TaskId.mjs'
 
 
 const REPO_VERSION = '1.0.0'
@@ -332,6 +338,9 @@ export {
     GradingImport,
     GradingExport,
     ProviderProof,
+    RequiredLevel,
+    AreaDependencyGraph,
+    TaskId,
     gradeSingleSchema,
     gradeSelection,
     validateGradingEntry,

@@ -1,6 +1,6 @@
 {
     "name": "flowmcp-grading",
-    "version": "2.0.1",
+    "version": "2.1.0",
     "description": "FlowMCP Grading reference implementation (gradingSpec/2.0.1, scoringSystem/1.0.0, gradingSystem/1.0.0).",
     "type": "module",
     "main": "src/index.mjs",

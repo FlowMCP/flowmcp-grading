@@ -469,3 +469,51 @@ describe( 'RebuildIndex.validateIndex (indexVersion 2 + rollup vocab)', () => {
         expect( result.errors.some( ( e ) => e.includes( 'IDX-007' ) ) ).toBe( true )
     } )
 } )
+
+
+describe( 'RebuildIndex re-grade hash-invalidation (PRD-006 Kap. 6.5)', () => {
+    test( 'a changed schemaHash falls the schema node to pending on the next rebuild', async () => {
+        const nsDir = join( tempRoot, 'providers', 'hashinval' )
+        const schemaDir = join( nsDir, 'prices' )
+        await mkdir( join( schemaDir, 'schema' ), { recursive: true } )
+        // Original snapshot bound to hash aaaaaaaa.
+        await writeFile( join( schemaDir, 'schema', 'prices--2026-05-30T19-44-23Z--aaaaaaaa.mjs' ), 'export const main = {}', 'utf-8' )
+        await mkdir( join( schemaDir, '_gradings' ), { recursive: true } )
+        await writeJson( {
+            path: join( schemaDir, '_gradings', 'tools-aggregate-schema--2026-05-31T11-20-00Z.json' ),
+            json: { area: 'tools-aggregate-schema', grade: 'B' }
+        } )
+
+        const first = await RebuildIndex.rebuildNamespaceIndex( { namespaceDir: nsDir } )
+        expect( first.status ).toBe( true )
+        expect( first.index.schemas.prices.snapshot.hash ).toBe( 'aaaaaaaa' )
+        expect( first.index.schemas.prices.toolsAggregate.boundTo ).toBe( 'aaaaaaaa' )
+        expect( first.index.schemas.prices.status ).toBe( 'graded' )
+
+        // A doctor fix produces a NEWER snapshot with a DIFFERENT hash; the prior
+        // grade is now bound to a stale hash.
+        await writeFile( join( schemaDir, 'schema', 'prices--2026-06-01T08-00-00Z--bbbbbbbb.mjs' ), 'export const main = { changed: true }', 'utf-8' )
+
+        const second = await RebuildIndex.rebuildNamespaceIndex( { namespaceDir: nsDir } )
+        expect( second.status ).toBe( true )
+        expect( second.index.schemas.prices.status ).toBe( 'pending' )
+        expect( second.index.schemas.prices.reason ).toBe( 'schema changed, regrade required' )
+    } )
+
+    test( 'an unchanged schemaHash keeps the bound grade on rebuild', async () => {
+        const nsDir = join( tempRoot, 'providers', 'hashstable' )
+        const schemaDir = join( nsDir, 'prices' )
+        await mkdir( join( schemaDir, 'schema' ), { recursive: true } )
+        await writeFile( join( schemaDir, 'schema', 'prices--2026-05-30T19-44-23Z--cccccccc.mjs' ), 'export const main = {}', 'utf-8' )
+        await mkdir( join( schemaDir, '_gradings' ), { recursive: true } )
+        await writeJson( {
+            path: join( schemaDir, '_gradings', 'tools-aggregate-schema--2026-05-31T11-20-00Z.json' ),
+            json: { area: 'tools-aggregate-schema', grade: 'B' }
+        } )
+
+        await RebuildIndex.rebuildNamespaceIndex( { namespaceDir: nsDir } )
+        const second = await RebuildIndex.rebuildNamespaceIndex( { namespaceDir: nsDir } )
+        expect( second.index.schemas.prices.status ).toBe( 'graded' )
+        expect( second.index.schemas.prices.toolsAggregate.boundTo ).toBe( 'cccccccc' )
+    } )
+} )

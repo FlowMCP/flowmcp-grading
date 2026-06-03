@@ -110,6 +110,13 @@ class RebuildIndex {
 
         const blockers = []
 
+        // Re-Grade Hash-Invalidation (PRD-006 Kap. 6.5): read the previous index up
+        // front so each schema node can compare the hash a prior grade was bound to
+        // (`snapshot.hash` / `toolsAggregate.boundTo`) against the live snapshot
+        // hash. On mismatch the schema area falls to `pending` instead of surfacing
+        // a stale grade. This is read here ONCE (not per node) — no silent default.
+        const priorIndex = await RebuildIndex.#readExistingIndex( { path: indexFilePath } )
+
         const aboutNode = await RebuildIndex.#resolveAboutNamespace( { namespaceDir, blockers } )
         const namespaceAggregate = await RebuildIndex.#resolveAggregate( {
             gradingsDir: join( namespaceDir, GRADINGS_DIR ),
@@ -126,7 +133,10 @@ class RebuildIndex {
         await schemaNames
             .reduce( async ( prev, schemaName ) => {
                 await prev
-                const schemaNode = await RebuildIndex.#buildSchemaNode( { namespaceDir, schemaName, blockers } )
+                const priorSchemaNode = priorIndex !== null && priorIndex.schemas !== undefined && priorIndex.schemas !== null
+                    ? priorIndex.schemas[ schemaName ]
+                    : undefined
+                const schemaNode = await RebuildIndex.#buildSchemaNode( { namespaceDir, schemaName, blockers, priorSchemaNode } )
                 schemas[ schemaName ] = schemaNode
             }, Promise.resolve() )
 
@@ -135,8 +145,7 @@ class RebuildIndex {
         const rollupStatus = RebuildIndex.#rollupStatus( { nodeStatuses: allNodeStatuses } )
         const rollupGrade = RebuildIndex.#rollupGrade( { schemas, descriptionNode, skillsNode, namespaceAggregate } )
 
-        const existing = await RebuildIndex.#readExistingIndex( { path: indexFilePath } )
-        const preservedLock = existing === null ? undefined : existing.lockSnapshot
+        const preservedLock = priorIndex === null ? undefined : priorIndex.lockSnapshot
 
         const index = {
             indexVersion: INDEX_VERSION,
@@ -382,17 +391,30 @@ class RebuildIndex {
 
     // ---- internal: schema/about/aggregate node builders -------------------
 
-    static async #buildSchemaNode( { namespaceDir, schemaName, blockers } ) {
+    static async #buildSchemaNode( { namespaceDir, schemaName, blockers, priorSchemaNode } ) {
         const schemaDir = join( namespaceDir, schemaName )
 
         const snapshot = await RebuildIndex.#resolveSnapshot( { schemaDir, schemaName } )
-        const toolsAggregate = await RebuildIndex.#resolveAggregate( {
-            gradingsDir: join( schemaDir, GRADINGS_DIR ),
-            logicalName: 'tools-aggregate-schema',
-            nodePath: `schemas.${schemaName}.toolsAggregate`,
-            blockers
-        } )
-        const tools = await RebuildIndex.#buildToolNodes( { schemaDir, schemaName, blockers } )
+
+        // Re-Grade Hash-Invalidation (PRD-006 Kap. 6.5): if a prior index bound a
+        // grade to an OLD snapshot hash and the live snapshot now carries a
+        // DIFFERENT hash (a doctor fix changed the schema), the bound grade is
+        // stale. The affected area falls to `pending` (`schema changed, regrade
+        // required`) instead of surfacing the stale grade. This is a regrade signal
+        // (not a `blocked` blocker). Determined explicitly — no silent default.
+        const hashInvalidated = RebuildIndex.#detectHashInvalidation( { priorSchemaNode, snapshot } )
+
+        const toolsAggregate = hashInvalidated.invalidated === true
+            ? { status: 'pending', reason: hashInvalidated.reason }
+            : await RebuildIndex.#resolveAggregate( {
+                gradingsDir: join( schemaDir, GRADINGS_DIR ),
+                logicalName: 'tools-aggregate-schema',
+                nodePath: `schemas.${schemaName}.toolsAggregate`,
+                blockers
+            } )
+        const tools = hashInvalidated.invalidated === true
+            ? RebuildIndex.#pendingToolNodesFromPrior( { priorSchemaNode, reason: hashInvalidated.reason } )
+            : await RebuildIndex.#buildToolNodes( { schemaDir, schemaName, blockers } )
 
         const toolStatuses = Object.values( tools )
             .map( ( t ) => t.status )
@@ -408,7 +430,13 @@ class RebuildIndex {
         }
         if( nodeStatus.reason !== null ) {
             node.reason = nodeStatus.reason
-            blockers.push( { node: `schemas.${schemaName}`, reason: nodeStatus.reason } )
+            // A regrade-required pending state is a signal, not a hard blocker.
+            if( hashInvalidated.invalidated !== true ) {
+                blockers.push( { node: `schemas.${schemaName}`, reason: nodeStatus.reason } )
+            }
+        }
+        if( hashInvalidated.invalidated === true ) {
+            node.reason = hashInvalidated.reason
         }
         if( toolsAggregate.grade !== undefined ) { node.grade = toolsAggregate.grade }
         if( snapshot !== null ) {
@@ -417,6 +445,57 @@ class RebuildIndex {
         }
 
         return node
+    }
+
+
+    // #detectHashInvalidation — compare the hash a prior grade was bound to against
+    // the live snapshot hash. The prior binding lives on the prior index node as
+    // `toolsAggregate.boundTo` (set on the last non-pending rebuild) or, failing
+    // that, the prior `snapshot.hash`. A mismatch with the live snapshot means the
+    // schema changed and any bound grade is stale. NO silent default — when there
+    // is no prior binding or no live snapshot, nothing is invalidated.
+    static #detectHashInvalidation( { priorSchemaNode, snapshot } ) {
+        if( snapshot === null || typeof snapshot.hash !== 'string' ) {
+            return { invalidated: false, reason: null }
+        }
+        if( priorSchemaNode === undefined || priorSchemaNode === null || typeof priorSchemaNode !== 'object' ) {
+            return { invalidated: false, reason: null }
+        }
+
+        const priorBound = priorSchemaNode.toolsAggregate !== undefined
+            && priorSchemaNode.toolsAggregate !== null
+            && typeof priorSchemaNode.toolsAggregate.boundTo === 'string'
+            ? priorSchemaNode.toolsAggregate.boundTo
+            : ( priorSchemaNode.snapshot !== undefined && priorSchemaNode.snapshot !== null && typeof priorSchemaNode.snapshot.hash === 'string'
+                ? priorSchemaNode.snapshot.hash
+                : null )
+
+        if( priorBound === null ) {
+            return { invalidated: false, reason: null }
+        }
+        if( priorBound === snapshot.hash ) {
+            return { invalidated: false, reason: null }
+        }
+
+        return { invalidated: true, reason: 'schema changed, regrade required' }
+    }
+
+
+    // Project the prior tool subtree to `pending` on a hash invalidation so the
+    // rollup reflects the regrade-required state without surfacing stale tool
+    // grades. An absent prior subtree yields {} (nothing to invalidate).
+    static #pendingToolNodesFromPrior( { priorSchemaNode, reason } ) {
+        const priorTools = priorSchemaNode !== undefined && priorSchemaNode !== null
+            && priorSchemaNode.tools !== undefined && priorSchemaNode.tools !== null
+            && typeof priorSchemaNode.tools === 'object'
+            ? priorSchemaNode.tools
+            : {}
+
+        return Object.keys( priorTools )
+            .reduce( ( acc, toolName ) => {
+                acc[ toolName ] = { status: 'pending', reason }
+                return acc
+            }, {} )
     }
 
 

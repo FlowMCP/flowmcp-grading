@@ -21,6 +21,9 @@
  *   API-* — ModuleApi (public state-read + schema add/upgrade + scope-rule guard)
  *   SKC-* — SkillComposition (selection-skill cross-reference rules A/B)
  *   IMP-* — GradingImport (scan/load/gate, namespace derivation + foldername-fallback + rename-later)
+ *   RLV-* — RequiredLevel (4-level ladder derivation + meets-comparison)
+ *   ADG-* — AreaDependencyGraph (data-file load/validate + dependsOn/requiredLevel lookup)
+ *   TID-* — TaskId (generate/parse/matchesAreaSet, schemaIdSlug--areaSetHash)
  *
  * Code format (strict):
  *   ERROR    → ^[A-Z]{3}-\d{3}$           (e.g. GRD-001)
@@ -604,12 +607,118 @@ const ERROR_CODE_TABLE = Object.freeze( {
             severity: 'ERROR',
             message: 'Rename-later conflict — target namespace folder already exists with different content: {detail}'
         } )
+    } ),
+    RLV: Object.freeze( {
+        'RLV-001': Object.freeze( {
+            code: 'RLV-001',
+            severity: 'ERROR',
+            message: 'Required field missing: {field}'
+        } ),
+        'RLV-002': Object.freeze( {
+            code: 'RLV-002',
+            severity: 'ERROR',
+            message: 'Type mismatch for field {field}: expected {expected}, got {actual}'
+        } ),
+        'RLV-003': Object.freeze( {
+            code: 'RLV-003',
+            severity: 'ERROR',
+            message: 'Unknown level: {value} (not on the level ladder)'
+        } ),
+        'RLV-004': Object.freeze( {
+            code: 'RLV-004',
+            severity: 'ERROR',
+            message: 'Level cannot be derived from the supplied signals: {detail}'
+        } )
+    } ),
+    ADG: Object.freeze( {
+        'ADG-001': Object.freeze( {
+            code: 'ADG-001',
+            severity: 'ERROR',
+            message: 'Required field missing: {field}'
+        } ),
+        'ADG-002': Object.freeze( {
+            code: 'ADG-002',
+            severity: 'ERROR',
+            message: 'Type mismatch for field {field}: expected {expected}, got {actual}'
+        } ),
+        'ADG-003': Object.freeze( {
+            code: 'ADG-003',
+            severity: 'ERROR',
+            message: 'Data file not readable: {path}'
+        } ),
+        'ADG-004': Object.freeze( {
+            code: 'ADG-004',
+            severity: 'ERROR',
+            message: 'Data file malformed: {detail}'
+        } ),
+        'ADG-005': Object.freeze( {
+            code: 'ADG-005',
+            severity: 'ERROR',
+            message: 'Unknown area: {value} (not in the area whitelist)'
+        } ),
+        'ADG-006': Object.freeze( {
+            code: 'ADG-006',
+            severity: 'ERROR',
+            message: 'Unknown requiredLevel: {value} (not on the level ladder)'
+        } ),
+        'ADG-007': Object.freeze( {
+            code: 'ADG-007',
+            severity: 'ERROR',
+            message: 'Unknown dependsOn.kind: {value} (not in the closed kind set)'
+        } ),
+        'ADG-008': Object.freeze( {
+            code: 'ADG-008',
+            severity: 'ERROR',
+            message: 'Area not present in the loaded graph: {value}'
+        } ),
+        'ADG-009': Object.freeze( {
+            code: 'ADG-009',
+            severity: 'ERROR',
+            message: 'derivedLevels missing a signal a graph dependsOn.kind requires: {detail}'
+        } )
+    } ),
+    TID: Object.freeze( {
+        'TID-001': Object.freeze( {
+            code: 'TID-001',
+            severity: 'ERROR',
+            message: 'Required field missing: {field}'
+        } ),
+        'TID-002': Object.freeze( {
+            code: 'TID-002',
+            severity: 'ERROR',
+            message: 'Type mismatch for field {field}: expected {expected}, got {actual}'
+        } ),
+        'TID-003': Object.freeze( {
+            code: 'TID-003',
+            severity: 'ERROR',
+            message: 'Parameter must not be empty: {field}'
+        } ),
+        'TID-004': Object.freeze( {
+            code: 'TID-004',
+            severity: 'ERROR',
+            message: 'Invalid area: {value} (not in the area whitelist)'
+        } ),
+        'TID-005': Object.freeze( {
+            code: 'TID-005',
+            severity: 'ERROR',
+            message: 'Hash computation failed: {detail}'
+        } ),
+        'TID-006': Object.freeze( {
+            code: 'TID-006',
+            severity: 'ERROR',
+            message: "Malformed Task-ID (no '--' separator): {value}"
+        } ),
+        'TID-007': Object.freeze( {
+            code: 'TID-007',
+            severity: 'ERROR',
+            message: 'Malformed area-set hash tail (not 8-hex): {value}'
+        } )
     } )
 } )
 
 
 const CODE_FORMAT_REGEX = /^[A-Z]{2,3}(-WARN|-INFO)?-(\d{3}|S\d)$/
-const VALID_PREFIXES = [ 'GRD', 'SCO', 'VET', 'HSH', 'SNP', 'PRT', 'STB', 'LCK', 'PRE', 'SEL', 'BMP', 'SCN', 'ABT', 'SL', 'NA', 'DPT', 'API', 'SKC', 'IMP' ]
+const VALID_PREFIXES = [ 'GRD', 'SCO', 'VET', 'HSH', 'SNP', 'PRT', 'STB', 'LCK', 'PRE', 'SEL', 'BMP', 'SCN', 'ABT', 'SL', 'NA', 'DPT', 'API', 'SKC', 'IMP', 'RLV', 'ADG', 'TID' ]
 const VALID_SEVERITIES = [ 'ERROR', 'WARNING', 'INFO' ]
 
 
