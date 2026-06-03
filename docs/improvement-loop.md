@@ -40,10 +40,10 @@ start-grade → [sub-agent evaluator] → apply-improvement
 | Parameter | Default | Notes |
 |-----------|---------|-------|
 | `iteration` | 1 (initial) | 1-based counter, incremented per re-iterate |
-| `maxIterations` | **1** (new default per Memo 097 Kap. 9.0) | Historically was 3 in all SKILL.md; opt-in higher via caller parameter |
+| `maxIterations` | **1** (new default from the PA-1 generator wiring) | Historically was 3 in all SKILL.md; opt-in higher via caller parameter |
 
 The historical SKILL.md default was `N = 3` with the rationale "2–3 iterations
-are recommended and cost-verified in a practical mini-test." Memo 097 changed
+are recommended and cost-verified in a practical mini-test." The PA-1 wiring changed
 this to `maxIterations = 1` as the new default (single pass), with higher
 values available as an explicit opt-in. The parameter is passed by the caller to
 `apply-improvement`; if absent, the default applies.
@@ -124,10 +124,10 @@ The skill emits: `{ "finalPath": "<absolute-path>", "iteration": <n>, "status": 
 
 ---
 
-## Generator / CLI Integration (Memo 097)
+## Generator / CLI Integration
 
 The `apply-improvement` + `start-grade` SKILL.md pair described above are
-scheduled for removal (Memo 097 Phase A). Their replacement is:
+removed in the PA-2 cleanup. Their replacement is:
 
 - `maxIterations` as an explicit CLI/generator parameter (default 1, opt-in higher).
 - The iteration logic moves into the caller harness, not a SKILL.md body.

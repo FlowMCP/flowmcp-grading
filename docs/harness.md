@@ -79,7 +79,7 @@ required area raises `FLEET-001`.
 **"lens" disambiguation:** In the grading slug, "lens" is a structural
 sub-facette of the persona (e.g. domain expertise). This is distinct from the
 "lens" concept in `flowmcp-spec/personas/persona-lens.md`, which is a 5-question
-review checklist for documentation personas (Spec-Personas, Memo 048). Do not
+review checklist for documentation personas (Spec-Personas). Do not
 confuse the two. See the Spec Glossary for the authoritative definitions.
 
 ---

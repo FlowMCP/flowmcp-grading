@@ -611,7 +611,7 @@ class RebuildIndex {
         if( entry.status === 'stable' ) {
             const node = { status: 'stable', ref }
             if( entry.grade !== undefined ) { node.grade = entry.grade }
-            // F11 (Memo 095): carry the numeric normalizedScore into the node when
+            // F11 (normalizedScore projection): carry the numeric normalizedScore into the node when
             // the grading entry persisted one (AreaScorer writes it alongside grade).
             if( typeof entry.normalizedScore === 'number' ) { node.normalizedScore = entry.normalizedScore }
             return node

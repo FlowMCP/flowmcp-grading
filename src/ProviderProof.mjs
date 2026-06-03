@@ -147,7 +147,7 @@ class ProviderProof {
     static #projectAggregate( { node } ) {
         const projected = { status: node.status }
         if( node.grade !== undefined ) { projected.grade = node.grade }
-        // F11 (Memo 095): surface the numeric normalizedScore into the proof so the
+        // F11 (normalizedScore projection): surface the numeric normalizedScore into the proof so the
         // board Score field can be driven by it. Omitted (not defaulted to 0) when
         // the namespace is pending/blocked — NO SILENT DEFAULTS.
         if( node.normalizedScore !== undefined ) { projected.normalizedScore = node.normalizedScore }

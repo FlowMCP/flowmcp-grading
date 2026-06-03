@@ -1,5 +1,5 @@
 /**
- * provider-proof-sweep.mjs — Memo 095 Phase 2 (PRD-005), the deterministic sweep.
+ * provider-proof-sweep.mjs — the deterministic provider-proof sweep (PRD-005).
  *
  * For every v4 provider folder in the schemas repo it runs the CHEAP path only:
  *   1. GradingImport.run  — structural import into the island (no LLM, no key).
@@ -32,7 +32,7 @@ const DEFAULT_SCHEMAS_ROOT = resolve( HERE, '../../flowmcp-schemas-private/schem
 const DEFAULT_PROOFS_OUT = resolve( HERE, '../../flowmcp-schemas-private/providers' )
 
 
-// Memo 097 PA-6 (Kap. 4): the island root MUST resolve the SAME way the CLI does
+// PA-6: the island root MUST resolve the SAME way the CLI does
 // (FlowMcpCli.#gradingDataRoot) — no divergent hardcode. Precedence (all explicit,
 // no silent default), mirroring the CLI exactly:
 //   1. --grading-data flag                 (cwd-relative / absolute)
@@ -182,7 +182,7 @@ const cli = async () => {
     // global config -> default), not a divergent hardcode.
     const gradingDataRoot = await resolveGradingDataRoot( { cwd: process.cwd(), flagValue: args.gradingDataFlag } )
 
-    process.stdout.write( `=== Provider-Proof Sweep (Memo 095 P2) ===\n` )
+    process.stdout.write( `=== Provider-Proof Sweep ===\n` )
     process.stdout.write( `schemas-root: ${args.schemasRoot}\n` )
     process.stdout.write( `proofs-out:   ${args.proofsOut}\n` )
     process.stdout.write( `grading-data: ${gradingDataRoot}\n` )

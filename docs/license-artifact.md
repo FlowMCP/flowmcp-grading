@@ -1,6 +1,6 @@
 # License Artifact — Grading/Island Model
 
-**Decision source:** Memo 097 Kap. 6, F5 = A (User, 2026-06-03).
+**Decision source:** F5 = A — ToS/Docs + license model decision (User, 2026-06-03).
 
 This document specifies the grading-side license model. The key principle:
 license assessment is a **private creator assessment**, kept inside the island
@@ -13,7 +13,7 @@ license assessment is a **private creator assessment**, kept inside the island
 | Layer | What it is | Where it lives | Public? |
 |-------|-----------|----------------|---------|
 | FlowMCP code license | MIT | `LICENSE` in each repo | Yes |
-| Provider ToS / data license | Link only — URL or `no-tos-found` sentinel | Schema `main.termsOfService` (MUST field, Memo 097 Kap. 6) | Yes (link only) |
+| Provider ToS / data license | Link only — URL or `no-tos-found` sentinel | Schema `main.termsOfService` (MUST field, F4) | Yes (link only) |
 | Creator legal assessment | Grader's private opinion — NOT legally binding | Island only (`grading-data/`, gitignored) | No |
 
 FlowMCP observes ToS — it does NOT interpret, accept, or certify them. The
@@ -57,7 +57,7 @@ Field rules:
 | `assessedAt` | Yes | ISO 8601 date (`2026-MM-DD`) |
 | `disclaimer` | Yes | Verbatim constant — see above |
 | `tosUrl` | Yes | URL string OR the literal `"no-tos-found"` |
-| `robotsTxtStatus` | Yes | `"green"` / `"yellow"` / `"red"` / `"unchecked"` (see Memo 090 Kap. 6, 7-step gate) |
+| `robotsTxtStatus` | Yes | `"green"` / `"yellow"` / `"red"` / `"unchecked"` (see the robots.txt 7-step gate) |
 | `usageCategory` | Yes | Closed enum — see below |
 | `notes` | No | Free text, private, NEVER copied to any public artifact |
 
@@ -127,7 +127,7 @@ do not add them ad-hoc.
 
 ## Relationship to Schema `main.termsOfService`
 
-The schema field `main.termsOfService` (MUST, per Memo 097 Kap. 6 / PRD-ToS-Docs-Mandatory)
+The schema field `main.termsOfService` (MUST, per PRD-ToS-Docs-Mandatory)
 carries a **URL** or the sentinel `"no-tos-found"`. It is public and part of the
 schema validation rules. It is NOT the `legalAssessment` — it is just the link.
 
@@ -141,6 +141,6 @@ and must not be conflated.
 
 - `src/ProviderProof.mjs` — `#renderProof` (proof shape, no legal fields)
 - `docs/harness.md` — grading run context
-- Memo 097 Kap. 6 — F4 (ToS/Docs MUST), F5 (license = island artifact)
-- Memo 090 Kap. 6 — robots.txt 7-step gate (maps to `robotsTxtStatus` field)
+- F4 (ToS/Docs MUST), F5 (license = island artifact)
+- robots.txt 7-step gate (maps to `robotsTxtStatus` field)
 - `prompts/output-schemas/` — area output schemas (no `legalAssessment` in any)

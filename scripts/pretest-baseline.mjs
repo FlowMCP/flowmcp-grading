@@ -1,5 +1,5 @@
 /**
- * pretest-baseline.mjs — Memo 095, deterministic reachability baseline (Stage 2/3).
+ * pretest-baseline.mjs — deterministic reachability baseline (Stage 2/3).
  *
  * Reads the persisted DataPretest result (the deterministic Stage-1 emit writes it to
  * `<island>/providers/<ns>/prompts.json` → `.pretests[]`, each `{ schemaName, ok }`
@@ -74,7 +74,7 @@ class PretestBaseline {
         // yet sit below the per-tool floor).
         const passing = pretests.filter( ( p ) => p.ok === true ).length
 
-        // Transient-failure guard (Memo 095 tuning): a rate-limit / timeout / reset is
+        // Transient-failure guard (reachability tuning): a rate-limit / timeout / reset is
         // NOT a real block — it's noise from pacing. Only HARD failures (missing key,
         // handler bug, 4xx/5xx, no-response) get blocked; transient ones stay Pending
         // and go on the recheck list. NO SILENT mislabel of a healthy-but-throttled API.
@@ -163,7 +163,7 @@ const cli = async () => {
         process.exit( 1 )
     }
 
-    process.stdout.write( `=== Pretest Baseline (Memo 095) ${args.dryRun ? '[DRY-RUN]' : ''} ===\n` )
+    process.stdout.write( `=== Pretest Baseline ${args.dryRun ? '[DRY-RUN]' : ''} ===\n` )
     const result = await PretestBaseline.run( args )
 
     process.stdout.write( `classified: ${JSON.stringify( result.summary )}\n` )

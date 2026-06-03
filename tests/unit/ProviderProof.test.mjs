@@ -127,7 +127,7 @@ describe( 'ProviderProof.write', () => {
     } )
 
 
-    test( 'T3c — normalizedScore projected when present (F11, Memo 095)', async () => {
+    test( 'T3c — normalizedScore projected when present (F11)', async () => {
         const idx = gradedIndex()
         idx.namespaceAggregate = { status: 'graded', grade: 'A', ref: 'providers/openmeteo/_gradings/x.json', normalizedScore: 4.75 }
         await ProviderProof.write( { namespaceIndex: idx, providerDir } )
