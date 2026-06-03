@@ -12,6 +12,11 @@
  *   structural-valid    — passes `flowmcp validate` (structure validation)
  *   deterministic-green — structural-valid AND data-pretest ok AND deterministic
  *                         dimensions green (HTTP 200). HTTP 4xx is NEVER a pass.
+ *                         The data-pretest `ok` signal encodes the Test-Leiter
+ *                         pass bar of >= 2 working tests per tool (Memo 101 Kap. 5,
+ *                         DataPretest.DEFAULT_MIN_WORKING_TESTS = 2): a tool at the
+ *                         `schema-validatable` rung (2 working) makes the schema
+ *                         deterministic-green; 1 working (`reachable`) does NOT.
  *   stable              — full grading promoted to stable (StablePromotion output)
  *
  * Hard rules (binding):

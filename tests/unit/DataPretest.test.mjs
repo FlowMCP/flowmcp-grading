@@ -109,19 +109,20 @@ describe( 'DataPretest typed-test extraction + happy path', () => {
 
         expect( out.ok ).toBe( true )
         expect( out.passedDownloadable ).toBe( 3 )
-        expect( out.required ).toBe( 3 )
+        // Test-Leiter pass bar is 2 (Memo 101); 3 working clears it as the ideal rung.
+        expect( out.required ).toBe( 2 )
         expect( out.stopReason ).toBeNull()
         expect( out.errors ).toEqual( [] )
         expect( out.results ).toHaveLength( 3 )
         expect( out.results.every( ( r ) => r.primitive === 'tool' && r.working === true ) ).toBe( true )
-        expect( out.perTool.getBalance ).toEqual( { working: 3, total: 3 } )
+        expect( out.perTool.getBalance ).toEqual( { working: 3, total: 3, level: 'data-analyzable' } )
 
         // summary.json — human-readable, no opaque hash
         const summary = JSON.parse( await readFile( out.summaryPath, 'utf-8' ) )
         expect( summary.namespace ).toBe( 'etherscan' )
         expect( summary.schemaFile ).toBe( 'getBalance' )
         expect( summary.ok ).toBe( true )
-        expect( summary.perTool.getBalance ).toEqual( { working: 3, total: 3 } )
+        expect( summary.perTool.getBalance ).toEqual( { working: 3, total: 3, level: 'data-analyzable' } )
         expect( out.summaryPath ).toContain( join( 'providers', 'etherscan', 'getBalance', 'summary.json' ) )
 
         // per-test files: numbered + self-describing (real response + HTTP status,
@@ -140,7 +141,29 @@ describe( 'DataPretest typed-test extraction + happy path', () => {
 
 
 describe( 'DataPretest abort rule', () => {
-    test( 'fewer than minWorkingTests working tests -> ok:false with DPT-003', async () => {
+    test( 'one working test (below the bar of 2) -> ok:false with DPT-003, not green', async () => {
+        fetchQueue = [
+            successFetch( { result: '284938' } )
+        ]
+        const main = makeMainWithToolTests( { count: 1 } )
+
+        const out = await DataPretest.run( {
+            namespace: 'etherscan',
+            toolName: 'getBalance',
+            main,
+            gradingDataDir: tempRoot
+        } )
+
+        expect( out.ok ).toBe( false )
+        expect( out.passedDownloadable ).toBe( 1 )
+        expect( out.required ).toBe( 2 )
+        expect( out.stopReason ).toContain( 'tools-below-2' )
+        expect( out.errors.some( ( e ) => e.includes( 'DPT-003' ) ) ).toBe( true )
+        // Test-Leiter: 1 working is `reachable` (minimum, insufficient — not green).
+        expect( out.perTool.getBalance.level ).toBe( 'reachable' )
+    } )
+
+    test( 'exactly two working tests clear the bar -> ok:true, level schema-validatable (deterministic-green)', async () => {
         fetchQueue = [
             successFetch( { result: '284938' } ),
             successFetch( { result: '190021' } )
@@ -154,10 +177,10 @@ describe( 'DataPretest abort rule', () => {
             gradingDataDir: tempRoot
         } )
 
-        expect( out.ok ).toBe( false )
-        expect( out.passedDownloadable ).toBe( 2 )
-        expect( out.stopReason ).toContain( 'tools-below-3' )
-        expect( out.errors.some( ( e ) => e.includes( 'DPT-003' ) ) ).toBe( true )
+        expect( out.ok ).toBe( true )
+        expect( out.required ).toBe( 2 )
+        expect( out.stopReason ).toBeNull()
+        expect( out.perTool.getBalance.level ).toBe( 'schema-validatable' )
     } )
 
     test( 'per-tool gate: one fully-working tool does NOT mask a sibling with zero working tests', async () => {
@@ -337,7 +360,7 @@ describe( 'DataPretest on-disk layout (readable: per-tool numbered tests + summa
         const summary = JSON.parse( await readFile( join( tempRoot, 'providers', 'layoutns', 'prices', 'summary.json' ), 'utf-8' ) )
         expect( summary.schemaFile ).toBe( 'prices' )
         expect( summary.ok ).toBe( true )
-        expect( summary.perTool.getBalance ).toEqual( { working: 3, total: 3 } )
+        expect( summary.perTool.getBalance ).toEqual( { working: 3, total: 3, level: 'data-analyzable' } )
 
         // schema folder holds tools/ + summary.json; the tool lives under tools/
         const schemaFileEntries = await readdir( join( tempRoot, 'providers', 'layoutns', 'prices' ) )

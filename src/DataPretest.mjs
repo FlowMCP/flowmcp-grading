@@ -29,10 +29,20 @@
  * still carry request params for live inspection, but they are not persisted.
  *
  * Abort rule (deterministic): every tool needs at least minWorkingTests
- * (default 3) working downloadable tests. A working test is a `tool` or
- * `resource` primitive with status === true AND non-empty data. An HTTP 4xx /
- * status:false / empty payload is a FAIL, never a pass. skill / prompt /
- * selection-member primitives are stubs and never count toward the threshold.
+ * (default 2 — the Test-Leiter pass bar, Memo 101 Kap. 5) working downloadable
+ * tests. A working test is a `tool` or `resource` primitive with status === true
+ * AND non-empty data. An HTTP 4xx / status:false / empty payload is a FAIL, never
+ * a pass. skill / prompt / selection-member primitives are stubs and never count
+ * toward the threshold.
+ *
+ * Test-Leiter (per-tool `level`, Memo 101 Kap. 5): the working-test count maps to
+ * a graded readiness rung so downstream consumers can tell "passes the bar" from
+ * "ideal". 0 → `unavailable` (reject; faktisch tritt nicht auf), 1 → `reachable`
+ * (minimum, INSUFFICIENT — the deterministic test does NOT pass), 2 →
+ * `schema-validatable` (the deterministic test PASSES = deterministic-green), ≥3 →
+ * `data-analyzable` (ideal, a later wave). The pass bar is binary at 2; ≥3 is an
+ * ideal gradient, not a second gate (F7). A tool with exactly 1 working test is
+ * NOT green but is NOT hard-rejected — it stays repairable by adding a test.
  *
  * NO SILENT DEFAULTS. Static methods only, object params, object returns.
  * No for/while loops.
@@ -50,8 +60,19 @@ import { HashGenerator } from './HashGenerator.mjs'
 
 
 const VERSION = '1.0.0'
-const DEFAULT_MIN_WORKING_TESTS = 3
+// Test-Leiter pass bar (Memo 101 Kap. 5, F2/F3/F7): a tool is deterministic-green
+// at >= 2 working downloadable tests (output schema is then validatable). 1 is the
+// minimum but INSUFFICIENT; 3 is the ideal gradient, not a second gate.
+const DEFAULT_MIN_WORKING_TESTS = 2
 const DOWNLOADABLE_PRIMITIVES = Object.freeze( [ 'tool', 'resource' ] )
+// Per-tool readiness rungs derived from the working-test count (Test-Leiter).
+const TEST_DEPTH_IDEAL = 3
+const TEST_LADDER = Object.freeze( {
+    unavailable: 'unavailable',
+    reachable: 'reachable',
+    schemaValidatable: 'schema-validatable',
+    dataAnalyzable: 'data-analyzable'
+} )
 const LIST_DIR_NAMES = Object.freeze( [ '_lists', '_shared' ] )
 const MAX_LIST_DIR_LEVELS = 10
 
@@ -59,6 +80,19 @@ const MAX_LIST_DIR_LEVELS = 10
 class DataPretest {
     static getVersion() {
         return { version: VERSION }
+    }
+
+
+    // #levelForWorking — map a per-tool working-test count to a Test-Leiter rung
+    // (Memo 101 Kap. 5). Deterministic, pure. 0 → unavailable, 1 → reachable
+    // (insufficient), 2 → schema-validatable (= deterministic-green), >=3 →
+    // data-analyzable (ideal).
+    static #levelForWorking( { working } ) {
+        const count = typeof working === 'number' ? working : 0
+        if( count <= 0 ) { return TEST_LADDER.unavailable }
+        if( count === 1 ) { return TEST_LADDER.reachable }
+        if( count < TEST_DEPTH_IDEAL ) { return TEST_LADDER.schemaValidatable }
+        return TEST_LADDER.dataAnalyzable
     }
 
 
@@ -197,7 +231,12 @@ class DataPretest {
 
         const perTool = Object.keys( totalByTool )
             .reduce( ( acc, name ) => {
-                acc[ name ] = { working: workingByTool[ name ], total: totalByTool[ name ] }
+                const working = workingByTool[ name ]
+                acc[ name ] = {
+                    working,
+                    total: totalByTool[ name ],
+                    level: DataPretest.#levelForWorking( { working } )
+                }
                 return acc
             }, {} )
 
@@ -786,4 +825,4 @@ class DataPretest {
 }
 
 
-export { DataPretest, VERSION as DATA_PRETEST_VERSION, DEFAULT_MIN_WORKING_TESTS }
+export { DataPretest, VERSION as DATA_PRETEST_VERSION, DEFAULT_MIN_WORKING_TESTS, TEST_LADDER }
