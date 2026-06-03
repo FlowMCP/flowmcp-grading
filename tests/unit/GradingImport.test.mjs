@@ -425,3 +425,65 @@ describe( 'GradingImport — blocked-never-stable integrity (PRD-001 AC-6)', () 
         expect( index2.description.status ).toBe( 'blocked' )
     } )
 } )
+
+
+describe( 'GradingImport.run — sharedLists snapshot (Memo 101 P1)', () => {
+    const listSource = ( { version } ) => `export const list = {
+    meta: { name: 'evmChains', version: ${JSON.stringify( version )} },
+    entries: [ { name: 'Ethereum', alchemyNetworkSlug: 'eth-mainnet', etherscanAlias: 'ETHEREUM_MAINNET', isTestnet: false } ]
+}
+`
+    const sharedListsExtra = `sharedLists: [ { ref: 'evmChains', version: '3.1.0' } ]`
+
+
+    test( 'copies the referenced _lists file into providers/<ns>/<schema>/_lists/ so the island is self-contained', async () => {
+        // Source layout: tempRoot/_lists/evm-chains.mjs is found by the up-walk
+        // from tempRoot/etherscan/getA.mjs (mirrors the real schemas/v4.0.0 layout).
+        await mkdir( join( tempRoot, '_lists' ), { recursive: true } )
+        await writeFile( join( tempRoot, '_lists', 'evm-chains.mjs' ), listSource( { version: '3.1.0' } ), 'utf-8' )
+        await writeFile( join( providerPath, 'getA.mjs' ), schemaSource( { namespace: 'etherscan', name: 'getA', extra: sharedListsExtra } ), 'utf-8' )
+
+        const result = await GradingImport.run( { providerPath, gradingDataRoot } )
+        expect( result.status ).toBe( true )
+        expect( result.errors ).toEqual( [] )
+
+        const islandList = join( gradingDataRoot, 'providers', 'etherscan', 'getA', '_lists', 'evm-chains.mjs' )
+        const copied = await readFile( islandList, 'utf-8' )
+        expect( copied ).toContain( "name: 'evmChains'" )
+
+        // The _lists sibling lives at the schema-folder level and is NOT promoted
+        // to a schema by the namespace-level scan (it would break the index).
+        const indexJson = JSON.parse( await readFile( result.indexPath, 'utf-8' ) )
+        expect( Object.keys( indexJson.schemas ) ).toContain( 'getA' )
+        expect( Object.keys( indexJson.schemas ) ).not.toContain( '_lists' )
+    } )
+
+
+    test( 'is idempotent — a second import does not rewrite an identical island list', async () => {
+        await mkdir( join( tempRoot, '_lists' ), { recursive: true } )
+        await writeFile( join( tempRoot, '_lists', 'evm-chains.mjs' ), listSource( { version: '3.1.0' } ), 'utf-8' )
+        await writeFile( join( providerPath, 'getA.mjs' ), schemaSource( { namespace: 'etherscan', name: 'getA', extra: sharedListsExtra } ), 'utf-8' )
+
+        const first = await GradingImport.run( { providerPath, gradingDataRoot } )
+        expect( first.status ).toBe( true )
+        const islandList = join( gradingDataRoot, 'providers', 'etherscan', 'getA', '_lists', 'evm-chains.mjs' )
+        const mtime1 = ( await stat( islandList ) ).mtimeMs
+
+        const second = await GradingImport.run( { providerPath, gradingDataRoot } )
+        expect( second.status ).toBe( true )
+        const mtime2 = ( await stat( islandList ) ).mtimeMs
+        expect( mtime2 ).toBe( mtime1 )
+    } )
+
+
+    test( 'surfaces IMP-009 (no silent default) when a declared shared list is absent at the source', async () => {
+        // The schema declares sharedLists but there is NO _lists dir anywhere above
+        // the source file → the dependency cannot be snapshotted.
+        await writeFile( join( providerPath, 'getA.mjs' ), schemaSource( { namespace: 'etherscan', name: 'getA', extra: sharedListsExtra } ), 'utf-8' )
+
+        const result = await GradingImport.run( { providerPath, gradingDataRoot } )
+        expect( result.status ).toBe( false )
+        const hasImp009 = result.errors.some( ( e ) => e.includes( 'IMP-009' ) )
+        expect( hasImp009 ).toBe( true )
+    } )
+} )
