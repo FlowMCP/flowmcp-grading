@@ -2,12 +2,12 @@
 
 # flowmcp-grading
 
-Reference implementation of the FlowMCP Grading-Spec. The active spec is `gradingSpec/2.0.0`
-(the v2 break: eleven grading areas, a five-status node model, the workbench island, the derived
+Reference implementation of the FlowMCP Grading-Spec. The active spec is `gradingSpec/3.0.0`
+(eleven grading areas, a five-status node model, the workbench island, the derived
 `index.json` rollup, and a `/goal`-driven harness). The repository hosts the source modules that
 implement Scoring, Grading, Veto, the index rollup, the area prompt builder, and the workbench
-IN/OUT round-trip, plus the LLM grader prompts and the unit test suite. The spec lives in
-`flowmcp-spec/grading/2.0.0/` and is a **living document** — it evolves with the FlowMCP schema corpus.
+output store, plus the LLM grader prompts and the unit test suite. The spec lives in
+`flowmcp-spec/grading/3.0.0/` and is a **living document** — it evolves with the FlowMCP schema corpus.
 
 ## Documentation
 
@@ -25,35 +25,37 @@ the difference explicit.
 
 ## Running a Grading
 
-A grading is no longer started by pasting a prompt into an empty LLM context. In v2 the run is
+A grading is no longer started by pasting a prompt into an empty LLM context. The run is
 **CLI-driven** via [flowmcp-cli](https://github.com/FlowMCP/flowmcp-cli): the CLI owns the
-deterministic stages and drives the non-deterministic stage through the Claude Code harness.
+deterministic stage and drives the non-deterministic stage through the Claude Code harness.
+There is no separate import step — the schema is read live from the configured `schemaFolders[]`,
+and the island serves only as the output store.
 
-The flow is a four-stage loop. The CLI owns Stages 0, 1, and 3; the harness (your Claude Code
-agent loop) owns Stage 2:
+The flow is a three-stage loop. The CLI owns the deterministic and finalize stages; the harness
+(your Claude Code agent loop) owns the non-deterministic stage:
 
 | Stage | Owner | What happens |
 |-------|-------|--------------|
-| 0 — Intake | CLI | `flowmcp grading import <provider-path>` validates the schemas, snapshots them into the island, normalises resources/skills |
-| 1 — Deterministic | CLI | `flowmcp grading run <target> --emit-prompts` runs the deterministic pretest (live HTTP checks — the request is never persisted) and the deterministic graders, then emits `prompts.json` + `state.json` for the handoff |
-| 2 — Non-deterministic | Harness | The agent loop reads `prompts.json` / `state.json` and grades each area (`start-grade → evaluate → apply-improvement`) — the only stage outside the CLI |
-| 3 — Finalize | CLI | `flowmcp grading run <target> --consume-scores <path>` reads the harness scores, computes grades, rebuilds `index.json` (5-status rollup), and finalizes the state for `export` |
+| 1 — Deterministic | CLI | `flowmcp grading deterministic <id>` runs the structural validate plus the data pretest (live HTTP checks — HTTP 200 **and** non-empty data; the request is never persisted) |
+| 2 — Non-deterministic (emit) | CLI | `flowmcp grading non-deterministic <ns> --emit-prompts` emits the per-area grading prompts for the handoff |
+| 3 — Non-deterministic (grade) | Harness | The agent loop reads the emitted prompts and grades each area (`start-grade → evaluate → apply-improvement`) — the only stage outside the CLI |
+| 4 — Finalize | CLI | `flowmcp grading non-deterministic <ns> --consume-scores <path>` reads the harness scores, computes grades, and rebuilds `index.json` (5-status rollup) |
 
 ```bash
-# Stage 0 — import a provider folder into the island
-flowmcp grading import providers/defillama
+# Stage 1 — deterministic: structural validate + live data pretest (read live from schemaFolders[])
+flowmcp grading deterministic defillama
 
-# Stage 1 — deterministic pretest + emit grading prompts (handoff)
-flowmcp grading run providers/defillama --emit-prompts
+# Stage 2 — emit the per-area grading prompts (handoff)
+flowmcp grading non-deterministic defillama --emit-prompts
 
-# Stage 2 — the harness grades each area (outside the CLI), writing scores
+# Stage 3 — the harness grades each area (outside the CLI), writing scores
 
-# Stage 3 — consume the harness scores, rebuild index.json, finalize
-flowmcp grading run providers/defillama --consume-scores scores.json
+# Stage 4 — consume the harness scores, rebuild index.json, finalize
+flowmcp grading non-deterministic defillama --consume-scores scores.json
 
-# Inspect the rollup, then export the graded state back to the source
-flowmcp grading state providers/defillama
-flowmcp grading export providers/defillama
+# Inspect the rollup, then export the graded state
+flowmcp grading state defillama
+flowmcp grading export defillama
 ```
 
 The target's path decides the flow, the tier, and the maximum reachable grade:
@@ -162,11 +164,11 @@ island, names are verbose — a logical name plus a timestamp plus a content has
 predictability, linkability, and version tracking. On the way **out** to the real repositories,
 names are stripped to clean spec names.
 
-The island is connected by a two-way, non-destructive **IN/OUT round-trip**:
+The island is the **OUT** side of a non-destructive round-trip; the **IN** side is a live read:
 
-- **IN — `grading import`** — source → workbench: validate, assert a single namespace, snapshot any
-  changed source *alongside* the old one (never overwrite), normalise into the island structure,
-  rebuild `index.json`.
+- **IN — live read from `schemaFolders[]`** — source → grading: the schema is read live from the
+  configured schema folders. There is no separate import command and no snapshot-on-intake — the
+  island holds only graded output, never a copy of the source.
 - **OUT — `grading export`** — workbench → source: the primary hand-off is `index.json` (the
   complete graded state); clean stripped `.mjs` files may accompany it. The export never overwrites
   the source.
@@ -223,7 +225,7 @@ See [Spec §23](https://github.com/FlowMCP/flowmcp-spec/blob/main/grading/2.0.0/
 
 The v2 grading system is implemented and exercised end-to-end:
 
-- **Provider flow proven end-to-end** on the `defillama` namespace — import → deterministic pretest
+- **Provider flow proven end-to-end** on the `defillama` namespace — live read → deterministic pretest
   → emit prompts → harness areas → consume scores → computed grades → rebuilt `index.json`.
 - **Selection flow** runs the real area chain (`about-selection`, `selection-skills-L1/L2/L3`,
   `selection-aggregate`); selection members are auto-chained from the selection definition.
@@ -239,7 +241,7 @@ a derived `index.json` rollup.
 
 ```mermaid
 flowchart TD
-    A[grading import<br/>providers/ or selections/] --> B[Workbench island<br/>~/.flowmcp/grading]
+    A[live read<br/>schemaFolders: providers/ or selections/] --> B[Workbench island<br/>~/.flowmcp/grading]
     B --> C{Flow auto-detect}
     C -- providers/ --> D[Provider-side areas<br/>autonomous: max B]
     C -- selections/ --> E[Selection-side areas<br/>group-bound: A possible]
@@ -290,7 +292,7 @@ Results are rolled up into `index.json` under the island (default `~/.flowmcp/gr
   frozen `lockSnapshot` and a member-resolution manifest
 - **Workbench island + IN/OUT round-trip** — verbose internal naming, stripped on mirror-out;
   `import` and `export` are both non-destructive
-- **Versioned namespaces** — `gradingSpec/2.0.0`, `scoringSystem/1.0.0`, `gradingSystem/1.0.0`
+- **Versioned namespaces** — `gradingSpec/3.0.0`, `scoringSystem/1.0.0`, `gradingSystem/1.0.0`
   evolve independently
 - **Categorical Veto** — closed list of four triggers halts the pipeline; `REJECTED` maps to the
   terminal node status `rejected`
@@ -502,9 +504,9 @@ bindings live in the derived `index.json`.
 
 Three independent namespaces; none is coupled to the others — bumping one does not imply bumping the others:
 
-- `gradingSpec/2.0.0` — the active specification documents under `flowmcp-spec/grading/2.0.0/`.
-  This is the **v2 break**: the eleven-area model, the five-status node enum, the workbench island,
-  and the `index.json` rollup. Earlier `1.0.0` / `1.1.0` gradings are treated as legacy.
+- `gradingSpec/3.0.0` — the active specification documents under `flowmcp-spec/grading/3.0.0/`.
+  Covers the eleven-area model, the five-status node enum, the workbench island, and the
+  `index.json` rollup. Earlier `1.0.0` / `1.1.0` / `2.0.0` gradings are treated as legacy.
 - `scoringSystem/1.0.0` — the scoring rules and dimensions (how a test is evidenced).
 - `gradingSystem/1.0.0` — the grading rules (thresholds, weights, tier trim, veto list).
 
