@@ -125,7 +125,7 @@ describe( 'DataPretest typed-test extraction + happy path', () => {
 
         expect( out.ok ).toBe( true )
         expect( out.passedDownloadable ).toBe( 3 )
-        // Test-Leiter pass bar is 2 (Memo 101); 3 working clears it as the ideal rung.
+        // The pass bar is 2 working tests; 3 working clears it as the ideal rung.
         expect( out.required ).toBe( 2 )
         expect( out.stopReason ).toBeNull()
         expect( out.errors ).toEqual( [] )
@@ -521,7 +521,7 @@ describe( 'DataPretest input validation', () => {
 } )
 
 
-// PRD-012 (Memo 102 Phase 4): dryRun runs the pretest in full but persists
+// dryRun runs the pretest in full but persists
 // NOTHING. No test-N.json, no summary.json — schemaDir/summaryPath are null
 // (NO SILENT DEFAULT, no fabricated path) and saved: false is returned.
 describe( 'DataPretest dryRun (no persist)', () => {

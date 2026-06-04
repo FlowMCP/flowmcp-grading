@@ -48,7 +48,7 @@ const NAMESPACE_REGEX = /^[a-z][a-z0-9-]*$/
 // blockedReason set in Grading.VALID_BLOCKED_REASONS.
 const BLOCKED_REASON_VALIDATION_FAILED = 'validation-failed'
 const ABOUT_FILENAME_REGEX = /^(.+)--(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z)--([0-9a-f]{8})\.md$/
-// Shared-list snapshotting (Memo 101 P1). A schema that declares `main.sharedLists`
+// Shared-list snapshotting. A schema that declares `main.sharedLists`
 // resolves each ref to a `<kebab(ref)>.mjs` file in a `_lists/`-or-`_shared/`
 // directory found by walking UP from the schema file (FlowMCP.resolveSharedLists +
 // SharedListResolver). The grading island snapshot is a single schema file with NO
@@ -207,7 +207,7 @@ class GradingImport {
 
         const schemaDir = join( gradingDataRoot, 'providers', namespace, schemaSlug )
 
-        // Memo 101 P1: make the island self-contained for sharedLists schemas. A
+        // Make the island self-contained for sharedLists schemas. A
         // missing/unresolvable referenced list is surfaced as an error (no silent
         // skip), not swallowed — the schema declares the dependency, so it must
         // exist at the source. Errors propagate via result.errors → run() fails.
@@ -239,7 +239,7 @@ class GradingImport {
 
     /**
      * #snapshotSharedLists — copy the schema's referenced shared-list files into
-     * the island so resolution is self-contained (Memo 101 P1). Each ref in
+     * the island so resolution is self-contained. Each ref in
      * `main.sharedLists` maps to `<kebab(ref)>.mjs` inside a `_lists/`/`_shared/`
      * directory found by walking UP from the source schema file. The files are
      * copied verbatim into providers/<ns>/<schema>/_lists/<kebab>.mjs, where the

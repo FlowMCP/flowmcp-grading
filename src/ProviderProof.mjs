@@ -38,7 +38,7 @@ const PROOF_FILENAME = 'grade.json'
 // committed projection so a pending proof still validates against the spec. NO SILENT
 // DEFAULTS: a non-enum reason is omitted, never rewritten.
 //
-// PRD-015 / N3 (Memo 102 Phase 5): the deterministic data-pretest bar is 2 working
+// The deterministic data-pretest bar is 2 working
 // downloadable tests (DataPretest DEFAULT_MIN_WORKING_TESTS). A schema blocked by that
 // bar emits a "below 2" reason that matched NO enum member before — the closed set only
 // knew 'fewer-than-three-tests' — so #specReason discarded it and the real reason never

@@ -21,7 +21,7 @@
  *   per-test  -> grading-data/providers/<namespace>/<schema>/tools/<tool>/tests/test-N.json
  *   summary   -> grading-data/providers/<namespace>/<schema>/summary.json
  *
- * dryRun (PRD-012, Memo 102 Phase 4): when run({ dryRun: true }) the pretest is
+ * dryRun: when run({ dryRun: true }) the pretest is
  * performed in full but #persist is NOT called — nothing is written to the
  * island. schemaDir/summaryPath are then null (no fabricated path) and
  * saved: false is returned. The default (dryRun: false) writes as before.
@@ -34,15 +34,15 @@
  * still carry request params for live inspection, but they are not persisted.
  *
  * Abort rule (deterministic): every tool needs at least minWorkingTests
- * (default 2 — the Test-Leiter pass bar, Memo 101 Kap. 5) working downloadable
+ * (default 2 — the pass bar of 2 working tests per tool) working downloadable
  * tests. A working test is a `tool` or `resource` primitive with status === true
  * AND non-empty data. An HTTP 4xx / status:false / empty payload is a FAIL, never
  * a pass. skill / prompt / selection-member primitives are stubs and never count
  * toward the threshold.
  *
- * Test-Leiter (per-tool `level`, Memo 101 Kap. 5): the working-test count maps to
+ * Readiness ladder (per-tool `level`): the working-test count maps to
  * a graded readiness rung so downstream consumers can tell "passes the bar" from
- * "ideal". 0 → `unavailable` (reject; faktisch tritt nicht auf), 1 → `reachable`
+ * "ideal". 0 → `unavailable` (reject; in practice does not occur), 1 → `reachable`
  * (minimum, INSUFFICIENT — the deterministic test does NOT pass), 2 →
  * `schema-validatable` (the deterministic test PASSES = deterministic-green), ≥3 →
  * `data-analyzable` (ideal, a later wave). The pass bar is binary at 2; ≥3 is an
@@ -65,7 +65,7 @@ import { HashGenerator } from './HashGenerator.mjs'
 
 
 const VERSION = '1.0.0'
-// Test-Leiter pass bar (Memo 101 Kap. 5, F2/F3/F7): a tool is deterministic-green
+// Pass bar of 2 working tests per tool: a tool is deterministic-green
 // at >= 2 working downloadable tests (output schema is then validatable). 1 is the
 // minimum but INSUFFICIENT; 3 is the ideal gradient, not a second gate.
 const DEFAULT_MIN_WORKING_TESTS = 2
@@ -100,8 +100,8 @@ class DataPretest {
     }
 
 
-    // #levelForWorking — map a per-tool working-test count to a Test-Leiter rung
-    // (Memo 101 Kap. 5). Deterministic, pure. 0 → unavailable, 1 → reachable
+    // #levelForWorking — map a per-tool working-test count to a readiness-ladder
+    // rung. Deterministic, pure. 0 → unavailable, 1 → reachable
     // (insufficient), 2 → schema-validatable (= deterministic-green), >=3 →
     // data-analyzable (ideal).
     static #levelForWorking( { working } ) {
@@ -456,7 +456,7 @@ class DataPretest {
                 return acc
             }, {} )
 
-        // PRD-012 (Memo 102 Phase 4): dryRun === true performs the full data-pretest
+        // dryRun === true performs the full data-pretest
         // but writes NOTHING to the island. #persist (the sole writer of test-N.json
         // + summary.json) is skipped entirely. schemaDir/summaryPath are then `null`
         // — NO SILENT DEFAULT: we never fabricate a path for a file that was not

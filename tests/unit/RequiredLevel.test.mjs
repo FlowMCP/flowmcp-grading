@@ -220,7 +220,7 @@ describe( 'RequiredLevel.deriveNamespaceLevel — fold to the weakest schema (PR
 } )
 
 
-describe( 'RequiredLevel — Test-Leiter pass bar = 2 (Memo 101 Kap. 5)', () => {
+describe( 'RequiredLevel — pass bar = 2 working tests per tool', () => {
     // The bar is enforced inside DataPretest (DEFAULT_MIN_WORKING_TESTS = 2): a
     // schema whose tools each reach >= 2 working tests yields dataPretest.ok = true.
     // RequiredLevel then lifts a structural-valid + detGreen schema to

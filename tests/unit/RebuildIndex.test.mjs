@@ -519,7 +519,7 @@ describe( 'RebuildIndex re-grade hash-invalidation (PRD-006 Kap. 6.5)', () => {
 } )
 
 
-describe( 'RebuildIndex testDepth dimension (Memo 101 Kap. 5, F4)', () => {
+describe( 'RebuildIndex testDepth dimension', () => {
     test( 'projects DataPretest summary.json perTool.level onto the tool node as testDepth', async () => {
         const nsDir = join( tempRoot, 'providers', 'depthns' )
         const schemaDir = join( nsDir, 'prices' )

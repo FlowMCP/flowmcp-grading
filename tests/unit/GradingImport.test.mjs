@@ -427,7 +427,7 @@ describe( 'GradingImport — blocked-never-stable integrity (PRD-001 AC-6)', () 
 } )
 
 
-describe( 'GradingImport.run — sharedLists snapshot (Memo 101 P1)', () => {
+describe( 'GradingImport.run — sharedLists snapshot', () => {
     const listSource = ( { version } ) => `export const list = {
     meta: { name: 'evmChains', version: ${JSON.stringify( version )} },
     entries: [ { name: 'Ethereum', alchemyNetworkSlug: 'eth-mainnet', etherscanAlias: 'ETHEREUM_MAINNET', isTestnet: false } ]

@@ -504,7 +504,7 @@ class RebuildIndex {
         const toolsDirExists = await RebuildIndex.#dirExists( { path: toolsDir } )
         if( !toolsDirExists ) { return {} }
 
-        // testDepth (Memo 101 Kap. 5, F4): the per-tool Test-Leiter rung is a
+        // testDepth: the per-tool readiness-ladder rung is a
         // DETERMINISTIC dimension distinct from the LLM outputSchemaMatch (Q-02).
         // It is read from the DataPretest summary.json the same gradingDataRoot
         // already carries — no new artifact, no grade coupling.
