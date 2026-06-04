@@ -456,3 +456,69 @@ describe( 'DataPretest input validation', () => {
         expect( out.errors.some( ( e ) => e.includes( 'DPT-001' ) ) ).toBe( true )
     } )
 } )
+
+
+// PRD-012 (Memo 102 Phase 4): dryRun runs the pretest in full but persists
+// NOTHING. No test-N.json, no summary.json — schemaDir/summaryPath are null
+// (NO SILENT DEFAULT, no fabricated path) and saved: false is returned.
+describe( 'DataPretest dryRun (no persist)', () => {
+    test( 'dryRun: true skips #persist — null paths, saved:false, no files on disk', async () => {
+        fetchQueue = [
+            successFetch( { result: '1' } ),
+            successFetch( { result: '2' } ),
+            successFetch( { result: '3' } )
+        ]
+        const main = makeMainWithToolTests( { count: 3 } )
+        const dryNs = `dryrun-${Date.now()}`
+
+        const out = await DataPretest.run( {
+            namespace: dryNs,
+            toolName: 'getBalance',
+            main,
+            gradingDataDir: tempRoot,
+            dryRun: true
+        } )
+
+        // Result is still computed and returned in full.
+        expect( out.ok ).toBe( true )
+        expect( out.passedDownloadable ).toBe( 3 )
+        expect( out.perTool.getBalance ).toEqual( { working: 3, total: 3, level: 'data-analyzable' } )
+        expect( out.results ).toHaveLength( 3 )
+
+        // No path fabricated, explicit not-saved marker.
+        expect( out.schemaDir ).toBeNull()
+        expect( out.summaryPath ).toBeNull()
+        expect( out.saved ).toBe( false )
+
+        // The provider folder for this namespace was never created.
+        const provDir = join( tempRoot, 'providers', dryNs )
+        let exists = true
+        try {
+            await readdir( provDir )
+        } catch {
+            exists = false
+        }
+        expect( exists ).toBe( false )
+    } )
+
+    test( 'default (dryRun absent) still persists — saved:true and a real summaryPath', async () => {
+        fetchQueue = [
+            successFetch( { result: '1' } ),
+            successFetch( { result: '2' } )
+        ]
+        const main = makeMainWithToolTests( { count: 2 } )
+        const saveNs = `saved-${Date.now()}`
+
+        const out = await DataPretest.run( {
+            namespace: saveNs,
+            toolName: 'getBalance',
+            main,
+            gradingDataDir: tempRoot
+        } )
+
+        expect( out.saved ).toBe( true )
+        expect( out.summaryPath ).not.toBeNull()
+        const summary = JSON.parse( await readFile( out.summaryPath, 'utf-8' ) )
+        expect( summary.namespace ).toBe( saveNs )
+    } )
+} )

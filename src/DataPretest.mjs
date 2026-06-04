@@ -21,6 +21,11 @@
  *   per-test  -> grading-data/providers/<namespace>/<schema>/tools/<tool>/tests/test-N.json
  *   summary   -> grading-data/providers/<namespace>/<schema>/summary.json
  *
+ * dryRun (PRD-012, Memo 102 Phase 4): when run({ dryRun: true }) the pretest is
+ * performed in full but #persist is NOT called — nothing is written to the
+ * island. schemaDir/summaryPath are then null (no fabricated path) and
+ * saved: false is returned. The default (dryRun: false) writes as before.
+ *
  * F26 key-hygiene (HARD rule): a persisted test file carries ONLY the API
  * response plus the HTTP status and run metadata. The `request` field is NEVER
  * written to disk — FlowMCP core bakes interpolated `{{KEY}}` server params into
@@ -105,7 +110,8 @@ class DataPretest {
         serverParams = {},
         sharedLists = {},
         gradingDataDir,
-        minWorkingTests = DEFAULT_MIN_WORKING_TESTS
+        minWorkingTests = DEFAULT_MIN_WORKING_TESTS,
+        dryRun = false
     } ) {
         const { status, messages } = DataPretest.#validationRun( {
             namespace, toolName, main, gradingDataDir, minWorkingTests
@@ -240,23 +246,31 @@ class DataPretest {
                 return acc
             }, {} )
 
+        // PRD-012 (Memo 102 Phase 4): dryRun === true performs the full data-pretest
+        // but writes NOTHING to the island. #persist (the sole writer of test-N.json
+        // + summary.json) is skipped entirely. schemaDir/summaryPath are then `null`
+        // — NO SILENT DEFAULT: we never fabricate a path for a file that was not
+        // written. The result (ok/perTool/toolsBelowThreshold/results/errors) is
+        // returned unchanged so the caller can still print it.
         const checkedAt = new Date().toISOString()
-        const persisted = await DataPretest.#persist( {
-            gradingDataDir,
-            namespace,
-            schemaFile: toolName,
-            results,
-            summary: {
+        const persisted = dryRun === true
+            ? { schemaFileDir: null, summaryPath: null }
+            : await DataPretest.#persist( {
+                gradingDataDir,
                 namespace,
                 schemaFile: toolName,
-                checkedAt,
-                minWorkingTests,
-                ok,
-                passedDownloadable,
-                toolsBelowThreshold,
-                perTool
-            }
-        } )
+                results,
+                summary: {
+                    namespace,
+                    schemaFile: toolName,
+                    checkedAt,
+                    minWorkingTests,
+                    ok,
+                    passedDownloadable,
+                    toolsBelowThreshold,
+                    perTool
+                }
+            } )
 
         return {
             ok,
@@ -266,6 +280,7 @@ class DataPretest {
             perTool,
             schemaDir: persisted[ 'schemaFileDir' ],
             summaryPath: persisted[ 'summaryPath' ],
+            saved: dryRun !== true,
             results,
             stopReason,
             errors
