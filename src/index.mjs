@@ -75,6 +75,8 @@ import { SelectionLockfile, OVERRIDE_WHITELIST } from './SelectionLockfile.mjs'
 import { RequiredLevel } from './RequiredLevel.mjs'
 import { AreaDependencyGraph } from './AreaDependencyGraph.mjs'
 import { TaskId } from './TaskId.mjs'
+import { AreaScorer } from './harness/AreaScorer.mjs'
+import { DeterministicAreaMapper } from './DeterministicAreaMapper.mjs'
 
 
 const REPO_VERSION = '1.0.0'
@@ -341,6 +343,8 @@ export {
     RequiredLevel,
     AreaDependencyGraph,
     TaskId,
+    AreaScorer,
+    DeterministicAreaMapper,
     gradeSingleSchema,
     gradeSelection,
     validateGradingEntry,

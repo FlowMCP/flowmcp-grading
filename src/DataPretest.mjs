@@ -53,7 +53,7 @@
  * No for/while loops.
  */
 
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, readdir, rename } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join, resolve, dirname } from 'node:path'
 import { createRequire } from 'node:module'
@@ -80,6 +80,11 @@ const TEST_LADDER = Object.freeze( {
 } )
 const LIST_DIR_NAMES = Object.freeze( [ '_lists', '_shared' ] )
 const MAX_LIST_DIR_LEVELS = 10
+// Deterministic response-size dimension: threshold-booleans derived from the
+// serialised response byte length. `large` flags a >1 MB response; `extreme` flags
+// a >10 MB content-bloat response (grade-effective on the single-test area).
+const LARGE_RESPONSE_BYTES = 1 * 1024 * 1024
+const EXTREME_RESPONSE_BYTES = 10 * 1024 * 1024
 // PRD-013: a parameterless tool declares NO user-input vector and needs only one
 // working test to be deterministic-green (Bar=1). The canonical FlowMCP user-input
 // marker is the literal `{{USER_PARAM}}` placeholder in a parameter position.
@@ -338,6 +343,8 @@ class DataPretest {
                     errors.push( `DPT-004: Test failed (not counted as a working download): ${detail}` )
                 }
 
+                const responseBytes = DataPretest.#responseBytes( { output: entry[ 'output' ] } )
+
                 return {
                     primitive: entry[ 'primitive' ],
                     name: entry[ 'name' ],
@@ -350,6 +357,9 @@ class DataPretest {
                     working,
                     isDuplicate,
                     durationMs: entry[ 'durationMs' ],
+                    responseBytes,
+                    large: responseBytes > LARGE_RESPONSE_BYTES,
+                    extreme: responseBytes > EXTREME_RESPONSE_BYTES,
                     output: entry[ 'output' ] === undefined ? null : entry[ 'output' ]
                 }
             } )
@@ -431,12 +441,24 @@ class DataPretest {
         // an explicit class and the effective bar it was judged against. A parameterless
         // tool emits DPT-006; a 0-test tool surfaces as `needs-tests` (visible, not
         // silent); a key-gated tool is `key-gated`.
+        // Per-tool maximum response size (deterministic size dimension). The largest
+        // working/recorded response decides whether the tool is large / extreme.
+        const maxBytesByTool = results
+            .filter( ( entry ) => DOWNLOADABLE_PRIMITIVES.includes( entry[ 'primitive' ] ) )
+            .reduce( ( acc, entry ) => {
+                const prev = acc[ entry[ 'name' ] ] === undefined ? 0 : acc[ entry[ 'name' ] ]
+                const bytes = typeof entry[ 'responseBytes' ] === 'number' ? entry[ 'responseBytes' ] : 0
+                acc[ entry[ 'name' ] ] = Math.max( prev, bytes )
+                return acc
+            }, {} )
+
         const perTool = Object.keys( totalByTool )
             .reduce( ( acc, name ) => {
                 const working = workingByTool[ name ] === undefined ? 0 : workingByTool[ name ]
                 const total = totalByTool[ name ]
                 const parameterless = parameterlessByTool[ name ] === true
                 const bar = toolBar( name )
+                const maxResponseBytes = maxBytesByTool[ name ] === undefined ? 0 : maxBytesByTool[ name ]
                 const toolClass = keyGated
                     ? TOOL_CLASS.keyGated
                     : ( total === 0
@@ -451,7 +473,10 @@ class DataPretest {
                     bar,
                     parameterless,
                     class: toolClass,
-                    level: DataPretest.#levelForWorking( { working } )
+                    level: DataPretest.#levelForWorking( { working } ),
+                    maxResponseBytes,
+                    large: maxResponseBytes > LARGE_RESPONSE_BYTES,
+                    extreme: maxResponseBytes > EXTREME_RESPONSE_BYTES
                 }
                 return acc
             }, {} )
@@ -532,11 +557,36 @@ class DataPretest {
                 hasData: entry[ 'hasData' ],
                 working: entry[ 'working' ],
                 durationMs: entry[ 'durationMs' ],
+                responseBytes: entry[ 'responseBytes' ] === undefined ? 0 : entry[ 'responseBytes' ],
+                large: entry[ 'large' ] === true,
+                extreme: entry[ 'extreme' ] === true,
                 error: entry[ 'error' ] === undefined ? null : entry[ 'error' ],
                 response: DataPretest.#parseResponse( { output: entry[ 'output' ] } )
             }
             await writeFile( join( toolDir, `test-${next}.json` ), JSON.stringify( fileBody, null, 4 ) + '\n', 'utf-8' )
         } ), Promise.resolve() )
+
+        // Stale-test cleanup — when a re-run produces FEWER tests for a tool than a
+        // previous run, the surplus test-<n>.json (index > the new count) is stale. Move
+        // it to a reversible `.trash/` snapshot, NEVER hard-delete (never-delete rule).
+        // A tool now absent from `counters` (0 results) is left untouched — that is a
+        // separate "removed tool" case outside the per-tool fewer-tests edge.
+        await Object
+            .keys( counters )
+            .reduce( ( promise, tool ) => promise.then( async () => {
+                const keep = counters[ tool ]
+                const toolDir = join( schemaFileDir, 'tools', tool, 'tests' )
+                const existing = await DataPretest.#listTestFiles( { toolDir } )
+                const stale = existing
+                    .filter( ( entry ) => entry.index > keep )
+                if( stale.length === 0 ) { return }
+                const stamp = typeof summary.checkedAt === 'string' ? summary.checkedAt.replace( /[:.]/g, '-' ) : 'unknown'
+                const trashDir = join( gradingDataDir, '.trash', `stale-tests-${stamp}`, namespace, schemaFile, tool )
+                await mkdir( trashDir, { recursive: true } )
+                await stale.reduce( ( inner, entry ) => inner.then( async () => {
+                    await rename( join( toolDir, entry.name ), join( trashDir, entry.name ) )
+                } ), Promise.resolve() )
+            } ), Promise.resolve() )
 
         await mkdir( schemaFileDir, { recursive: true } )
         const summaryPath = join( schemaFileDir, 'summary.json' )
@@ -546,10 +596,44 @@ class DataPretest {
     }
 
 
+    // List test-<n>.json files in a tool dir with their numeric index, so the persist
+    // step can detect stale surplus files left by a previous higher-count run.
+    static async #listTestFiles( { toolDir } ) {
+        let entries = []
+        try {
+            entries = await readdir( toolDir )
+        } catch {
+            return []
+        }
+        return entries
+            .map( ( name ) => {
+                const match = name.match( /^test-(\d+)\.json$/ )
+                return match === null ? null : { name, index: Number( match[ 1 ] ) }
+            } )
+            .filter( ( entry ) => entry !== null )
+    }
+
+
     static #parseResponse( { output } ) {
         if( output === undefined || output === null ) { return null }
         if( typeof output !== 'string' ) { return output }
         try { return JSON.parse( output ) } catch { return output }
+    }
+
+
+    // Deterministic byte length of the serialised response (bytes, not characters).
+    // Drives the size threshold-booleans `large` / `extreme`. A non-serialisable
+    // output (circular / undefined) degrades to 0 — never throws.
+    static #responseBytes( { output } ) {
+        if( output === undefined || output === null ) { return 0 }
+        let asString
+        try {
+            asString = typeof output === 'string' ? output : JSON.stringify( output )
+        } catch {
+            return 0
+        }
+        if( typeof asString !== 'string' ) { return 0 }
+        return Buffer.byteLength( asString, 'utf-8' )
     }
 
 
