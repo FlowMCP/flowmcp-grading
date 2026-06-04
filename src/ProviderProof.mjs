@@ -37,9 +37,21 @@ const PROOF_FILENAME = 'grade.json'
 // grading yet", "not yet imported") — those are INTERNAL and are dropped from the
 // committed projection so a pending proof still validates against the spec. NO SILENT
 // DEFAULTS: a non-enum reason is omitted, never rewritten.
+//
+// The deterministic data-pretest bar is 2 working
+// downloadable tests (DataPretest DEFAULT_MIN_WORKING_TESTS). A schema blocked by that
+// bar emits a "below 2" reason that matched NO enum member before — the closed set only
+// knew 'fewer-than-three-tests' — so #specReason discarded it and the real reason never
+// reached the committed proof. We add 'fewer-than-two-tests' so the Bar=2 block survives.
+// Spec-alignment: this is a grading-spec blockedReason enum addition (gradingSpec
+// index.schema.json $defs.blockedReason). The grading repo is the authority for the
+// pretest bar; the spec enum must carry the matching member. Coordinated as a spec note
+// here (the spec bump itself lives in flowmcp-spec, out of this memo's edit scope) —
+// 'fewer-than-three-tests' is retained for backward compatibility, never silently dropped.
 const SPEC_BLOCKED_REASONS = [
     'validation-failed',
     'fewer-than-three-tests',
+    'fewer-than-two-tests',
     'no-about',
     'api-down',
     'all-schemas-unparseable',

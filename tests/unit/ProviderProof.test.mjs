@@ -159,6 +159,22 @@ describe( 'ProviderProof.write', () => {
     } )
 
 
+    test( 'N3 (PRD-015) — a Bar=2 "fewer-than-two-tests" reason now SURVIVES #specReason', async () => {
+        const idx = blockedOnlyIndex()
+        // A schema blocked because it is below the 2-working-tests bar. Before the N3
+        // enum fix this reason matched nothing and was discarded (reason: undefined).
+        idx.schemas.openMeteoAirQuality = { status: 'blocked', reason: 'fewer-than-two-tests' }
+        idx.schemas.openMeteoForecast = { status: 'blocked', reason: 'fewer-than-two-tests: getForecast (1/2)' }
+        await ProviderProof.write( { namespaceIndex: idx, providerDir } )
+        const proof = await readProof( providerDir )
+
+        // Bare enum value survives verbatim; the detailed prefix normalises to the
+        // exact enum member (the detail stays in blockers[]).
+        expect( proof.schemas.openMeteoAirQuality.reason ).toBe( 'fewer-than-two-tests' )
+        expect( proof.schemas.openMeteoForecast.reason ).toBe( 'fewer-than-two-tests' )
+    } )
+
+
     test( 'T-projection — producer never recomputes grade (projection only)', async () => {
         // Feed an aggregate whose grade is deliberately inconsistent with the
         // per-schema grades. A projection copies it verbatim; a recompute would

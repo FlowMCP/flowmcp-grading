@@ -21,6 +21,11 @@
  *   per-test  -> grading-data/providers/<namespace>/<schema>/tools/<tool>/tests/test-N.json
  *   summary   -> grading-data/providers/<namespace>/<schema>/summary.json
  *
+ * dryRun: when run({ dryRun: true }) the pretest is
+ * performed in full but #persist is NOT called — nothing is written to the
+ * island. schemaDir/summaryPath are then null (no fabricated path) and
+ * saved: false is returned. The default (dryRun: false) writes as before.
+ *
  * F26 key-hygiene (HARD rule): a persisted test file carries ONLY the API
  * response plus the HTTP status and run metadata. The `request` field is NEVER
  * written to disk — FlowMCP core bakes interpolated `{{KEY}}` server params into
@@ -29,10 +34,20 @@
  * still carry request params for live inspection, but they are not persisted.
  *
  * Abort rule (deterministic): every tool needs at least minWorkingTests
- * (default 3) working downloadable tests. A working test is a `tool` or
- * `resource` primitive with status === true AND non-empty data. An HTTP 4xx /
- * status:false / empty payload is a FAIL, never a pass. skill / prompt /
- * selection-member primitives are stubs and never count toward the threshold.
+ * (default 2 — the pass bar of 2 working tests per tool) working downloadable
+ * tests. A working test is a `tool` or `resource` primitive with status === true
+ * AND non-empty data. An HTTP 4xx / status:false / empty payload is a FAIL, never
+ * a pass. skill / prompt / selection-member primitives are stubs and never count
+ * toward the threshold.
+ *
+ * Readiness ladder (per-tool `level`): the working-test count maps to
+ * a graded readiness rung so downstream consumers can tell "passes the bar" from
+ * "ideal". 0 → `unavailable` (reject; in practice does not occur), 1 → `reachable`
+ * (minimum, INSUFFICIENT — the deterministic test does NOT pass), 2 →
+ * `schema-validatable` (the deterministic test PASSES = deterministic-green), ≥3 →
+ * `data-analyzable` (ideal, a later wave). The pass bar is binary at 2; ≥3 is an
+ * ideal gradient, not a second gate (F7). A tool with exactly 1 working test is
+ * NOT green but is NOT hard-rejected — it stays repairable by adding a test.
  *
  * NO SILENT DEFAULTS. Static methods only, object params, object returns.
  * No for/while loops.
@@ -50,15 +65,164 @@ import { HashGenerator } from './HashGenerator.mjs'
 
 
 const VERSION = '1.0.0'
-const DEFAULT_MIN_WORKING_TESTS = 3
+// Pass bar of 2 working tests per tool: a tool is deterministic-green
+// at >= 2 working downloadable tests (output schema is then validatable). 1 is the
+// minimum but INSUFFICIENT; 3 is the ideal gradient, not a second gate.
+const DEFAULT_MIN_WORKING_TESTS = 2
 const DOWNLOADABLE_PRIMITIVES = Object.freeze( [ 'tool', 'resource' ] )
+// Per-tool readiness rungs derived from the working-test count (Test-Leiter).
+const TEST_DEPTH_IDEAL = 3
+const TEST_LADDER = Object.freeze( {
+    unavailable: 'unavailable',
+    reachable: 'reachable',
+    schemaValidatable: 'schema-validatable',
+    dataAnalyzable: 'data-analyzable'
+} )
 const LIST_DIR_NAMES = Object.freeze( [ '_lists', '_shared' ] )
 const MAX_LIST_DIR_LEVELS = 10
+// PRD-013: a parameterless tool declares NO user-input vector and needs only one
+// working test to be deterministic-green (Bar=1). The canonical FlowMCP user-input
+// marker is the literal `{{USER_PARAM}}` placeholder in a parameter position.
+const PARAMETERLESS_MIN_WORKING_TESTS = 1
+const USER_PARAM_MARKER = '{{USER_PARAM}}'
+// PRD-013 / PRD-014 class markers — explicit, surfaced, never silent.
+const TOOL_CLASS = Object.freeze( {
+    normal: 'normal',
+    parameterless: 'parameterless',
+    keyGated: 'key-gated',
+    needsTests: 'needs-tests'
+} )
 
 
 class DataPretest {
     static getVersion() {
         return { version: VERSION }
+    }
+
+
+    // #levelForWorking — map a per-tool working-test count to a readiness-ladder
+    // rung. Deterministic, pure. 0 → unavailable, 1 → reachable
+    // (insufficient), 2 → schema-validatable (= deterministic-green), >=3 →
+    // data-analyzable (ideal).
+    static #levelForWorking( { working } ) {
+        const count = typeof working === 'number' ? working : 0
+        if( count <= 0 ) { return TEST_LADDER.unavailable }
+        if( count === 1 ) { return TEST_LADDER.reachable }
+        if( count < TEST_DEPTH_IDEAL ) { return TEST_LADDER.schemaValidatable }
+        return TEST_LADDER.dataAnalyzable
+    }
+
+
+    // #toolIsParameterless (PRD-013) — a tool is parameterless when it declares NO
+    // user-input vector. Deterministic + pure, derived from TWO explicit signals
+    // (both must agree — NO SILENT DEFAULTS, no blanket exception):
+    //   1. parameters[] carries no `{{USER_PARAM}}` user-input position, AND
+    //   2. no declared test case supplies any userParams (a non-`_description` key).
+    // Requiring both prevents a tool whose tests pass real inputs from being
+    // mis-classified as parameterless when its parameters[] is merely absent. The
+    // canonical FlowMCP user-input marker is the literal `{{USER_PARAM}}` placeholder.
+    static #toolIsParameterless( { toolConfig } ) {
+        const parameters = Array.isArray( toolConfig[ 'parameters' ] ) ? toolConfig[ 'parameters' ] : []
+        const declaresUserInput = parameters
+            .some( ( param ) => DataPretest.#parameterIsUserInput( { param } ) )
+        if( declaresUserInput === true ) { return false }
+
+        const toolTests = Array.isArray( toolConfig[ 'tests' ] ) ? toolConfig[ 'tests' ] : []
+        const anyTestHasUserParams = toolTests
+            .some( ( testCase ) => {
+                if( testCase === null || typeof testCase !== 'object' ) { return false }
+                const inputKeys = Object.keys( testCase )
+                    .filter( ( key ) => key !== '_description' )
+                return inputKeys.length > 0
+            } )
+        return anyTestHasUserParams === false
+    }
+
+
+    // #parameterIsUserInput (PRD-013) — true when a single parameter position is a
+    // user-supplied input (carries the `{{USER_PARAM}}` marker as its value). All
+    // other positions are fixed constants. Pure.
+    static #parameterIsUserInput( { param } ) {
+        if( param === null || typeof param !== 'object' ) { return false }
+        const position = param[ 'position' ]
+        if( position === null || typeof position !== 'object' ) { return false }
+        return position[ 'value' ] === USER_PARAM_MARKER
+    }
+
+
+    // #downloadableToolsFromMain (PRD-013) — enumerate EVERY downloadable tool from
+    // main.tools/main.routes plus main.resources.queries, independent of whether the
+    // tool carries any tests[]. This is the source-of-truth tool list so a tool with
+    // 0 tests becomes VISIBLE (needs-tests) instead of falling silently out of the
+    // results-driven aggregation. Returns
+    // [ { name, parameterless, testCount } ]. Pure.
+    static #downloadableToolsFromMain( { main } ) {
+        const tools = main[ 'tools' ] !== undefined
+            ? main[ 'tools' ]
+            : ( main[ 'routes' ] !== undefined ? main[ 'routes' ] : {} )
+        const toolEntries = Object.entries( tools )
+            .map( ( [ name, toolConfig ] ) => {
+                const toolTests = Array.isArray( toolConfig[ 'tests' ] ) ? toolConfig[ 'tests' ] : []
+                return {
+                    name,
+                    parameterless: DataPretest.#toolIsParameterless( { toolConfig } ),
+                    testCount: toolTests.length
+                }
+            } )
+
+        const resources = main[ 'resources' ] === undefined ? {} : main[ 'resources' ]
+        const resourceEntries = Object.entries( resources )
+            .reduce( ( acc, [ resourceName, resourceConfig ] ) => {
+                const queries = resourceConfig[ 'queries' ] === undefined ? {} : resourceConfig[ 'queries' ]
+                const perQuery = Object.entries( queries )
+                    .map( ( [ queryName, queryConfig ] ) => {
+                        const queryTests = Array.isArray( queryConfig[ 'tests' ] ) ? queryConfig[ 'tests' ] : []
+                        return {
+                            name: `${resourceName}.${queryName}`,
+                            parameterless: DataPretest.#toolIsParameterless( { toolConfig: queryConfig } ),
+                            testCount: queryTests.length
+                        }
+                    } )
+                return acc.concat( perQuery )
+            }, [] )
+
+        return toolEntries.concat( resourceEntries )
+    }
+
+
+    // #barForTool (PRD-013) — the EFFECTIVE per-tool pass bar. A parameterless tool
+    // needs only 1 working test (Bar=1); every other tool keeps the global
+    // minWorkingTests (Bar=2 by default). The global constant is NEVER mutated — the
+    // bar is decided per tool. NO SILENT DEFAULTS.
+    static #barForTool( { parameterless, minWorkingTests } ) {
+        return parameterless === true ? PARAMETERLESS_MIN_WORKING_TESTS : minWorkingTests
+    }
+
+
+    // #extractHttpStatus (PRD-015) — robustly recover the real HTTP status code from
+    // a FlowMCP error message. FlowMCP core formats a non-ok response as
+    // `HTTP <code>: <statusText>` (flowmcp-core Fetch.mjs:220). We read the code out
+    // of that exact shape — no guessing, NO SILENT DEFAULTS: a message without an
+    // `HTTP <ddd>` token returns null (the caller keeps the raw error instead).
+    static #extractHttpStatus( { error } ) {
+        if( typeof error !== 'string' ) { return null }
+        const match = error.match( /HTTP\s+(\d{3})\b/ )
+        return match === null ? null : Number( match[ 1 ] )
+    }
+
+
+    // #canonicalTestKey (PRD-015) — a byte-stable key for a test case that ignores
+    // ONLY the human `_description` field. Two tests sharing this key are
+    // byte-identical except for their description = a duplicate. Pure.
+    static #canonicalTestKey( { userParams } ) {
+        const params = userParams === undefined || userParams === null ? {} : userParams
+        const sortedKeys = Object.keys( params ).sort()
+        const canonical = sortedKeys
+            .reduce( ( acc, key ) => {
+                acc[ key ] = params[ key ]
+                return acc
+            }, {} )
+        return JSON.stringify( canonical )
     }
 
 
@@ -71,7 +235,8 @@ class DataPretest {
         serverParams = {},
         sharedLists = {},
         gradingDataDir,
-        minWorkingTests = DEFAULT_MIN_WORKING_TESTS
+        minWorkingTests = DEFAULT_MIN_WORKING_TESTS,
+        dryRun = false
     } ) {
         const { status, messages } = DataPretest.#validationRun( {
             namespace, toolName, main, gradingDataDir, minWorkingTests
@@ -91,17 +256,33 @@ class DataPretest {
 
         const errors = []
 
-        // Verify every required server parameter is present. A missing one is
-        // surfaced explicitly (no silent skip-as-pass) and turns into a FAIL.
+        // Source-of-truth tool list (PRD-013): every downloadable tool declared in
+        // main.tools/main.routes/main.resources, with its parameterless flag and
+        // declared test count. This drives visibility so a 0-test tool can NEVER
+        // vanish silently from the aggregation.
+        const declaredTools = DataPretest.#downloadableToolsFromMain( { main } )
+        const parameterlessByTool = declaredTools
+            .reduce( ( acc, tool ) => {
+                acc[ tool[ 'name' ] ] = tool[ 'parameterless' ]
+                return acc
+            }, {} )
+
+        // PRD-014 (key-gated, F13=A): if any required server parameter is absent, the
+        // schema is key-gated. requiredServerParams is schema-wide, so a missing key
+        // gates EVERY downloadable tool in the file. A key-gated schema is its OWN
+        // class ("not evaluable without key") — NOT a FAIL — and the futile live call
+        // is SKIPPED (no 4xx that would also trigger DPT-004). DPT-007 (INFO) lists the
+        // missing key NAMES for diagnostics (env doctor), but is not grade-wirksam.
         const required = main[ 'requiredServerParams' ] === undefined
             ? []
             : main[ 'requiredServerParams' ]
         const missingParams = required
             .filter( ( paramName ) => serverParams[ paramName ] === undefined )
-        missingParams
-            .forEach( ( paramName ) => {
-                errors.push( `DPT-005: Required server parameter absent from serverParams: ${paramName}` )
-            } )
+        const keyGated = missingParams.length > 0
+
+        if( keyGated ) {
+            errors.push( `DPT-007: Key-gated — not evaluable without key (missing requiredServerParam): ${missingParams.join( ', ' )}` )
+        }
 
         const resolved = await DataPretest.#resolveHandlers( {
             main,
@@ -112,25 +293,48 @@ class DataPretest {
         handlerResolutionErrors
             .forEach( ( message ) => { errors.push( message ) } )
 
-        const typedRun = await DataPretest.#runTypedTests( {
-            main,
-            handlerMap: resolved[ 'handlerMap' ],
-            resourceHandlerMap: resolved[ 'resourceHandlerMap' ],
-            serverParams,
-            sharedLists,
-            fullOutput: true
-        } )
+        // PRD-014: a key-gated schema NEVER reaches the live test layer (no futile
+        // 4xx). The result list is empty; the per-tool class is derived from the
+        // declared tools below. With keys present, the normal live path runs.
+        const typedRun = keyGated
+            ? { results: [] }
+            : await DataPretest.#runTypedTests( {
+                main,
+                handlerMap: resolved[ 'handlerMap' ],
+                resourceHandlerMap: resolved[ 'resourceHandlerMap' ],
+                serverParams,
+                sharedLists,
+                fullOutput: true
+            } )
 
+        // PRD-015 (duplicate detection): mark byte-identical-except-_description tests
+        // per tool BEFORE counting. The FIRST occurrence is kept (isDuplicate:false);
+        // each later byte-identical sibling is a duplicate (isDuplicate:true) that
+        // does NOT count toward the bar and surfaces a DPT-008.
+        const dupSeen = {}
         const results = typedRun[ 'results' ]
             .map( ( entry ) => {
                 const hasData = DataPretest.#hasData( { output: entry[ 'output' ] } )
                 const downloadable = DOWNLOADABLE_PRIMITIVES.includes( entry[ 'primitive' ] )
-                const working = downloadable && entry[ 'status' ] === true && hasData
+                const httpStatus = DataPretest.#extractHttpStatus( { error: entry[ 'error' ] } )
 
-                if( !working && downloadable ) {
-                    const detail = entry[ 'error' ] === null || entry[ 'error' ] === undefined
+                const toolKey = entry[ 'name' ]
+                const canonical = DataPretest.#canonicalTestKey( { userParams: entry[ 'request' ] } )
+                const dupKey = `${toolKey}::${canonical}`
+                const isDuplicate = downloadable && dupSeen[ dupKey ] === true
+                if( downloadable ) { dupSeen[ dupKey ] = true }
+
+                // A duplicate never counts as a working download (it adds no real
+                // second coverage) — it must not let a single test "pass" the bar twice.
+                const working = downloadable && isDuplicate === false && entry[ 'status' ] === true && hasData
+
+                if( isDuplicate ) {
+                    errors.push( `DPT-008: Duplicate test (byte-identical except _description) — counted once: ${entry[ 'name' ]}: ${canonical}` )
+                } else if( !working && downloadable ) {
+                    const rawDetail = entry[ 'error' ] === null || entry[ 'error' ] === undefined
                         ? `${entry[ 'name' ]}: empty data`
                         : `${entry[ 'name' ]}: ${entry[ 'error' ]}`
+                    const detail = httpStatus === null ? rawDetail : `${rawDetail} (HTTP ${httpStatus})`
                     errors.push( `DPT-004: Test failed (not counted as a working download): ${detail}` )
                 }
 
@@ -141,8 +345,10 @@ class DataPretest {
                     request: entry[ 'request' ] === undefined ? {} : entry[ 'request' ],
                     status: entry[ 'status' ],
                     error: entry[ 'error' ] === undefined ? null : entry[ 'error' ],
+                    httpStatus,
                     hasData,
                     working,
+                    isDuplicate,
                     durationMs: entry[ 'durationMs' ],
                     output: entry[ 'output' ] === undefined ? null : entry[ 'output' ]
                 }
@@ -153,9 +359,9 @@ class DataPretest {
             .length
 
         // Per-tool gate (the spec is per-tool, NOT a schema-file total): every
-        // downloadable tool must reach minWorkingTests working tests on its own.
-        // A tool whose tests all fail must fail the pretest even when sibling
-        // tools in the same schema file pass.
+        // downloadable tool must reach its EFFECTIVE bar of working tests on its own.
+        // workingByTool is seeded from the DECLARED tools (PRD-013) so a tool with 0
+        // tests appears with 0 working instead of disappearing.
         const workingByTool = results
             .filter( ( entry ) => DOWNLOADABLE_PRIMITIVES.includes( entry[ 'primitive' ] ) )
             .reduce( ( acc, entry ) => {
@@ -163,27 +369,50 @@ class DataPretest {
                 const prev = acc[ name ] === undefined ? 0 : acc[ name ]
                 acc[ name ] = entry[ 'working' ] === true ? prev + 1 : prev
                 return acc
-            }, {} )
+            }, declaredTools.reduce( ( acc, tool ) => {
+                acc[ tool[ 'name' ] ] = 0
+                return acc
+            }, {} ) )
 
         const downloadableToolCount = Object.keys( workingByTool ).length
 
-        const toolsBelowThreshold = Object.entries( workingByTool )
-            .filter( ( pair ) => pair[ 1 ] < minWorkingTests )
-            .map( ( pair ) => `${pair[ 0 ]} (${pair[ 1 ]}/${minWorkingTests})` )
+        // PRD-013/014 — per-tool effective bar: Bar=1 for parameterless tools, the
+        // global minWorkingTests otherwise (Bar=2 default, NEVER lowered for tools
+        // that have parameters). Key-gated tools are NOT measured against any bar.
+        const toolBar = ( name ) => DataPretest.#barForTool( {
+            parameterless: parameterlessByTool[ name ] === true,
+            minWorkingTests
+        } )
 
-        // ok requires at least one downloadable tool AND every such tool meeting
-        // the threshold. No downloadable tools at all (e.g. only stubs) is a FAIL.
-        const ok = downloadableToolCount > 0 && toolsBelowThreshold.length === 0
+        // toolsBelowThreshold (the FAIL set) excludes key-gated tools — they are not
+        // FAILs, just not evaluable. A 0-working parameterless tool stays below its
+        // own Bar=1 and is correctly surfaced (needs-tests) but, like any below-bar
+        // tool, keeps ok=false (Memory: don't lower the bar to fake a pass).
+        const toolsBelowThreshold = keyGated
+            ? []
+            : Object.entries( workingByTool )
+                .filter( ( pair ) => pair[ 1 ] < toolBar( pair[ 0 ] ) )
+                .map( ( pair ) => `${pair[ 0 ]} (${pair[ 1 ]}/${toolBar( pair[ 0 ] )})` )
+
+        // ok requires at least one downloadable tool AND every such tool meeting its
+        // effective bar. A purely key-gated schema is NOT ok (it is not evaluable) but
+        // is NOT counted as a FAIL — stopReason names key-gated explicitly. No
+        // downloadable tools at all (e.g. only stubs) stays a FAIL.
+        const ok = keyGated === false && downloadableToolCount > 0 && toolsBelowThreshold.length === 0
         const stopReason = ok
             ? null
-            : ( downloadableToolCount === 0
-                ? 'no-downloadable-tools'
-                : `tools-below-${minWorkingTests}-working-downloadable-tests` )
+            : ( keyGated
+                ? 'key-gated-not-evaluable-without-key'
+                : ( downloadableToolCount === 0
+                    ? 'no-downloadable-tools'
+                    : `tools-below-${minWorkingTests}-working-downloadable-tests` ) )
 
-        if( !ok ) {
+        // DPT-003 (real FAIL abort) is emitted ONLY for genuine below-bar failures —
+        // never for a purely key-gated schema (that surfaces as DPT-007, its own class).
+        if( !ok && keyGated === false ) {
             const detail = downloadableToolCount === 0
                 ? 'no downloadable tools with working tests'
-                : `tool(s) below ${minWorkingTests} working downloadable tests: ${toolsBelowThreshold.join( ', ' )}`
+                : `tool(s) below effective bar: ${toolsBelowThreshold.join( ', ' )}`
             errors.push( `DPT-003: Data-pretest abort: ${detail}` )
         }
 
@@ -193,40 +422,77 @@ class DataPretest {
                 const name = entry[ 'name' ]
                 acc[ name ] = ( acc[ name ] === undefined ? 0 : acc[ name ] ) + 1
                 return acc
-            }, {} )
+            }, declaredTools.reduce( ( acc, tool ) => {
+                acc[ tool[ 'name' ] ] = 0
+                return acc
+            }, {} ) )
 
+        // perTool (PRD-013/014): EVERY declared downloadable tool is present, each with
+        // an explicit class and the effective bar it was judged against. A parameterless
+        // tool emits DPT-006; a 0-test tool surfaces as `needs-tests` (visible, not
+        // silent); a key-gated tool is `key-gated`.
         const perTool = Object.keys( totalByTool )
             .reduce( ( acc, name ) => {
-                acc[ name ] = { working: workingByTool[ name ], total: totalByTool[ name ] }
+                const working = workingByTool[ name ] === undefined ? 0 : workingByTool[ name ]
+                const total = totalByTool[ name ]
+                const parameterless = parameterlessByTool[ name ] === true
+                const bar = toolBar( name )
+                const toolClass = keyGated
+                    ? TOOL_CLASS.keyGated
+                    : ( total === 0
+                        ? TOOL_CLASS.needsTests
+                        : ( parameterless ? TOOL_CLASS.parameterless : TOOL_CLASS.normal ) )
+                if( toolClass === TOOL_CLASS.parameterless ) {
+                    errors.push( `DPT-006: Parameterless tool (no user-input vector) — own class, Bar=1: ${name} (${working}/${bar})` )
+                }
+                acc[ name ] = {
+                    working,
+                    total,
+                    bar,
+                    parameterless,
+                    class: toolClass,
+                    level: DataPretest.#levelForWorking( { working } )
+                }
                 return acc
             }, {} )
 
+        // dryRun === true performs the full data-pretest
+        // but writes NOTHING to the island. #persist (the sole writer of test-N.json
+        // + summary.json) is skipped entirely. schemaDir/summaryPath are then `null`
+        // — NO SILENT DEFAULT: we never fabricate a path for a file that was not
+        // written. The result (ok/perTool/toolsBelowThreshold/results/errors) is
+        // returned unchanged so the caller can still print it.
         const checkedAt = new Date().toISOString()
-        const persisted = await DataPretest.#persist( {
-            gradingDataDir,
-            namespace,
-            schemaFile: toolName,
-            results,
-            summary: {
+        const persisted = dryRun === true
+            ? { schemaFileDir: null, summaryPath: null }
+            : await DataPretest.#persist( {
+                gradingDataDir,
                 namespace,
                 schemaFile: toolName,
-                checkedAt,
-                minWorkingTests,
-                ok,
-                passedDownloadable,
-                toolsBelowThreshold,
-                perTool
-            }
-        } )
+                results,
+                summary: {
+                    namespace,
+                    schemaFile: toolName,
+                    checkedAt,
+                    minWorkingTests,
+                    keyGated,
+                    ok,
+                    passedDownloadable,
+                    toolsBelowThreshold,
+                    perTool
+                }
+            } )
 
         return {
             ok,
+            keyGated,
             passedDownloadable,
             required: minWorkingTests,
             toolsBelowThreshold,
             perTool,
             schemaDir: persisted[ 'schemaFileDir' ],
             summaryPath: persisted[ 'summaryPath' ],
+            saved: dryRun !== true,
             results,
             stopReason,
             errors
@@ -786,4 +1052,4 @@ class DataPretest {
 }
 
 
-export { DataPretest, VERSION as DATA_PRETEST_VERSION, DEFAULT_MIN_WORKING_TESTS }
+export { DataPretest, VERSION as DATA_PRETEST_VERSION, DEFAULT_MIN_WORKING_TESTS, TEST_LADDER }

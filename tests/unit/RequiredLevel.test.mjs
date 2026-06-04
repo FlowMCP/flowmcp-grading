@@ -218,3 +218,24 @@ describe( 'RequiredLevel.deriveNamespaceLevel — fold to the weakest schema (PR
         expect( errors.some( ( e ) => e.startsWith( 'RLV-003' ) ) ).toBe( true )
     } )
 } )
+
+
+describe( 'RequiredLevel — pass bar = 2 working tests per tool', () => {
+    // The bar is enforced inside DataPretest (DEFAULT_MIN_WORKING_TESTS = 2): a
+    // schema whose tools each reach >= 2 working tests yields dataPretest.ok = true.
+    // RequiredLevel then lifts a structural-valid + detGreen schema to
+    // deterministic-green. A tool stuck at 1 working keeps dataPretest.ok = false.
+    test( 'pretest ok (>=2 working per tool) lifts a valid+detGreen schema to deterministic-green', () => {
+        const { level } = RequiredLevel.derive( {
+            imported: true, structuralValid: true, dataPretest: { ok: true }, detGreen: true, gradingStatus: 'graded'
+        } )
+        expect( level ).toBe( 'deterministic-green' )
+    } )
+
+    test( 'pretest not ok (a tool below the bar of 2) stays at structural-valid, not green', () => {
+        const { level } = RequiredLevel.derive( {
+            imported: true, structuralValid: true, dataPretest: { ok: false }, detGreen: true, gradingStatus: 'graded'
+        } )
+        expect( level ).toBe( 'structural-valid' )
+    } )
+} )

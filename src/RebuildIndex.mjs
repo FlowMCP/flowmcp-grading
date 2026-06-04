@@ -504,6 +504,12 @@ class RebuildIndex {
         const toolsDirExists = await RebuildIndex.#dirExists( { path: toolsDir } )
         if( !toolsDirExists ) { return {} }
 
+        // testDepth: the per-tool readiness-ladder rung is a
+        // DETERMINISTIC dimension distinct from the LLM outputSchemaMatch (Q-02).
+        // It is read from the DataPretest summary.json the same gradingDataRoot
+        // already carries — no new artifact, no grade coupling.
+        const testDepthByTool = await RebuildIndex.#readTestDepthMap( { schemaDir } )
+
         const toolNames = await RebuildIndex.#listSubDirs( { dir: toolsDir } )
         const tools = {}
 
@@ -515,10 +521,36 @@ class RebuildIndex {
                     nodePath: `schemas.${schemaName}.tools.${toolName}`,
                     blockers
                 } )
-                tools[ toolName ] = node
+                const testDepth = testDepthByTool[ toolName ]
+                tools[ toolName ] = testDepth === undefined ? node : { ...node, testDepth }
             }, Promise.resolve() )
 
         return tools
+    }
+
+
+    // #readTestDepthMap — read providers/<ns>/<schema>/summary.json (written by
+    // DataPretest) and project its perTool[].level into a { toolName: level } map.
+    // Absent/unparseable summary → empty map (the deterministic pretest simply has
+    // not run yet; testDepth is then omitted, never guessed).
+    static async #readTestDepthMap( { schemaDir } ) {
+        const summaryPath = join( schemaDir, 'summary.json' )
+        try {
+            const raw = await readFile( summaryPath, 'utf-8' )
+            const parsed = JSON.parse( raw )
+            const perTool = parsed !== null && typeof parsed === 'object' ? parsed.perTool : null
+            if( perTool === null || typeof perTool !== 'object' ) { return {} }
+            return Object.keys( perTool )
+                .reduce( ( acc, toolName ) => {
+                    const level = perTool[ toolName ] === null || typeof perTool[ toolName ] !== 'object'
+                        ? undefined
+                        : perTool[ toolName ].level
+                    if( typeof level === 'string' && level.length > 0 ) { acc[ toolName ] = level }
+                    return acc
+                }, {} )
+        } catch( error ) {
+            return {}
+        }
     }
 
 

@@ -517,3 +517,53 @@ describe( 'RebuildIndex re-grade hash-invalidation (PRD-006 Kap. 6.5)', () => {
         expect( second.index.schemas.prices.toolsAggregate.boundTo ).toBe( 'cccccccc' )
     } )
 } )
+
+
+describe( 'RebuildIndex testDepth dimension', () => {
+    test( 'projects DataPretest summary.json perTool.level onto the tool node as testDepth', async () => {
+        const nsDir = join( tempRoot, 'providers', 'depthns' )
+        const schemaDir = join( nsDir, 'prices' )
+
+        await mkdir( join( schemaDir, 'schema' ), { recursive: true } )
+        await writeFile( join( schemaDir, 'schema', 'prices--2026-05-30T19-44-23Z--dddddddd.mjs' ), 'export const main = {}', 'utf-8' )
+
+        // A deterministic single-test grading so the tool node is built.
+        await mkdir( join( schemaDir, 'tools', 'getFirstPrice', '_gradings' ), { recursive: true } )
+        await writeJson( {
+            path: join( schemaDir, 'tools', 'getFirstPrice', '_gradings', 'single-test--2026-05-31T11-05-00Z.json' ),
+            json: { area: 'single-test', status: 'stable', grade: 'A' }
+        } )
+
+        // The DataPretest summary carries the per-tool Test-Leiter rung.
+        await writeJson( {
+            path: join( schemaDir, 'summary.json' ),
+            json: { namespace: 'depthns', schemaFile: 'prices', ok: true, perTool: { getFirstPrice: { working: 2, total: 2, level: 'schema-validatable' } } }
+        } )
+
+        const result = await RebuildIndex.rebuildNamespaceIndex( { namespaceDir: nsDir } )
+        expect( result.errors ).toEqual( [] )
+        const toolNode = result.index.schemas.prices.tools.getFirstPrice
+        // testDepth is a DETERMINISTIC dimension surfaced alongside the grade — it
+        // does not alter the node status (the grade still drives the rollup).
+        expect( toolNode.testDepth ).toBe( 'schema-validatable' )
+        expect( toolNode.status ).toBe( 'stable' )
+    } )
+
+
+    test( 'omits testDepth (no guess) when no DataPretest summary exists', async () => {
+        const nsDir = join( tempRoot, 'providers', 'nodepthns' )
+        const schemaDir = join( nsDir, 'prices' )
+
+        await mkdir( join( schemaDir, 'schema' ), { recursive: true } )
+        await writeFile( join( schemaDir, 'schema', 'prices--2026-05-30T19-44-23Z--eeeeeeee.mjs' ), 'export const main = {}', 'utf-8' )
+        await mkdir( join( schemaDir, 'tools', 'getFirstPrice', '_gradings' ), { recursive: true } )
+        await writeJson( {
+            path: join( schemaDir, 'tools', 'getFirstPrice', '_gradings', 'single-test--2026-05-31T11-05-00Z.json' ),
+            json: { area: 'single-test', status: 'stable', grade: 'A' }
+        } )
+
+        const result = await RebuildIndex.rebuildNamespaceIndex( { namespaceDir: nsDir } )
+        const toolNode = result.index.schemas.prices.tools.getFirstPrice
+        expect( Object.prototype.hasOwnProperty.call( toolNode, 'testDepth' ) ).toBe( false )
+    } )
+} )

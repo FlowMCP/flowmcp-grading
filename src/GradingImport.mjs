@@ -26,7 +26,8 @@
  */
 
 import { readdir, writeFile, mkdir, stat, readFile, rm, rename } from 'node:fs/promises'
-import { join, basename } from 'node:path'
+import { existsSync } from 'node:fs'
+import { join, basename, dirname } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
@@ -47,6 +48,18 @@ const NAMESPACE_REGEX = /^[a-z][a-z0-9-]*$/
 // blockedReason set in Grading.VALID_BLOCKED_REASONS.
 const BLOCKED_REASON_VALIDATION_FAILED = 'validation-failed'
 const ABOUT_FILENAME_REGEX = /^(.+)--(\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z)--([0-9a-f]{8})\.md$/
+// Shared-list snapshotting. A schema that declares `main.sharedLists`
+// resolves each ref to a `<kebab(ref)>.mjs` file in a `_lists/`-or-`_shared/`
+// directory found by walking UP from the schema file (FlowMCP.resolveSharedLists +
+// SharedListResolver). The grading island snapshot is a single schema file with NO
+// such directory above it, so BOTH the CLI (#resolveSharedListsForSchema) AND the
+// DataPretest (#resolveHandlers) re-resolution walk up and find nothing → sharedLists
+// = {} → the handler factory throws `reading 'filter'`. The fix makes the island
+// self-contained: copy the referenced list files into providers/<ns>/<schema>/_lists/
+// (found by the same up-walk at the schema-folder level, invisible to the
+// namespace-level schema-dir scanners which never enumerate a `_`-prefixed sibling).
+const LIST_DIR_NAMES = Object.freeze( [ '_lists', '_shared' ] )
+const MAX_LIST_DIR_LEVELS = 10
 
 
 class GradingImport {
@@ -194,6 +207,15 @@ class GradingImport {
 
         const schemaDir = join( gradingDataRoot, 'providers', namespace, schemaSlug )
 
+        // Make the island self-contained for sharedLists schemas. A
+        // missing/unresolvable referenced list is surfaced as an error (no silent
+        // skip), not swallowed — the schema declares the dependency, so it must
+        // exist at the source. Errors propagate via result.errors → run() fails.
+        const lists = await GradingImport.#snapshotSharedLists( { schema: item.schema, sourcePath: item.sourcePath, schemaDir } )
+        if( lists.errors.length > 0 ) {
+            result.errors = result.errors.concat( lists.errors )
+        }
+
         const about = await GradingImport.#convertAboutResource( { schema: item.schema, schemaDir, namespace } )
         if( about.errors.length > 0 ) {
             result.errors = result.errors.concat( about.errors )
@@ -212,6 +234,105 @@ class GradingImport {
         result.normalizedSkills = normalized.normalized
 
         return result
+    }
+
+
+    /**
+     * #snapshotSharedLists — copy the schema's referenced shared-list files into
+     * the island so resolution is self-contained. Each ref in
+     * `main.sharedLists` maps to `<kebab(ref)>.mjs` inside a `_lists/`/`_shared/`
+     * directory found by walking UP from the source schema file. The files are
+     * copied verbatim into providers/<ns>/<schema>/_lists/<kebab>.mjs, where the
+     * runtime up-walk (CLI + DataPretest) finds them at the schema-folder level.
+     * Non-destructive: identical content → skip; changed content → rewrite to
+     * track the pinned source (the list filename is exact, so it is NOT
+     * content-addressed like the schema snapshot). No silent skip on a missing
+     * source dir/file: the schema declares the dependency, so absence is IMP-009.
+     *
+     * @returns {Promise<{ copied: string[], errors: string[] }>}
+     */
+    static async #snapshotSharedLists( { schema, sourcePath, schemaDir } ) {
+        const refs = schema.sharedLists
+        if( !Array.isArray( refs ) || refs.length === 0 ) { return { copied: [], errors: [] } }
+
+        const sourceListsDir = GradingImport.#findListsDir( { startDir: dirname( sourcePath ) } )
+        if( sourceListsDir === null ) {
+            return { copied: [], errors: [ `IMP-009: schema declares sharedLists but no ${LIST_DIR_NAMES.join( '/' )} directory found above ${sourcePath}` ] }
+        }
+
+        const islandListsDir = join( schemaDir, '_lists' )
+        await mkdir( islandListsDir, { recursive: true } )
+
+        const copied = []
+        const errors = []
+
+        await refs
+            .reduce( async ( prev, ref ) => {
+                await prev
+                const refName = ref === null || typeof ref !== 'object' ? null : ref.ref
+                if( typeof refName !== 'string' || refName.length === 0 ) {
+                    errors.push( `IMP-009: invalid sharedLists ref (missing string 'ref' field) in ${sourcePath}` )
+                    return
+                }
+                const fileName = `${GradingImport.#toKebabCase( { name: refName } )}.mjs`
+                const sourceFile = join( sourceListsDir, fileName )
+                const read = await GradingImport.#readFileOrNull( { path: sourceFile } )
+                if( read === null ) {
+                    errors.push( `IMP-009: referenced shared list '${refName}' -> ${fileName} not found in ${sourceListsDir}` )
+                    return
+                }
+                const targetFile = join( islandListsDir, fileName )
+                const existing = await GradingImport.#readFileOrNull( { path: targetFile } )
+                if( existing === read ) { return }
+                await writeFile( targetFile, read, 'utf-8' )
+                copied.push( fileName )
+            }, Promise.resolve() )
+
+        return { copied, errors }
+    }
+
+
+    /**
+     * #findListsDir — walk UP from startDir up to MAX_LIST_DIR_LEVELS, returning
+     * the first `_lists/`/`_shared/` directory found (or null). Mirrors
+     * DataPretest.#findListsDir so the IN snapshot lands where the OUT resolution
+     * looks.
+     */
+    static #findListsDir( { startDir } ) {
+        const result = Array.from( { length: MAX_LIST_DIR_LEVELS } )
+            .reduce( ( acc, _entry ) => {
+                if( acc.found === true ) { return acc }
+                const hit = LIST_DIR_NAMES
+                    .map( ( name ) => join( acc.current, name ) )
+                    .find( ( candidate ) => GradingImport.#dirExistsSync( { path: candidate } ) )
+                if( hit !== undefined ) { return { found: true, listsDir: hit, current: acc.current } }
+                const parent = dirname( acc.current )
+                if( parent === acc.current ) { return { found: false, listsDir: null, current: acc.current } }
+                return { found: false, listsDir: null, current: parent }
+            }, { found: false, listsDir: null, current: startDir } )
+
+        return result.listsDir
+    }
+
+
+    static #toKebabCase( { name } ) {
+        return name
+            .replace( /([a-z])([A-Z])/g, '$1-$2' )
+            .toLowerCase()
+    }
+
+
+    static async #readFileOrNull( { path } ) {
+        try {
+            return await readFile( path, 'utf-8' )
+        } catch( error ) {
+            return null
+        }
+    }
+
+
+    static #dirExistsSync( { path } ) {
+        return existsSync( path )
     }
 
 

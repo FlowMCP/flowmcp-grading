@@ -62,6 +62,9 @@
  * | IMP-006         | ERROR    | Foldername-fallback name not a valid namespace|
  * | IMP-007         | ERROR    | Folder<->namespace invariant violation        |
  * | IMP-008         | ERROR    | Rename-later target exists with diff content  |
+ * | DPT-006         | INFO     | Parameterless tool — own class, Bar=1         |
+ * | DPT-007         | INFO     | Key-gated — not evaluable without key          |
+ * | DPT-008         | ERROR    | Duplicate test (byte-identical except _desc)  |
  */
 
 const ERROR_CODE_TABLE = Object.freeze( {
@@ -520,6 +523,21 @@ const ERROR_CODE_TABLE = Object.freeze( {
             code: 'DPT-005',
             severity: 'ERROR',
             message: 'Required server parameter absent from serverParams: {detail}'
+        } ),
+        'DPT-006': Object.freeze( {
+            code: 'DPT-006',
+            severity: 'INFO',
+            message: 'Parameterless tool (no user-input vector) — own class, Bar=1: {detail}'
+        } ),
+        'DPT-007': Object.freeze( {
+            code: 'DPT-007',
+            severity: 'INFO',
+            message: 'Key-gated — not evaluable without key (missing requiredServerParam): {detail}'
+        } ),
+        'DPT-008': Object.freeze( {
+            code: 'DPT-008',
+            severity: 'ERROR',
+            message: 'Duplicate test (byte-identical except _description) — counted once: {detail}'
         } )
     } ),
     API: Object.freeze( {
