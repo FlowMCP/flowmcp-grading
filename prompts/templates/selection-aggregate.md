@@ -27,10 +27,6 @@ The predecessor grades above are the per-skill area grades and the member
 grades that feed this aggregate. Use them as evidence — do not re-grade an
 individual member here.
 
-## Files to Read
-
-{{FILES_TO_READ_BLOCK}}
-
 ## Question(s)
 
 Grade the selection as a whole per Spec 24 §2. The injected manifest reports
@@ -55,9 +51,7 @@ assumptions.
 
 {{QUESTIONS_BLOCK}}
 
-## Output Schema
-
-The answer MUST conform exactly to the JSON schema at `{{OUTPUT_SCHEMA_REF}}`.
+{{OUTPUT_SCHEMA_BLOCK}}
 On a file-read error, answer exclusively with:
 `{ "blocker": "<file-path>", "reason": "<reason>" }`
 and stop.

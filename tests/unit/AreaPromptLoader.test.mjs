@@ -118,3 +118,41 @@ describe( 'AreaPromptLoader.loadAllAreas', () => {
         expect( areas.length ).toBe( SELECTION_AREAS.length )
     } )
 } )
+
+
+describe( 'AreaPromptLoader.loadArea — substitutions (PRD-3.2)', () => {
+    const substitutions = {
+        namespace: 'etherscan',
+        toolName: 'getBalance',
+        schemaName: 'etherscan',
+        schemaPath: 'repos/flowmcp-schemas-private/schemas/v4.0.0/providers/etherscan/etherscan.mjs',
+        responseFixturePath: '_grading/providers/etherscan/etherscan/summary.json'
+    }
+
+    test( 'fills NAME tokens + real file paths, leaving no torso', async () => {
+        const { promptsRoot } = AreaPromptLoader.getPromptsRoot()
+        const result = await AreaPromptLoader.loadArea( { promptsRoot, area: 'single-test', substitutions } )
+
+        expect( result.prompt.includes( '{{NAMESPACE}}' ) ).toBe( false )
+        expect( result.prompt.includes( '{{TOOL_NAME}}' ) ).toBe( false )
+        expect( result.prompt.includes( '{{schemaPath}}' ) ).toBe( false )
+        expect( result.prompt.includes( 'etherscan.getBalance' ) ).toBe( true )
+        expect( result.prompt.includes( substitutions.schemaPath ) ).toBe( true )
+        // the inline output schema (block token) is filled, not a dead ref
+        expect( result.prompt.includes( '{{OUTPUT_SCHEMA_REF}}' ) ).toBe( false )
+        expect( result.prompt.includes( 'Output schema (binding)' ) ).toBe( true )
+    } )
+
+    test( 'throws APL-010 when a referenced NAME token has no substitution value', async () => {
+        const { promptsRoot } = AreaPromptLoader.getPromptsRoot()
+        await expect(
+            AreaPromptLoader.loadArea( { promptsRoot, area: 'single-test', substitutions: { namespace: 'etherscan', schemaPath: 'x.mjs', responseFixturePath: 'y.json' } } )
+        ).rejects.toThrow( /APL-010/ )
+    } )
+
+    test( 'without substitutions the legacy placeholders are kept (back-compat)', async () => {
+        const { promptsRoot } = AreaPromptLoader.getPromptsRoot()
+        const result = await AreaPromptLoader.loadArea( { promptsRoot, area: 'single-test' } )
+        expect( result.prompt.includes( '{{NAMESPACE}}' ) ).toBe( true )
+    } )
+} )

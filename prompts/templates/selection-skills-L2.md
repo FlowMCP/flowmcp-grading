@@ -40,9 +40,7 @@ the composition, and whether the composition happens without hidden defaults.
 
 {{QUESTIONS_BLOCK}}
 
-## Output Schema
-
-The answer MUST conform exactly to the JSON schema at `{{OUTPUT_SCHEMA_REF}}`.
+{{OUTPUT_SCHEMA_BLOCK}}
 On a file-read error, answer exclusively with:
 `{ "blocker": "<file-path>", "reason": "<reason>" }`
 and stop.
