@@ -75,8 +75,21 @@ const GRADE_THRESHOLDS = Object.freeze( [
 const VALID_HARNESSES = [ 'claude-code' ]
 const VALID_NODE_STATUSES = [ 'pending', 'blocked', 'graded', 'stable', 'rejected' ]
 // Closed reason set for a no-grade blocked record (emit-on-failure, PRD-001).
-// Free-text reasons are rejected (no silent default).
-const VALID_BLOCKED_REASONS = [ 'validation-failed' ]
+// Free-text reasons are rejected (no silent default). Befund I-5: this is the
+// canonical 7-value blockedReason set from grading-spec 08 (single source of
+// truth, also encoded in index.schema.json $defs/blockedReason). The earlier
+// narrow `['validation-failed']` subset is superseded — every reason a producer
+// (createEntry / ProviderProof) can emit is a member here, so the two lists no
+// longer diverge.
+const VALID_BLOCKED_REASONS = [
+    'validation-failed',
+    'fewer-than-three-tests',
+    'fewer-than-two-tests',
+    'no-about',
+    'api-down',
+    'all-schemas-unparseable',
+    'not-imported'
+]
 const VALID_AREAS = [
     'single-test',
     'tools-aggregate-schema',

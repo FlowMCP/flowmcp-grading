@@ -1,35 +1,43 @@
 {
-    "version": "1.1.0",
-    "description": "Area dependency graph: per-area dependsOn descriptor + requiredLevel gate + classification (deterministic = CLI can finish it for free; non-deterministic = needs an LLM scoring round). Graph lives as DATA so new edges/classifications are a data edit, not a code change. Provider-Namespace-Gate is encoded here as namespace-areas depending on all-namespace-schemas at requiredLevel deterministic-green.",
+    "version": "1.2.0",
+    "description": "Area dependency graph: per-area dependsOn descriptor + requiredLevel gate + classification (deterministic = CLI can finish it for free; non-deterministic = needs an LLM scoring round; both = a deterministic gate done for free PLUS an LLM round, per grading-spec 04/08). Graph lives as DATA so new edges/classifications are a data edit, not a code change. Provider-Namespace-Gate is encoded here as namespace-areas depending on all-namespace-schemas at requiredLevel deterministic-green. about-namespace gates at stable (Spec 21).",
     "entries": [
         {
             "area": "single-test",
             "group": "schema-areas",
-            "dependsOn": { "kind": "none" },
+            "dependsOn": {
+                "kind": "none"
+            },
             "requiredLevel": "structural-valid",
-            "classification": "deterministic",
+            "classification": "both",
             "deferred": false
         },
         {
             "area": "tools-aggregate-schema",
             "group": "schema-areas",
-            "dependsOn": { "kind": "none" },
+            "dependsOn": {
+                "kind": "none"
+            },
             "requiredLevel": "structural-valid",
-            "classification": "deterministic",
+            "classification": "both",
             "deferred": false
         },
         {
             "area": "tools-aggregate-namespace",
             "group": "namespace-areas",
-            "dependsOn": { "kind": "all-namespace-schemas" },
+            "dependsOn": {
+                "kind": "all-namespace-schemas"
+            },
             "requiredLevel": "deterministic-green",
-            "classification": "non-deterministic",
+            "classification": "both",
             "deferred": false
         },
         {
             "area": "namespace-description",
             "group": "namespace-areas",
-            "dependsOn": { "kind": "all-namespace-schemas" },
+            "dependsOn": {
+                "kind": "all-namespace-schemas"
+            },
             "requiredLevel": "deterministic-green",
             "classification": "non-deterministic",
             "deferred": false
@@ -37,7 +45,9 @@
         {
             "area": "namespace-skills",
             "group": "namespace-areas",
-            "dependsOn": { "kind": "all-namespace-schemas" },
+            "dependsOn": {
+                "kind": "all-namespace-schemas"
+            },
             "requiredLevel": "deterministic-green",
             "classification": "non-deterministic",
             "deferred": false
@@ -45,15 +55,19 @@
         {
             "area": "about-namespace",
             "group": "about-namespace",
-            "dependsOn": { "kind": "about-resource-present" },
-            "requiredLevel": "structural-valid",
-            "classification": "non-deterministic",
+            "dependsOn": {
+                "kind": "about-resource-present"
+            },
+            "requiredLevel": "stable",
+            "classification": "both",
             "deferred": false
         },
         {
             "area": "about-selection",
             "group": "selection-areas",
-            "dependsOn": { "kind": "all-member-schemas" },
+            "dependsOn": {
+                "kind": "all-member-schemas"
+            },
             "requiredLevel": "stable",
             "classification": "non-deterministic",
             "deferred": true
@@ -61,7 +75,9 @@
         {
             "area": "selection-skills-L1",
             "group": "selection-areas",
-            "dependsOn": { "kind": "all-member-schemas" },
+            "dependsOn": {
+                "kind": "all-member-schemas"
+            },
             "requiredLevel": "stable",
             "classification": "non-deterministic",
             "deferred": true
@@ -69,7 +85,9 @@
         {
             "area": "selection-skills-L2",
             "group": "selection-areas",
-            "dependsOn": { "kind": "all-member-schemas" },
+            "dependsOn": {
+                "kind": "all-member-schemas"
+            },
             "requiredLevel": "stable",
             "classification": "non-deterministic",
             "deferred": true
@@ -77,7 +95,9 @@
         {
             "area": "selection-skills-L3",
             "group": "selection-areas",
-            "dependsOn": { "kind": "all-member-schemas" },
+            "dependsOn": {
+                "kind": "all-member-schemas"
+            },
             "requiredLevel": "stable",
             "classification": "non-deterministic",
             "deferred": true
@@ -85,7 +105,9 @@
         {
             "area": "selection-aggregate",
             "group": "selection-areas",
-            "dependsOn": { "kind": "all-member-schemas" },
+            "dependsOn": {
+                "kind": "all-member-schemas"
+            },
             "requiredLevel": "stable",
             "classification": "non-deterministic",
             "deferred": true
