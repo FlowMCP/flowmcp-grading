@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeAll, afterAll, beforeEach, jest } from '@jest/globals'
+import { describe, test, expect, beforeAll, afterAll, beforeEach, afterEach, jest } from '@jest/globals'
 import { mkdtemp, rm, readFile, mkdir, writeFile, readdir } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -78,23 +78,24 @@ const makeMainParameterless = ( { count } ) => {
 }
 
 
-beforeAll( async () => {
-    tempRoot = await mkdtemp( join( tmpdir(), 'datapretest-' ) )
-} )
-
-
-afterAll( async () => {
-    if( tempRoot !== null ) {
-        await rm( tempRoot, { recursive: true, force: true } )
-    }
-} )
-
-
-beforeEach( () => {
+// A fresh island per test: read-cache (PRD-2.1) is default-on, so re-running the
+// same namespace/schema against a shared island would (correctly) serve the
+// second run from disk. Each test gets its own empty gradingDataDir so the
+// per-test fetch assertions stay deterministic; the cache tests that DO exercise
+// reuse allocate their own dirs explicitly.
+beforeEach( async () => {
     fetchQueue = []
     resourceQueue = []
     fetchMock.mockClear()
     executeResourceMock.mockClear()
+    tempRoot = await mkdtemp( join( tmpdir(), 'datapretest-' ) )
+} )
+
+
+afterEach( async () => {
+    if( tempRoot !== null ) {
+        await rm( tempRoot, { recursive: true, force: true } )
+    }
 } )
 
 
@@ -730,5 +731,80 @@ describe( 'DataPretest PRD-015 broken-test HTTP status + duplicate detection', (
         const dupResult = out.results.find( ( r ) => r.isDuplicate === true )
         expect( dupResult ).not.toBeUndefined()
         expect( dupResult.working ).toBe( false )
+    } )
+} )
+
+
+describe( 'DataPretest read-cache (PRD-2.1)', () => {
+    test( 'a second run reuses persisted test-N.json without re-fetching', async () => {
+        const dir = await mkdtemp( join( tmpdir(), 'datapretest-cache-' ) )
+        const main = makeMainWithToolTests( { count: 3 } )
+
+        fetchQueue = [
+            successFetch( { result: '284938' } ),
+            successFetch( { result: '190021' } ),
+            successFetch( { result: '77310' } )
+        ]
+        const first = await DataPretest.run( { namespace: 'etherscan', toolName: 'getBalance', main, gradingDataDir: dir } )
+        expect( first.ok ).toBe( true )
+        expect( first.fromCache ).toBe( false )
+        expect( fetchMock ).toHaveBeenCalledTimes( 3 )
+
+        fetchMock.mockClear()
+        fetchQueue = []
+        const second = await DataPretest.run( { namespace: 'etherscan', toolName: 'getBalance', main, gradingDataDir: dir } )
+        expect( second.fromCache ).toBe( true )
+        expect( fetchMock ).toHaveBeenCalledTimes( 0 )
+        expect( second.ok ).toBe( true )
+        expect( second.passedDownloadable ).toBe( 3 )
+        expect( second.perTool.getBalance ).toMatchObject( { working: 3, total: 3, bar: 2 } )
+        expect( typeof second.dataAt ).toBe( 'string' )
+        expect( second.dataAt ).toBe( first.dataAt )
+
+        await rm( dir, { recursive: true, force: true } )
+    } )
+
+    test( 'force:true bypasses the cache and re-fetches', async () => {
+        const dir = await mkdtemp( join( tmpdir(), 'datapretest-force-' ) )
+        const main = makeMainWithToolTests( { count: 3 } )
+
+        fetchQueue = [ successFetch( { result: 'a' } ), successFetch( { result: 'b' } ), successFetch( { result: 'c' } ) ]
+        await DataPretest.run( { namespace: 'etherscan', toolName: 'getBalance', main, gradingDataDir: dir } )
+
+        fetchMock.mockClear()
+        fetchQueue = [ successFetch( { result: 'x' } ), successFetch( { result: 'y' } ), successFetch( { result: 'z' } ) ]
+        const forced = await DataPretest.run( { namespace: 'etherscan', toolName: 'getBalance', main, gradingDataDir: dir, force: true } )
+        expect( forced.fromCache ).toBe( false )
+        expect( fetchMock ).toHaveBeenCalledTimes( 3 )
+        expect( forced.ok ).toBe( true )
+
+        await rm( dir, { recursive: true, force: true } )
+    } )
+
+    test( 'no persisted data -> cache miss, fetches live (first run is uncached)', async () => {
+        const dir = await mkdtemp( join( tmpdir(), 'datapretest-miss-' ) )
+        const main = makeMainWithToolTests( { count: 2 } )
+        fetchQueue = [ successFetch( { result: '1' } ), successFetch( { result: '2' } ) ]
+        const out = await DataPretest.run( { namespace: 'etherscan', toolName: 'getBalance', main, gradingDataDir: dir } )
+        expect( out.fromCache ).toBe( false )
+        expect( fetchMock ).toHaveBeenCalledTimes( 2 )
+        await rm( dir, { recursive: true, force: true } )
+    } )
+} )
+
+
+describe( 'DataPretest optional throttle (PRD-2.3)', () => {
+    test( 'throttleMs > 0 still fetches every test and clears the bar', async () => {
+        const dir = await mkdtemp( join( tmpdir(), 'datapretest-throttle-' ) )
+        const main = makeMainWithToolTests( { count: 2 } )
+        fetchQueue = [ successFetch( { result: '1' } ), successFetch( { result: '2' } ) ]
+        const started = Date.now()
+        const out = await DataPretest.run( { namespace: 'etherscan', toolName: 'getBalance', main, gradingDataDir: dir, throttleMs: 20 } )
+        const elapsed = Date.now() - started
+        expect( out.ok ).toBe( true )
+        expect( fetchMock ).toHaveBeenCalledTimes( 2 )
+        // one inter-fetch pause of 20ms applied between the two tests
+        expect( elapsed ).toBeGreaterThanOrEqual( 18 )
+        await rm( dir, { recursive: true, force: true } )
     } )
 } )
