@@ -11,7 +11,7 @@
  * | S3    | selection-skills (max 4)          | group-bound  |
  * | S4    | persona-reference (selection-aggregate) | group-bound |
  *
- * Per the grading spec (gradingSpec/1.2.0):
+ * Per the grading spec (gradingSpec/3.0.0):
  *   - There are two skill families sharing one data model.
  *   - The selection validator consumes single-schema base units.
  *   - personaIds are required for non-deterministic dimensions.

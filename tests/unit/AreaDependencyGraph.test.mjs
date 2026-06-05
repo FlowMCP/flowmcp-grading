@@ -73,11 +73,13 @@ describe( 'AreaDependencyGraph.requiredLevelFor / dependsOnFor — seeded values
         } )
     } )
 
-    test( 'about-namespace requires structural-valid @ about-resource-present', () => {
+    test( 'about-namespace requires stable @ about-resource-present (Befund I-2: strict Spec-21 gate)', () => {
         const { graph } = AreaDependencyGraph.loadGraph( { path: SEED_PATH } )
         const lvl = AreaDependencyGraph.requiredLevelFor( { graph, area: 'about-namespace' } )
         const dep = AreaDependencyGraph.dependsOnFor( { graph, area: 'about-namespace' } )
-        expect( lvl.requiredLevel ).toBe( 'structural-valid' )
+        // The aggregate About verification runs only once the namespace is stable
+        // (Spec 21 universal pre-condition); the code pulled up to the spec gate.
+        expect( lvl.requiredLevel ).toBe( 'stable' )
         expect( dep.dependsOn.kind ).toBe( 'about-resource-present' )
     } )
 
@@ -286,13 +288,15 @@ describe( 'AreaDependencyGraph.classifyArea — deterministic vs non-determinist
         return p
     }
 
-    test( 'schema-areas are deterministic (CLI can finish them for free)', () => {
+    test( 'schema-areas are both (deterministic gate + non-det LLM round, Befund I-4)', () => {
         const { graph } = AreaDependencyGraph.loadGraph( { path: SEED_PATH } )
         const single = AreaDependencyGraph.classifyArea( { graph, area: 'single-test' } )
         const tools = AreaDependencyGraph.classifyArea( { graph, area: 'tools-aggregate-schema' } )
         expect( single.errors ).toEqual( [] )
-        expect( single.classification ).toBe( 'deterministic' )
-        expect( tools.classification ).toBe( 'deterministic' )
+        // grading-spec 04/08 list these as "deterministic gate + non-deterministic":
+        // the free CLI gate AND the descriptive LLM questions (the emitted reality).
+        expect( single.classification ).toBe( 'both' )
+        expect( tools.classification ).toBe( 'both' )
     } )
 
     test( 'namespace-areas are non-deterministic (need an LLM scoring round)', () => {

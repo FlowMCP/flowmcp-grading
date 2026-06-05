@@ -2,7 +2,7 @@
  * SingleSchemaPhases — provider-side skill family (autonomous tier), v2 Areas.
  *
  * The linear P1-P7 phase model is replaced by the SIX provider-side grading Areas
- * (gradingSpec/1.2.0 §5.1 areas 1-6). Each Area is a self-contained rubric; the
+ * (gradingSpec/3.0.0 §5.1 areas 1-6). Each Area is a self-contained rubric; the
  * only ordering obligations are the cascade/veto rules and the deterministic-first
  * rule (§06).
  *

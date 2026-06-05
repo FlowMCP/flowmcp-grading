@@ -241,7 +241,9 @@ class DataPretest {
         sharedLists = {},
         gradingDataDir,
         minWorkingTests = DEFAULT_MIN_WORKING_TESTS,
-        dryRun = false
+        dryRun = false,
+        force = false,
+        throttleMs = 0
     } ) {
         const { status, messages } = DataPretest.#validationRun( {
             namespace, toolName, main, gradingDataDir, minWorkingTests
@@ -289,80 +291,55 @@ class DataPretest {
             errors.push( `DPT-007: Key-gated — not evaluable without key (missing requiredServerParam): ${missingParams.join( ', ' )}` )
         }
 
-        const resolved = await DataPretest.#resolveHandlers( {
-            main,
-            handlersFn,
-            filePath: schemaSnapshotPath
-        } )
-        const handlerResolutionErrors = resolved[ 'errors' ]
-        handlerResolutionErrors
-            .forEach( ( message ) => { errors.push( message ) } )
+        // PRD-2.1 read-cache (Befund A): a prior pretest persisted test-N.json per
+        // tool. When that data exists AND force !== true AND the schema is not
+        // key-gated, REUSE it instead of re-fetching (no rate-limit storm). Only the
+        // live FETCH is skipped — the GATE is always recomputed below from the
+        // current `main` + minWorkingTests. force === true bypasses the cache.
+        const cache = ( keyGated === false && force !== true )
+            ? await DataPretest.#readCache( { gradingDataDir, namespace, 'schemaFile': toolName, declaredTools } )
+            : { available: false }
 
-        // PRD-014: a key-gated schema NEVER reaches the live test layer (no futile
-        // 4xx). The result list is empty; the per-tool class is derived from the
-        // declared tools below. With keys present, the normal live path runs.
-        const typedRun = keyGated
-            ? { results: [] }
-            : await DataPretest.#runTypedTests( {
+        let results
+        let fromCache = false
+        let dataAt = null
+
+        if( cache.available === true ) {
+            results = cache.results
+            cache.errors
+                .forEach( ( message ) => { errors.push( message ) } )
+            fromCache = true
+            dataAt = cache.dataAt
+        } else {
+            const resolved = await DataPretest.#resolveHandlers( {
                 main,
-                handlerMap: resolved[ 'handlerMap' ],
-                resourceHandlerMap: resolved[ 'resourceHandlerMap' ],
-                serverParams,
-                sharedLists,
-                fullOutput: true
+                handlersFn,
+                filePath: schemaSnapshotPath
             } )
+            const handlerResolutionErrors = resolved[ 'errors' ]
+            handlerResolutionErrors
+                .forEach( ( message ) => { errors.push( message ) } )
 
-        // PRD-015 (duplicate detection): mark byte-identical-except-_description tests
-        // per tool BEFORE counting. The FIRST occurrence is kept (isDuplicate:false);
-        // each later byte-identical sibling is a duplicate (isDuplicate:true) that
-        // does NOT count toward the bar and surfaces a DPT-008.
-        const dupSeen = {}
-        const results = typedRun[ 'results' ]
-            .map( ( entry ) => {
-                const hasData = DataPretest.#hasData( { output: entry[ 'output' ] } )
-                const downloadable = DOWNLOADABLE_PRIMITIVES.includes( entry[ 'primitive' ] )
-                const httpStatus = DataPretest.#extractHttpStatus( { error: entry[ 'error' ] } )
+            // PRD-014: a key-gated schema NEVER reaches the live test layer (no futile
+            // 4xx). The result list is empty; the per-tool class is derived from the
+            // declared tools below. With keys present, the normal live path runs.
+            const typedRun = keyGated
+                ? { results: [] }
+                : await DataPretest.#runTypedTests( {
+                    main,
+                    handlerMap: resolved[ 'handlerMap' ],
+                    resourceHandlerMap: resolved[ 'resourceHandlerMap' ],
+                    serverParams,
+                    sharedLists,
+                    fullOutput: true,
+                    throttleMs
+                } )
 
-                const toolKey = entry[ 'name' ]
-                const canonical = DataPretest.#canonicalTestKey( { userParams: entry[ 'request' ] } )
-                const dupKey = `${toolKey}::${canonical}`
-                const isDuplicate = downloadable && dupSeen[ dupKey ] === true
-                if( downloadable ) { dupSeen[ dupKey ] = true }
-
-                // A duplicate never counts as a working download (it adds no real
-                // second coverage) — it must not let a single test "pass" the bar twice.
-                const working = downloadable && isDuplicate === false && entry[ 'status' ] === true && hasData
-
-                if( isDuplicate ) {
-                    errors.push( `DPT-008: Duplicate test (byte-identical except _description) — counted once: ${entry[ 'name' ]}: ${canonical}` )
-                } else if( !working && downloadable ) {
-                    const rawDetail = entry[ 'error' ] === null || entry[ 'error' ] === undefined
-                        ? `${entry[ 'name' ]}: empty data`
-                        : `${entry[ 'name' ]}: ${entry[ 'error' ]}`
-                    const detail = httpStatus === null ? rawDetail : `${rawDetail} (HTTP ${httpStatus})`
-                    errors.push( `DPT-004: Test failed (not counted as a working download): ${detail}` )
-                }
-
-                const responseBytes = DataPretest.#responseBytes( { output: entry[ 'output' ] } )
-
-                return {
-                    primitive: entry[ 'primitive' ],
-                    name: entry[ 'name' ],
-                    description: entry[ 'description' ] === undefined ? '' : entry[ 'description' ],
-                    request: entry[ 'request' ] === undefined ? {} : entry[ 'request' ],
-                    status: entry[ 'status' ],
-                    error: entry[ 'error' ] === undefined ? null : entry[ 'error' ],
-                    httpStatus,
-                    hasData,
-                    working,
-                    isDuplicate,
-                    durationMs: entry[ 'durationMs' ],
-                    responseBytes,
-                    large: responseBytes > LARGE_RESPONSE_BYTES,
-                    extreme: responseBytes > EXTREME_RESPONSE_BYTES,
-                    output: entry[ 'output' ] === undefined ? null : entry[ 'output' ]
-                }
-            } )
+            const classified = DataPretest.#classifyResults( { rawResults: typedRun[ 'results' ] } )
+            results = classified.results
+            classified.errors
+                .forEach( ( message ) => { errors.push( message ) } )
+        }
 
         const passedDownloadable = results
             .filter( ( entry ) => entry[ 'working' ] === true )
@@ -487,9 +464,13 @@ class DataPretest {
         // — NO SILENT DEFAULT: we never fabricate a path for a file that was not
         // written. The result (ok/perTool/toolsBelowThreshold/results/errors) is
         // returned unchanged so the caller can still print it.
+        // On a cache hit nothing was re-fetched, so the persisted test-N.json are
+        // identical — skip the write entirely (no churn) and reuse the existing
+        // paths. dataAt is the stored `checkedAt` (the data stamp). A live run
+        // writes as before and stamps `dataAt` with the current run time.
         const checkedAt = new Date().toISOString()
-        const persisted = dryRun === true
-            ? { schemaFileDir: null, summaryPath: null }
+        const persisted = ( dryRun === true || fromCache === true )
+            ? { schemaFileDir: cache.schemaFileDir === undefined ? null : cache.schemaFileDir, summaryPath: cache.summaryPath === undefined ? null : cache.summaryPath }
             : await DataPretest.#persist( {
                 gradingDataDir,
                 namespace,
@@ -517,11 +498,156 @@ class DataPretest {
             perTool,
             schemaDir: persisted[ 'schemaFileDir' ],
             summaryPath: persisted[ 'summaryPath' ],
-            saved: dryRun !== true,
+            saved: dryRun !== true && fromCache !== true,
+            fromCache,
+            dataAt: dataAt === null ? checkedAt : dataAt,
             results,
             stopReason,
             errors
         }
+    }
+
+
+    // #classifyResults (PRD-015) — turn the raw per-test runner output into the
+    // classified result entries used by the gate: duplicate-detection (byte-
+    // identical-except-_description), working flag, httpStatus, response size. The
+    // FIRST occurrence of a byte-identical test is kept (isDuplicate:false); each
+    // later sibling is a DPT-008 duplicate that does NOT count toward the bar.
+    // Extracted from run() so the live path and the cache path share ONE classifier.
+    static #classifyResults( { rawResults } ) {
+        const errors = []
+        const dupSeen = {}
+        const results = rawResults
+            .map( ( entry ) => {
+                const hasData = DataPretest.#hasData( { output: entry[ 'output' ] } )
+                const downloadable = DOWNLOADABLE_PRIMITIVES.includes( entry[ 'primitive' ] )
+                const httpStatus = DataPretest.#extractHttpStatus( { error: entry[ 'error' ] } )
+
+                const toolKey = entry[ 'name' ]
+                const canonical = DataPretest.#canonicalTestKey( { userParams: entry[ 'request' ] } )
+                const dupKey = `${toolKey}::${canonical}`
+                const isDuplicate = downloadable && dupSeen[ dupKey ] === true
+                if( downloadable ) { dupSeen[ dupKey ] = true }
+
+                // A duplicate never counts as a working download (it adds no real
+                // second coverage) — it must not let a single test "pass" the bar twice.
+                const working = downloadable && isDuplicate === false && entry[ 'status' ] === true && hasData
+
+                if( isDuplicate ) {
+                    errors.push( `DPT-008: Duplicate test (byte-identical except _description) — counted once: ${entry[ 'name' ]}: ${canonical}` )
+                } else if( !working && downloadable ) {
+                    const rawDetail = entry[ 'error' ] === null || entry[ 'error' ] === undefined
+                        ? `${entry[ 'name' ]}: empty data`
+                        : `${entry[ 'name' ]}: ${entry[ 'error' ]}`
+                    const detail = httpStatus === null ? rawDetail : `${rawDetail} (HTTP ${httpStatus})`
+                    errors.push( `DPT-004: Test failed (not counted as a working download): ${detail}` )
+                }
+
+                const responseBytes = DataPretest.#responseBytes( { output: entry[ 'output' ] } )
+
+                return {
+                    primitive: entry[ 'primitive' ],
+                    name: entry[ 'name' ],
+                    description: entry[ 'description' ] === undefined ? '' : entry[ 'description' ],
+                    request: entry[ 'request' ] === undefined ? {} : entry[ 'request' ],
+                    status: entry[ 'status' ],
+                    error: entry[ 'error' ] === undefined ? null : entry[ 'error' ],
+                    httpStatus,
+                    hasData,
+                    working,
+                    isDuplicate,
+                    durationMs: entry[ 'durationMs' ],
+                    responseBytes,
+                    large: responseBytes > LARGE_RESPONSE_BYTES,
+                    extreme: responseBytes > EXTREME_RESPONSE_BYTES,
+                    output: entry[ 'output' ] === undefined ? null : entry[ 'output' ]
+                }
+            } )
+
+        return { results, errors }
+    }
+
+
+    // #readCache (PRD-2.1) — reconstruct the already-classified per-test results from
+    // the persisted test-N.json files of a prior run, so the gate can be recomputed
+    // WITHOUT re-fetching. Availability is keyed on the presence of summary.json (the
+    // marker a prior pretest persisted). The persisted files carry the live-computed
+    // `working` flag (F26: NO request, so no key ever lands on disk) — duplicate
+    // detection already happened live and is baked into that flag. A working:false
+    // cached test re-surfaces a DPT-004 (marked `cached`) for diagnostics. The data
+    // stamp (`dataAt`) is the stored summary `checkedAt`. NO SILENT DEFAULTS.
+    static async #readCache( { gradingDataDir, namespace, schemaFile, declaredTools } ) {
+        const schemaFileDir = join( gradingDataDir, 'providers', namespace, schemaFile )
+        const summaryPath = join( schemaFileDir, 'summary.json' )
+        if( existsSync( summaryPath ) === false ) {
+            return { available: false }
+        }
+        const summary = await DataPretest.#readJsonFile( { path: summaryPath } )
+        if( summary === null ) {
+            return { available: false }
+        }
+        const dataAt = typeof summary[ 'checkedAt' ] === 'string' ? summary[ 'checkedAt' ] : null
+
+        const errors = []
+        const results = await declaredTools
+            .reduce( ( promise, tool ) => promise.then( async ( acc ) => {
+                const toolDir = join( schemaFileDir, 'tools', tool[ 'name' ], 'tests' )
+                const files = await DataPretest.#listTestFiles( { toolDir } )
+                const ordered = files
+                    .slice()
+                    .sort( ( a, b ) => a.index - b.index )
+                const entries = await ordered
+                    .reduce( ( inner, file ) => inner.then( async ( list ) => {
+                        const body = await DataPretest.#readJsonFile( { path: join( toolDir, file.name ) } )
+                        if( body === null ) { return list }
+                        const responseBytes = typeof body[ 'responseBytes' ] === 'number' ? body[ 'responseBytes' ] : 0
+                        const error = body[ 'error' ] === undefined ? null : body[ 'error' ]
+                        const working = body[ 'working' ] === true
+                        if( working === false ) {
+                            const detail = error === null ? `${tool[ 'name' ]}: empty data` : `${tool[ 'name' ]}: ${error}`
+                            errors.push( `DPT-004: Test failed (not counted as a working download): ${detail} (cached)` )
+                        }
+                        list.push( {
+                            primitive: 'tool',
+                            name: tool[ 'name' ],
+                            description: body[ 'description' ] === undefined ? '' : body[ 'description' ],
+                            request: {},
+                            status: body[ 'status' ],
+                            error,
+                            httpStatus: DataPretest.#extractHttpStatus( { error } ),
+                            hasData: body[ 'hasData' ] === true,
+                            working,
+                            isDuplicate: false,
+                            durationMs: body[ 'durationMs' ],
+                            responseBytes,
+                            large: responseBytes > LARGE_RESPONSE_BYTES,
+                            extreme: responseBytes > EXTREME_RESPONSE_BYTES,
+                            output: body[ 'response' ] === undefined ? null : body[ 'response' ]
+                        } )
+                        return list
+                    } ), Promise.resolve( [] ) )
+                return acc.concat( entries )
+            } ), Promise.resolve( [] ) )
+
+        return { available: true, results, errors, dataAt, schemaFileDir, summaryPath }
+    }
+
+
+    // #readJsonFile — read + parse a JSON file, returning null on any read/parse
+    // failure (the caller treats null as "no usable cache", never throws).
+    static async #readJsonFile( { path } ) {
+        try {
+            const raw = await readFile( path, 'utf-8' )
+            return JSON.parse( raw )
+        } catch {
+            return null
+        }
+    }
+
+
+    // #sleep — resolve after `ms` milliseconds (the optional inter-fetch throttle).
+    static #sleep( { ms } ) {
+        return new Promise( ( resolve ) => { setTimeout( resolve, ms ) } )
     }
 
 
@@ -887,12 +1013,18 @@ class DataPretest {
 
     static async #runTypedTests( {
         main, handlerMap = {}, resourceHandlerMap = {},
-        serverParams = {}, sharedLists = {}, fullOutput = false
+        serverParams = {}, sharedLists = {}, fullOutput = false, throttleMs = 0
     } ) {
         const typedTests = DataPretest.#getAllTestsTyped( { main } )
 
         const results = await typedTests
-            .reduce( ( promise, typedTest ) => promise.then( async ( acc ) => {
+            .reduce( ( promise, typedTest, index ) => promise.then( async ( acc ) => {
+                // Optional gentle throttle (PRD-2.3, opt-in, default 0): pause between
+                // live fetches to avoid tripping provider rate-limits. Applied BEFORE
+                // every test except the first; throttleMs <= 0 means no throttle.
+                if( throttleMs > 0 && index > 0 ) {
+                    await DataPretest.#sleep( { ms: throttleMs } )
+                }
                 const result = await DataPretest.#executeTest( {
                     typedTest,
                     schemaMain: main,

@@ -66,11 +66,16 @@ const VALID_DEPENDS_ON_KINDS = Object.freeze( [
 
 // Per-area work classification (PRD-010): `deterministic` = the remaining work
 // is structural / CLI work FlowMCP can finish for free; `non-deterministic` =
-// the area still needs an LLM scoring round (a grading sub-agent). Encoded as
-// DATA per graph entry — never an area->det map hardcoded in a consumer.
+// the area still needs an LLM scoring round (a grading sub-agent); `both` = the
+// area carries BOTH dimensions (a deterministic gate done for free PLUS an LLM
+// round for the descriptive questions). Befund I-4: `both` aligns the graph with
+// grading-spec 04/08, which list `single-test` and `tools-aggregate-schema` as
+// "deterministic gate + non-deterministic". Encoded as DATA per graph entry —
+// never an area->det map hardcoded in a consumer.
 const VALID_CLASSIFICATIONS = Object.freeze( [
     'deterministic',
-    'non-deterministic'
+    'non-deterministic',
+    'both'
 ] )
 
 

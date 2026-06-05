@@ -27,6 +27,8 @@
 import { readFile, writeFile, mkdir, rename } from 'node:fs/promises'
 import { join } from 'node:path'
 
+import { VALID_BLOCKED_REASONS } from './Grading.mjs'
+
 
 const PROOF_VERSION = 1
 const PROOF_FILENAME = 'grade.json'
@@ -48,15 +50,10 @@ const PROOF_FILENAME = 'grade.json'
 // pretest bar; the spec enum must carry the matching member. Coordinated as a spec note
 // here (the spec bump itself lives in flowmcp-spec, out of this memo's edit scope) —
 // 'fewer-than-three-tests' is retained for backward compatibility, never silently dropped.
-const SPEC_BLOCKED_REASONS = [
-    'validation-failed',
-    'fewer-than-three-tests',
-    'fewer-than-two-tests',
-    'no-about',
-    'api-down',
-    'all-schemas-unparseable',
-    'not-imported'
-]
+// Befund I-5: the list is no longer duplicated here — it is the SINGLE canonical
+// VALID_BLOCKED_REASONS imported from Grading (which mirrors grading-spec 08 +
+// index.schema.json $defs/blockedReason). The two producers can no longer diverge.
+const SPEC_BLOCKED_REASONS = VALID_BLOCKED_REASONS
 
 
 class ProviderProof {

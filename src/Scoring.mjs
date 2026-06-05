@@ -6,7 +6,7 @@
  * Encapsulates sub-grades (dimensions with weights, deterministic scores).
  * Static methods only, object params, object returns. NO SILENT DEFAULTS.
  *
- * Per the grading spec (gradingSpec/1.2.0):
+ * Per the grading spec (gradingSpec/3.0.0):
  *   - A grading is an array of sub-grades.
  *   - The 17 single dimensions plus S1-S4 are replaced by 11 grading Areas.
  *     Each grading entry targets exactly one Area (const per entry).
@@ -21,7 +21,7 @@
 const SCORING_SYSTEM_VERSION = 'scoringSystem/1.0.0'
 
 
-// The 11 grading Areas per gradingSpec/1.2.0 §5.1 (replaces the legacy 17-dimension
+// The 11 grading Areas per gradingSpec/3.0.0 §5.1 (replaces the legacy 17-dimension
 // enum). Closed list, extensions require a gradingSystem bump. Provider areas 1-6,
 // selection areas 7-11. `scoreDimension` accepts an Area slug as its `dimension`.
 const AREAS = [

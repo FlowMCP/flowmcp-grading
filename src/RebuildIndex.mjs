@@ -1,6 +1,6 @@
 /**
  * RebuildIndex — the single-point index builders defined by
- * gradingSpec/1.2.0 chapter 23 (index.json rollup) + index.schema.json,
+ * gradingSpec/3.0.0 chapter 23 (index.json rollup) + index.schema.json,
  * with the naming grammar from chapter 15.
  *
  * Two builders walk a namespace- or selection-folder, resolve the newest

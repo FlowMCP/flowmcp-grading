@@ -39,7 +39,19 @@ const PACKAGE_PROMPTS_ROOT = resolve( MODULE_DIR, '..', 'prompts' )
  *   APL-007 — questions.json is malformed
  *   APL-008 — No questions defined for the area
  *   APL-009 — Unknown file placeholder (no role mapping)
+ *   APL-010 — A NAME token survived substitution (torso — no context value)
  */
+
+
+// Deterministic NAME-token -> substitution-key map (PRD-3.2). The emit context
+// supplies real values; any token that survives without one is an APL-010 torso.
+const NAME_TOKEN_TO_KEY = Object.freeze( {
+    '{{NAMESPACE}}': 'namespace',
+    '{{TOOL_NAME}}': 'toolName',
+    '{{SCHEMA_NAME}}': 'schemaName',
+    '{{SKILL_NAME}}': 'skillName',
+    '{{SELECTION_NAME}}': 'selectionName'
+} )
 
 
 // Areas graded in the provider (single-schema) flow — mirrors
@@ -103,17 +115,20 @@ class AreaPromptLoader {
     }
 
 
-    static async loadArea( { promptsRoot, area, persona, goal } ) {
+    static async loadArea( { promptsRoot, area, persona, goal, substitutions = null } ) {
         const { status, messages } = AreaPromptLoader.#validationLoadArea( { promptsRoot, area } )
         if( status === false ) { throw new Error( `AreaPromptLoader.loadArea: ${messages.join( '; ' )}` ) }
 
         const template = await AreaPromptLoader.#readArtifact( { promptsRoot, 'relPath': join( 'templates', `${area}.md` ), 'label': 'template' } )
         const outputSchema = await AreaPromptLoader.#readOutputSchema( { promptsRoot, area } )
         const questions = await AreaPromptLoader.#loadQuestions( { promptsRoot, area } )
-        const files = AreaPromptLoader.#deriveFiles( { questions } )
+        // PRD-3.2: when a substitution context is supplied (the emit path), file
+        // placeholders are replaced with the REAL on-disk paths; without it (the
+        // legacy compose path) the placeholder is kept verbatim.
+        const files = AreaPromptLoader.#deriveFiles( { questions, substitutions } )
         const policies = await AreaPromptLoader.#loadPolicies( { promptsRoot, area } )
 
-        const { prompt, metadata } = PromptBuilder.build( {
+        const built = PromptBuilder.build( {
             template,
             persona,
             files,
@@ -124,16 +139,24 @@ class AreaPromptLoader {
             goal
         } )
 
-        return { area, prompt, metadata, 'questionCount': questions.length, 'personaRequired': metadata.personaRequired }
+        // PRD-3.2: replace the NAME tokens ({{NAMESPACE}}/{{TOOL_NAME}}/...) with the
+        // real values from the substitution context. NO SILENT DEFAULT — a name token
+        // that survives without a substitution value is a hard APL-010 error (no
+        // torso reaches a subagent). Skipped entirely when no context is supplied.
+        const prompt = substitutions === null
+            ? built.prompt
+            : AreaPromptLoader.#applyNameSubstitutions( { prompt: built.prompt, substitutions, area } )
+
+        return { area, prompt, metadata: built.metadata, 'questionCount': questions.length, 'personaRequired': built.metadata.personaRequired }
     }
 
 
-    static async loadAllAreas( { promptsRoot, flow, persona, goal } ) {
+    static async loadAllAreas( { promptsRoot, flow, persona, goal, substitutions = null } ) {
         const { areas } = AreaPromptLoader.getAreasForFlow( { flow } )
 
         const loaded = await areas
             .reduce( ( promise, area ) => promise.then( async ( acc ) => {
-                const result = await AreaPromptLoader.#loadAreaOrDefer( { promptsRoot, area, persona, goal } )
+                const result = await AreaPromptLoader.#loadAreaOrDefer( { promptsRoot, area, persona, goal, substitutions } )
 
                 return acc.concat( [ result ] )
             } ), Promise.resolve( [] ) )
@@ -142,7 +165,7 @@ class AreaPromptLoader {
     }
 
 
-    static async #loadAreaOrDefer( { promptsRoot, area, persona, goal } ) {
+    static async #loadAreaOrDefer( { promptsRoot, area, persona, goal, substitutions = null } ) {
         const { personaRequired } = PromptBuilder.isPersonaRequired( { area } )
 
         // Persona-required area without a resolved persona: do NOT invent one
@@ -160,7 +183,7 @@ class AreaPromptLoader {
         }
 
         const personaForArea = AreaPromptLoader.#personaForArea( { area, persona } )
-        const result = await AreaPromptLoader.loadArea( { promptsRoot, area, 'persona': personaForArea, goal } )
+        const result = await AreaPromptLoader.loadArea( { promptsRoot, area, 'persona': personaForArea, goal, substitutions } )
         const { prompt, metadata, questionCount } = result
 
         return { area, prompt, metadata, questionCount, 'personaRequired': result.personaRequired, 'deferred': false }
@@ -224,7 +247,7 @@ class AreaPromptLoader {
     }
 
 
-    static #deriveFiles( { questions } ) {
+    static #deriveFiles( { questions, substitutions = null } ) {
         const seen = new Set()
         const files = []
 
@@ -239,7 +262,12 @@ class AreaPromptLoader {
                         if( role === undefined ) {
                             throw new Error( `AreaPromptLoader: APL-009: unknown file placeholder '${placeholder}' — add a role mapping` )
                         }
-                        files.push( { 'path': placeholder, role } )
+                        // PRD-3.2: substitute the placeholder with the REAL on-disk path
+                        // when a context supplies it; otherwise keep the placeholder
+                        // (legacy compose path). The key is the placeholder stripped of
+                        // its braces (e.g. {{schemaPath}} -> schemaPath).
+                        const path = AreaPromptLoader.#resolveFilePath( { placeholder, substitutions } )
+                        files.push( { path, role } )
                     } )
             } )
 
@@ -248,6 +276,42 @@ class AreaPromptLoader {
         }
 
         return files
+    }
+
+
+    // #resolveFilePath (PRD-3.2) — map a {{placeholder}} file token to its real path
+    // from the substitution context. Without a context, or without a value for the
+    // key, the placeholder is kept verbatim (legacy compose path). Pure.
+    static #resolveFilePath( { placeholder, substitutions } ) {
+        if( substitutions === null || typeof substitutions !== 'object' ) { return placeholder }
+        const key = placeholder.replace( /^\{\{/, '' ).replace( /\}\}$/, '' )
+        const value = substitutions[ key ]
+        return typeof value === 'string' && value.length > 0 ? value : placeholder
+    }
+
+
+    // #applyNameSubstitutions (PRD-3.2) — replace the inline NAME tokens with their
+    // real values from the substitution context. After replacement NO known NAME
+    // token may survive (a torso reaching a subagent is a hard APL-010 error — NO
+    // SILENT DEFAULT). Only the tokens actually present in the prompt are required.
+    static #applyNameSubstitutions( { prompt, substitutions, area } ) {
+        const tokenToKey = NAME_TOKEN_TO_KEY
+        const filled = Object.keys( tokenToKey )
+            .reduce( ( acc, token ) => {
+                const key = tokenToKey[ token ]
+                const value = substitutions[ key ]
+                if( acc.includes( token ) === false ) { return acc }
+                if( typeof value !== 'string' || value.length === 0 ) { return acc }
+                return acc.split( token ).join( value )
+            }, prompt )
+
+        const unresolved = Object.keys( tokenToKey )
+            .filter( ( token ) => filled.includes( token ) === true )
+        if( unresolved.length > 0 ) {
+            throw new Error( `AreaPromptLoader: APL-010: unresolved name token(s) for area '${area}': ${unresolved.join( ', ' )} — supply them in the substitution context` )
+        }
+
+        return filled
     }
 
 

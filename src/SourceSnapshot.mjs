@@ -1,7 +1,7 @@
 /**
  * SourceSnapshot — frozen schema snapshots in grading-data/providers/<ns>/<schema>/schema/.
  *
- * Per the grading spec (gradingSpec/1.2.0 §10.1 / §19):
+ * Per the grading spec (gradingSpec/3.0.0 §10.1 / §19):
  *   - Layout migrated schemas/ → providers/ (schema-level folders).
  *   - Filename is the B2 grammar `<name>--<YYYY-MM-DDTHH-MM-SSZ>--<hash8>.mjs`
  *     (timestamp BEFORE hash so `sort().at(-1)` yields the newest snapshot —

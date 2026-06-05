@@ -1,7 +1,7 @@
 /**
  * FolderScanner — validates the grading-data/ folder layout against the v2 layout.
  *
- * Per the grading spec (gradingSpec/1.2.0 §19):
+ * Per the grading spec (gradingSpec/3.0.0 §19):
  *   - The canonical roots are providers/ , selections/ and shared-lists/.
  *   - The legacy schemas/ , single/ , phase-status/ , selection.lock.json and
  *     namespace.json checks are DROPPED (F24 drops namespace.json).

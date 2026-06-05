@@ -1,9 +1,9 @@
 ---
 area: namespace-skills
-specRef: flowmcp-spec/grading/1.1.0/13-skills.md#3
+specRef: flowmcp-spec/grading/3.0.0/13-skills.md#3
 personaRequired: true
 outputSchemaRef: prompts/output-schemas/namespace-skills.schema.json
-version: 1.0.0
+version: 3.0.0
 ---
 
 <!-- Spec 13 §3.1 declares the persona reference as OPTIONAL for namespace skills.
@@ -22,10 +22,6 @@ View the namespace skill through the lens of this persona + lens.
 Spec 13 §3.1 declares the persona reference as OPTIONAL for namespace skills;
 the grading spec sets the default to WITH persona.
 
-## Files to Read
-
-{{FILES_TO_READ_BLOCK}}
-
 ## Question(s)
 
 Evaluate the namespace skill `{{NAMESPACE}}.{{SKILL_NAME}}` with a persona
@@ -35,9 +31,7 @@ the basis of the files you have read — no web research, no assumptions.
 
 {{QUESTIONS_BLOCK}}
 
-## Output Schema
-
-The answer MUST conform exactly to the JSON schema at `{{OUTPUT_SCHEMA_REF}}`.
+{{OUTPUT_SCHEMA_BLOCK}}
 On a file-read error, answer exclusively with:
 `{ "blocker": "<file-path>", "reason": "<reason>" }`
 and stop.

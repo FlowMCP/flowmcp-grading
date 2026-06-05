@@ -1,5 +1,5 @@
 /**
- * SelectionLockfile — override validation salvage (gradingSpec/1.2.0).
+ * SelectionLockfile — override validation salvage (gradingSpec/3.0.0).
  *
  * The selection.lock.json LIFECYCLE (generate / read / diff) is DROPPED in v2:
  * there is no standalone lockfile any more — the frozen member pins live in

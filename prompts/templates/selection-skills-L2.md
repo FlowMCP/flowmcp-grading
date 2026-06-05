@@ -1,9 +1,9 @@
 ---
 area: selection-skills-L2
-specRef: flowmcp-spec/grading/1.1.0/13-skills.md#4
+specRef: flowmcp-spec/grading/3.0.0/13-skills.md#4
 personaRequired: true
 outputSchemaRef: prompts/output-schemas/selection-skills-L2.schema.json
-version: 1.0.0
+version: 3.0.0
 skillLevel: L2
 ---
 
@@ -40,9 +40,7 @@ the composition, and whether the composition happens without hidden defaults.
 
 {{QUESTIONS_BLOCK}}
 
-## Output Schema
-
-The answer MUST conform exactly to the JSON schema at `{{OUTPUT_SCHEMA_REF}}`.
+{{OUTPUT_SCHEMA_BLOCK}}
 On a file-read error, answer exclusively with:
 `{ "blocker": "<file-path>", "reason": "<reason>" }`
 and stop.
