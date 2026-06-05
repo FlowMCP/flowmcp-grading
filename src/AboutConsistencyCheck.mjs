@@ -1,7 +1,7 @@
 /**
  * AboutConsistencyCheck — text-vs-schema validator for About Resources.
  *
- * Per the grading spec (gradingSpec/1.2.0 §4 / §11):
+ * Per the grading spec (gradingSpec/3.0.0 §4 / §11):
  *   - Step 0 (pre-condition) + Step 1 (consistency check).
  *   - The About Resource is a markdown Resource declared in ONE schema of the
  *     namespace, stored at providers/<ns>/<schema>/resources/about/ — NOT a

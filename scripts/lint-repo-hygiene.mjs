@@ -26,6 +26,8 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
+import { GRADING_SPEC_VERSION } from '../src/data/specVersion.mjs'
+
 const REPO_ROOT = join( fileURLToPath( import.meta.url ), '..', '..' )
 
 const SCAN_DIRS = [ 'src', 'prompts', 'docs', 'bin', 'scripts', 'tests' ]
@@ -40,6 +42,14 @@ const EXCLUDED_PATHS = [
 const EXCLUDED_DIR_NAMES = [ 'node_modules', '.git', '.memo', 'grading-data', 'coverage', '.tmp' ]
 
 const MEMO_REF_REGEX = /\bmemo[\s_-]?\d+/i
+
+// Stale grading-spec-version guard (Befund E, F4 single-source): any
+// `gradingSpec/<x.y.z>` or `grading/<x.y.z>` literal whose version differs from
+// the single canonical GRADING_SPEC_VERSION is drift and fails the lint. The
+// version source is data/specVersion.mjs — change it there, not in scattered
+// literals. Historical version axes (15-versioning) and CHANGELOG migration
+// notes are out of scope (markdown under docs is allowed to cite older specs).
+const SPEC_VERSION_REGEX = /\b(?:gradingSpec|grading)\/(\d+\.\d+\.\d+)/g
 
 // Conservative non-English wordlist — distinctive words unlikely to collide
 // with English. Ambiguous words (die, der, das, also, bin, war) are
@@ -77,6 +87,11 @@ const scanFile = ( { file } ) => {
     const rel = relative( REPO_ROOT, file )
     const lines = readFileSync( file, 'utf-8' ).split( '\n' )
 
+    // The spec-version drift guard binds only to the surfaces that drifted in
+    // Befund E — source comments and prompt templates. Docs (versioning axes,
+    // CHANGELOG migration notes) legitimately cite older spec versions.
+    const versionGuarded = rel.startsWith( 'src/' ) === true || rel.startsWith( 'prompts/' ) === true
+
     const findings = lines.flatMap( ( line, idx ) => {
         const lineNo = idx + 1
         const hits = []
@@ -87,6 +102,14 @@ const scanFile = ( { file } ) => {
         const hasGermanWord = GERMAN_WORD_REGEX.test( line )
         if( hasUmlaut === true || hasGermanWord === true ) {
             hits.push( { rel, lineNo, kind: 'non-english', text: line.trim().slice( 0, 100 ) } )
+        }
+        if( versionGuarded === true ) {
+            const matches = [ ...line.matchAll( SPEC_VERSION_REGEX ) ]
+            matches
+                .filter( ( match ) => match[ 1 ] !== GRADING_SPEC_VERSION )
+                .forEach( ( match ) => {
+                    hits.push( { rel, lineNo, kind: 'spec-version-drift', text: `${match[ 0 ]} != canonical ${GRADING_SPEC_VERSION}` } )
+                } )
         }
         return hits
     } )

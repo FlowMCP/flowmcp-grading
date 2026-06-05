@@ -1,9 +1,9 @@
 ---
 area: selection-skills-L2
-specRef: flowmcp-spec/grading/1.1.0/13-skills.md#4
+specRef: flowmcp-spec/grading/3.0.0/13-skills.md#4
 personaRequired: true
 outputSchemaRef: prompts/output-schemas/selection-skills-L2.schema.json
-version: 1.0.0
+version: 3.0.0
 skillLevel: L2
 ---
 

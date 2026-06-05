@@ -1,7 +1,7 @@
 /**
  * PartialGrading — Partial vs Full grading-mode + mandatory-sequence validator.
  *
- * Per the grading spec (gradingSpec/1.2.0 §06 §8 — gradingMode + 5-status):
+ * Per the grading spec (gradingSpec/3.0.0 §06 §8 — gradingMode + 5-status):
  *   - First entry MUST be full
  *   - Last-before-stable MUST be full
  *   - Partial entries MUST NOT change aggregateGrade

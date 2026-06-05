@@ -1,5 +1,5 @@
 /**
- * GradingImport — the IN side of the IN/OUT round-trip (gradingSpec/1.2.0 §22.3.1).
+ * GradingImport — the IN side of the IN/OUT round-trip (gradingSpec/3.0.0 §22.3.1).
  *
  * `grading import <provider-path>`: a provider folder (one namespace, possibly
  * several schema .mjs files) flows from the real repository into the workbench

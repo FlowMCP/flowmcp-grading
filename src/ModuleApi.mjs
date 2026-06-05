@@ -38,10 +38,11 @@ import { HashGenerator } from './HashGenerator.mjs'
 import { Grading } from './Grading.mjs'
 import { PartialGrading } from './Phases/PartialGrading.mjs'
 import { RebuildIndex } from './RebuildIndex.mjs'
+import { GRADING_SPEC_VERSION } from './data/specVersion.mjs'
 
 
 // The six provider-scope Areas (single-schema validator, autonomous tier) per
-// gradingSpec/1.2.0 §5.1 areas 1-6. Each Area is a self-contained rubric.
+// gradingSpec/3.0.0 §5.1 areas 1-6. Each Area is a self-contained rubric.
 const SCHEMA_AREAS = Object.freeze( {
     'single-test': [ 'single-test' ],
     'tools-aggregate-schema': [ 'tools-aggregate-schema' ],
@@ -52,7 +53,7 @@ const SCHEMA_AREAS = Object.freeze( {
 } )
 
 // The five selection-scope Areas (selection validator, group-bound tier) per
-// gradingSpec/1.2.0 §5.1 areas 7-11. The legacy `lockfile` Area is DROPPED (the
+// gradingSpec/3.0.0 §5.1 areas 7-11. The legacy `lockfile` Area is DROPPED (the
 // lockfile lifecycle is gone — pins live in index.json.lockSnapshot). The 11th
 // Area `selection-aggregate` is the group-bound path to grade A.
 const SELECTION_AREAS = Object.freeze( {
@@ -76,6 +77,14 @@ class ModuleApi {
             schemaAreas: SCHEMA_AREA_KEYS.slice(),
             selectionAreas: SELECTION_AREA_KEYS.slice()
         }
+    }
+
+
+    // getSpecVersion — the single canonical grading-spec version (Befund E).
+    // Reads ONE source (data/specVersion.mjs) so no consumer re-hardcodes the
+    // version. NO SILENT DEFAULTS.
+    static getSpecVersion() {
+        return { gradingSpecVersion: GRADING_SPEC_VERSION }
     }
 
 

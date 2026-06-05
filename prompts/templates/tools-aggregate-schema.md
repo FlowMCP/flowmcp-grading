@@ -1,9 +1,9 @@
 ---
 area: tools-aggregate-schema
-specRef: flowmcp-spec/grading/1.1.0/06-determinism-and-tier.md#4
+specRef: flowmcp-spec/grading/3.0.0/06-determinism-and-tier.md#4
 personaRequired: false
 outputSchemaRef: prompts/output-schemas/tools-aggregate-schema.schema.json
-version: 1.0.0
+version: 3.0.0
 ---
 
 ## Pre-Instructions

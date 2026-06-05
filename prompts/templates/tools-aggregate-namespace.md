@@ -1,9 +1,9 @@
 ---
 area: tools-aggregate-namespace
-specRef: flowmcp-spec/grading/1.1.0/01-namespace-extensions.md
+specRef: flowmcp-spec/grading/3.0.0/04-phases-single.md
 personaRequired: false
 outputSchemaRef: prompts/output-schemas/tools-aggregate-namespace.schema.json
-version: 1.0.0
+version: 3.0.0
 ---
 
 ## Pre-Instructions

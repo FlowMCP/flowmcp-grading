@@ -1,7 +1,7 @@
 /**
  * PreConditionCheck — universal stable-gate shared by Selection-Grading and About-Verification.
  *
- * Per the grading spec (gradingSpec/1.2.0 §21):
+ * Per the grading spec (gradingSpec/3.0.0 §21):
  *   - Defines the universal pre-condition.
  *   - Step 0 — pre-condition check (mandatory).
  *

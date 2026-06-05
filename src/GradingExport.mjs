@@ -1,5 +1,5 @@
 /**
- * GradingExport — the OUT side of the IN/OUT round-trip (gradingSpec/1.2.0 §22.3.2).
+ * GradingExport — the OUT side of the IN/OUT round-trip (gradingSpec/3.0.0 §22.3.2).
  *
  * `grading export <namespace|selection>`: the graded workbench state flows back
  * toward the real repository. Two guarantees:

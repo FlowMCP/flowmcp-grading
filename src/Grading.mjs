@@ -62,7 +62,7 @@ const GRADE_ORDER = Object.freeze( [ 'F', 'D', 'C', 'B', 'A' ] )
 // gradingSystem/1.0.0 score-to-grade thresholds. Input is the weighted mean of
 // per-answer scores on the 1.0-5.0 scale (Scoring.computeWeightedSum). Bands are
 // scanned high-to-low; the first satisfied `min` wins. Documented in
-// gradingSpec/1.2.0 chapter 07-scoring-vs-grading.
+// gradingSpec/3.0.0 chapter 07-scoring-vs-grading.
 const GRADE_THRESHOLDS = Object.freeze( [
     { min: 4.5, grade: 'A' },
     { min: 3.5, grade: 'B' },
@@ -71,7 +71,7 @@ const GRADE_THRESHOLDS = Object.freeze( [
     { min: 0.0, grade: 'F' }
 ] )
 
-// v2 envelope vocabularies (gradingSpec/1.2.0 §3.Y / §5.1).
+// v2 envelope vocabularies (gradingSpec/3.0.0 §3.Y / §5.1).
 const VALID_HARNESSES = [ 'claude-code' ]
 const VALID_NODE_STATUSES = [ 'pending', 'blocked', 'graded', 'stable', 'rejected' ]
 // Closed reason set for a no-grade blocked record (emit-on-failure, PRD-001).
@@ -199,7 +199,7 @@ class Grading {
 
 
     /**
-     * formatGradingFilename — v2 grading-filename grammar (gradingSpec/1.2.0 §17.4):
+     * formatGradingFilename — v2 grading-filename grammar (gradingSpec/3.0.0 §17.4):
      *   `‹area›[--‹basePersona›--‹lens›]--‹timestamp›.json`
      * The timestamp is the LAST segment before `.json` (no random hash), so a naive
      * `sort().at(-1)` yields the newest grading (RebuildIndex.resolveLatest relies on

@@ -1,7 +1,7 @@
 /**
  * StablePromotion — promotes a schema to the 5-status `stable` when conditions are met.
  *
- * Per the grading spec (gradingSpec/1.2.0):
+ * Per the grading spec (gradingSpec/3.0.0):
  *   - The last grading entry before stable MUST be full.
  *   - The node status lives in the rollup `index.json` (the legacy
  *     phase-status/single/<ns>--<tool>.json is dropped); StablePromotion writes

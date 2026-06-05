@@ -56,7 +56,7 @@ const AREAS_NEUTRAL = Object.freeze( [
     'tools-aggregate-namespace'
 ] )
 
-// 11 grading Areas (gradingSpec/1.2.0 §5.1) — the 11th is `selection-aggregate`.
+// 11 grading Areas (gradingSpec/3.0.0 §5.1) — the 11th is `selection-aggregate`.
 const KNOWN_AREAS = Object.freeze( AREAS_WITH_PERSONA.concat( AREAS_NEUTRAL ) )
 
 // Selection-side Areas run by the fleet's selection step (areas 7-11). The

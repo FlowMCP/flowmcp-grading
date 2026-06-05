@@ -1,9 +1,9 @@
 ---
 area: selection-aggregate
-specRef: flowmcp-spec/grading/1.2.0/24-selection-aggregate.md
+specRef: flowmcp-spec/grading/3.0.0/24-selection-aggregate.md
 personaRequired: true
 outputSchemaRef: prompts/output-schemas/selection-aggregate.schema.json
-version: 1.0.0
+version: 3.0.0
 ---
 
 ## Pre-Instructions

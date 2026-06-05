@@ -1,9 +1,9 @@
 ---
 area: namespace-skills
-specRef: flowmcp-spec/grading/1.1.0/13-skills.md#3
+specRef: flowmcp-spec/grading/3.0.0/13-skills.md#3
 personaRequired: true
 outputSchemaRef: prompts/output-schemas/namespace-skills.schema.json
-version: 1.0.0
+version: 3.0.0
 ---
 
 <!-- Spec 13 §3.1 declares the persona reference as OPTIONAL for namespace skills.
