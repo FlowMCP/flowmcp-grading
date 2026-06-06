@@ -362,8 +362,8 @@ describe( 'DataPretest HTTP-4xx / empty-data rules', () => {
 } )
 
 
-describe( 'DataPretest stub primitives', () => {
-    test( 'skill / prompt / selection-member stubs never count toward the threshold', async () => {
+describe( 'DataPretest structural primitives (real v4 validation, F10/P1)', () => {
+    test( 'skill / prompt / selection-member never count toward the downloadable threshold and never reach the fetch layer', async () => {
         const main = {
             namespace: 'demo',
             requiredServerParams: [],
@@ -383,9 +383,74 @@ describe( 'DataPretest stub primitives', () => {
         expect( out.passedDownloadable ).toBe( 0 )
         expect( out.results.length ).toBeGreaterThan( 0 )
         expect( out.results.every( ( r ) => r.working === false ) ).toBe( true )
-        // Stub primitives must never reach the live fetch layer.
+        // Structural primitives must never reach the live fetch layer.
         expect( fetchMock ).not.toHaveBeenCalled()
         expect( executeResourceMock ).not.toHaveBeenCalled()
+    } )
+
+    test( 'a structurally INVALID skill flips an otherwise-green schema to red via DPT-009 (real validation, not stub-pass)', async () => {
+        fetchQueue = [
+            successFetch( { result: '284938' } ),
+            successFetch( { result: '190021' } )
+        ]
+        const main = makeMainWithToolTests( { count: 2 } )
+        // missing version / whenToUse / type / description / content / output
+        main.skills = [ { name: 'incomplete' } ]
+
+        const out = await DataPretest.run( {
+            namespace: 'etherscan',
+            toolName: 'getBalance',
+            main,
+            gradingDataDir: tempRoot
+        } )
+
+        // the downloadable tool itself passes its Bar=2 ...
+        expect( out.passedDownloadable ).toBe( 2 )
+        expect( out.perTool.getBalance ).toMatchObject( { working: 2 } )
+        // ... yet the invalid skill keeps the schema from deterministic-green
+        expect( out.ok ).toBe( false )
+        expect( out.stopReason ).toBe( 'structural-primitive-validation-failed' )
+        expect( out.errors.some( ( e ) => e.startsWith( 'DPT-009' ) ) ).toBe( true )
+        expect( out.errors.some( ( e ) => e.includes( 'skill "incomplete"' ) ) ).toBe( true )
+    } )
+
+    test( 'a structurally VALID prompt does NOT false-fail a green schema (no DPT-009)', async () => {
+        fetchQueue = [
+            successFetch( { result: '284938' } ),
+            successFetch( { result: '190021' } )
+        ]
+        const main = makeMainWithToolTests( { count: 2 } )
+        main.prompts = [ { name: 'summarize', tests: [ {} ] } ]
+
+        const out = await DataPretest.run( {
+            namespace: 'etherscan',
+            toolName: 'getBalance',
+            main,
+            gradingDataDir: tempRoot
+        } )
+
+        expect( out.ok ).toBe( true )
+        expect( out.stopReason ).toBeNull()
+        expect( out.errors.some( ( e ) => e.startsWith( 'DPT-009' ) ) ).toBe( false )
+    } )
+
+    test( 'a prompt with a non-string name fails structurally via DPT-009', async () => {
+        fetchQueue = [
+            successFetch( { result: '284938' } ),
+            successFetch( { result: '190021' } )
+        ]
+        const main = makeMainWithToolTests( { count: 2 } )
+        main.prompts = [ { name: 42, tests: [ {} ] } ]
+
+        const out = await DataPretest.run( {
+            namespace: 'etherscan',
+            toolName: 'getBalance',
+            main,
+            gradingDataDir: tempRoot
+        } )
+
+        expect( out.ok ).toBe( false )
+        expect( out.errors.some( ( e ) => e.startsWith( 'DPT-009' ) && e.includes( 'prompt' ) ) ).toBe( true )
     } )
 } )
 
