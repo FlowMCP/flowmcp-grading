@@ -37,8 +37,10 @@
  * (default 2 — the pass bar of 2 working tests per tool) working downloadable
  * tests. A working test is a `tool` or `resource` primitive with status === true
  * AND non-empty data. An HTTP 4xx / status:false / empty payload is a FAIL, never
- * a pass. skill / prompt / selection-member primitives are stubs and never count
- * toward the threshold.
+ * a pass. skill / prompt / selection-member primitives never count toward the
+ * downloadable threshold, but are validated structurally against the real v4
+ * modules (SkillValidator / SelectionValidator / field check); a structurally
+ * invalid one fails the schema via DPT-009 (F10: real coverage, not stub-pass).
  *
  * Readiness ladder (per-tool `level`): the working-test count maps to
  * a graded readiness rung so downstream consumers can tell "passes the bar" from
@@ -60,6 +62,7 @@ import { createRequire } from 'node:module'
 import { pathToFileURL, fileURLToPath } from 'node:url'
 
 import { FlowMCP } from 'flowmcp/v2'
+import { SkillValidator, SelectionValidator } from 'flowmcp/v4'
 
 import { HashGenerator } from './HashGenerator.mjs'
 
@@ -345,6 +348,23 @@ class DataPretest {
             .filter( ( entry ) => entry[ 'working' ] === true )
             .length
 
+        // Structural primitives (skill / prompt / selection-member) are validated
+        // against the real v4 modules (SkillValidator / SelectionValidator / field
+        // check), no longer stub-passed. They never count toward the downloadable
+        // working-tests bar, but a structurally INVALID one is a genuine failure that
+        // keeps a schema from being deterministic-green (F10: real coverage). The
+        // current v4 corpus declares none of these primitives, so this gate is a
+        // future-proofing safeguard with zero impact on existing schemas.
+        const STRUCTURAL_PRIMITIVES = [ 'skill', 'prompt', 'selection-member' ]
+        const structuralFailures = results
+            .filter( ( entry ) => STRUCTURAL_PRIMITIVES.includes( entry[ 'primitive' ] ) && entry[ 'status' ] !== true )
+            .map( ( entry ) => {
+                const reason = entry[ 'error' ] === null || entry[ 'error' ] === undefined
+                    ? 'structurally invalid'
+                    : entry[ 'error' ]
+                return `${entry[ 'primitive' ]} "${entry[ 'name' ]}": ${reason}`
+            } )
+
         // Per-tool gate (the spec is per-tool, NOT a schema-file total): every
         // downloadable tool must reach its EFFECTIVE bar of working tests on its own.
         // workingByTool is seeded from the DECLARED tools (PRD-013) so a tool with 0
@@ -385,22 +405,30 @@ class DataPretest {
         // effective bar. A purely key-gated schema is NOT ok (it is not evaluable) but
         // is NOT counted as a FAIL — stopReason names key-gated explicitly. No
         // downloadable tools at all (e.g. only stubs) stays a FAIL.
-        const ok = keyGated === false && downloadableToolCount > 0 && toolsBelowThreshold.length === 0
+        const ok = keyGated === false && downloadableToolCount > 0 && toolsBelowThreshold.length === 0 && structuralFailures.length === 0
         const stopReason = ok
             ? null
             : ( keyGated
                 ? 'key-gated-not-evaluable-without-key'
                 : ( downloadableToolCount === 0
                     ? 'no-downloadable-tools'
-                    : `tools-below-${minWorkingTests}-working-downloadable-tests` ) )
+                    : ( toolsBelowThreshold.length > 0
+                        ? `tools-below-${minWorkingTests}-working-downloadable-tests`
+                        : 'structural-primitive-validation-failed' ) ) )
 
         // DPT-003 (real FAIL abort) is emitted ONLY for genuine below-bar failures —
         // never for a purely key-gated schema (that surfaces as DPT-007, its own class).
-        if( !ok && keyGated === false ) {
+        if( !ok && keyGated === false && ( downloadableToolCount === 0 || toolsBelowThreshold.length > 0 ) ) {
             const detail = downloadableToolCount === 0
                 ? 'no downloadable tools with working tests'
                 : `tool(s) below effective bar: ${toolsBelowThreshold.join( ', ' )}`
             errors.push( `DPT-003: Data-pretest abort: ${detail}` )
+        }
+
+        // DPT-009: a structurally invalid skill / prompt / selection primitive keeps a
+        // schema from deterministic-green even when every downloadable tool passes.
+        if( keyGated === false && structuralFailures.length > 0 ) {
+            errors.push( `DPT-009: Structural primitive validation failed: ${structuralFailures.join( '; ' )}` )
         }
 
         const totalByTool = results
@@ -903,6 +931,42 @@ class DataPretest {
     }
 
 
+    // #isRateLimited — detect an HTTP 429 / "Too Many Requests" in a test error so the
+    // resilient runner can back off and retry instead of recording a false FAIL.
+    static #isRateLimited( { error } ) {
+        if( error === undefined || error === null ) { return false }
+        const text = String( error )
+        return text.includes( '429' ) || text.includes( 'Too Many Requests' )
+    }
+
+
+    // #executeTestResilient — wrap #executeTest with an exponential backoff that fires
+    // ONLY on a rate-limit (429). A burst of tests against one provider can trip its
+    // limit and poison the deterministic verdict (a false "too few working tests"),
+    // because the legitimate calls return 429 instead of data. Retrying with a growing
+    // pause recovers the real result. Successes and non-429 failures return immediately,
+    // so the happy path keeps zero added latency.
+    static async #executeTestResilient( {
+        typedTest, schemaMain, handlerMap = {}, resourceHandlerMap = {},
+        serverParams = {}, sharedLists = {}, fullOutput = false,
+        maxRetries = 3, baseDelayMs = 600
+    } ) {
+        const attempt = async ( n ) => {
+            const result = await DataPretest.#executeTest( {
+                typedTest, schemaMain, handlerMap, resourceHandlerMap,
+                serverParams, sharedLists, fullOutput
+            } )
+            if( result[ 'status' ] === true ) { return result }
+            if( n >= maxRetries ) { return result }
+            if( DataPretest.#isRateLimited( { error: result[ 'error' ] } ) === false ) { return result }
+            await DataPretest.#sleep( { ms: baseDelayMs * Math.pow( 2, n ) } )
+            return attempt( n + 1 )
+        }
+
+        return attempt( 0 )
+    }
+
+
     // Primitive-aware dispatcher. Always returns
     // { status, error, output, durationMs, primitive } — never throws.
     static async #executeTest( {
@@ -979,19 +1043,52 @@ class DataPretest {
                 return { status: ok, error, output, durationMs: Date.now() - startedAt, primitive }
             }
 
-            // skill / prompt / selection-member are structural stubs. They report a
-            // placeholder pass but carry no downloadable data, so they can NOT meet
-            // the working-tests threshold (enforced in run() via DOWNLOADABLE_PRIMITIVES).
-            if( primitive === 'skill' || primitive === 'prompt' || primitive === 'selection-member' ) {
-                return {
-                    status: true,
-                    error: null,
-                    output: `${primitive}-structural-stub`,
-                    durationMs: Date.now() - startedAt,
-                    primitive
-                }
+            // skill / prompt / selection-member carry no downloadable data, so they
+            // never meet the working-tests threshold (enforced in run() via
+            // DOWNLOADABLE_PRIMITIVES). They are now validated STRUCTURALLY against the
+            // real v4 modules instead of an unconditional stub-pass: a structurally
+            // invalid primitive returns status:false and is surfaced by run() as a
+            // structural failure (it does not contribute to the working-tests count).
+            if( primitive === 'skill' ) {
+                const tools = schemaMain[ 'tools' ] === undefined ? {} : schemaMain[ 'tools' ]
+                const resources = schemaMain[ 'resources' ] === undefined ? {} : schemaMain[ 'resources' ]
+                const skill = typedTest[ 'context' ][ 'skill' ]
+                const skillName = typedTest[ 'name' ]
+                const { status, messages } = SkillValidator.validate( {
+                    skills: { [ skillName ]: skill },
+                    tools,
+                    resources
+                } )
+                const error = status ? null : ( messages[ 0 ] === undefined ? 'skill structurally invalid' : messages[ 0 ] )
+                return { status, error, output: `skill-structural:${skillName}`, durationMs: Date.now() - startedAt, primitive }
             }
 
+            if( primitive === 'selection-member' ) {
+                // Single-schema structural validation of the selection block via the real
+                // v4 module. Catalog-resolvability (SEL003) needs cross-schema registry
+                // data not available in a per-schema pretest, so it is omitted here.
+                const selection = schemaMain[ 'selection' ] === undefined ? null : schemaMain[ 'selection' ]
+                const { valid, errors } = selection === null
+                    ? { valid: false, errors: [ 'selection block missing on schema' ] }
+                    : SelectionValidator.validate( { selection, catalog: null } )
+                const error = valid ? null : ( errors[ 0 ] === undefined ? 'selection structurally invalid' : errors[ 0 ] )
+                return { status: valid, error, output: `selection-member:${typedTest[ 'name' ]}`, durationMs: Date.now() - startedAt, primitive }
+            }
+
+            // prompt has no dedicated v4 validator (no PromptValidator export). The
+            // honest structural check is field-level: a prompt must carry a string name.
+            if( primitive === 'prompt' ) {
+                const prompt = typedTest[ 'context' ][ 'prompt' ]
+                const status = prompt !== undefined && prompt !== null && typeof prompt[ 'name' ] === 'string' && prompt[ 'name' ].length > 0
+                const error = status ? null : 'prompt structurally invalid: missing string name'
+                return { status, error, output: `prompt-structural:${typedTest[ 'name' ]}`, durationMs: Date.now() - startedAt, primitive }
+            }
+
+            // The `agent` primitive is intentionally OUT OF SCOPE for the data-pretest:
+            // there is no v4 agent runtime to execute against, #getAllTestsTyped never emits
+            // agent test entries, and the v4 corpus declares zero agent primitives. An
+            // agent entry reaching this dispatcher is therefore an unexpected input and
+            // is reported as an unknown primitive rather than silently passed.
             return {
                 status: false,
                 error: `unknown primitive: ${primitive}`,
@@ -1025,7 +1122,7 @@ class DataPretest {
                 if( throttleMs > 0 && index > 0 ) {
                     await DataPretest.#sleep( { ms: throttleMs } )
                 }
-                const result = await DataPretest.#executeTest( {
+                const result = await DataPretest.#executeTestResilient( {
                     typedTest,
                     schemaMain: main,
                     handlerMap,
