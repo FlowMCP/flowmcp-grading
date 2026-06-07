@@ -2,6 +2,16 @@
 
 All notable changes to `flowmcp-grading` are documented here.
 
+## 2.5.0 — 2026-06-07
+
+### Fixed
+
+- `DataPretest.#persist` no longer caches a result that FAILED on an infrastructure
+  error (sqlite bindings, TLS, network). Such errors are local and transient; caching
+  them turned a fixable environment problem into a sticky FAIL that survived the fix.
+  Infra-failed results are now dropped from the per-test cache, so the next run
+  re-fetches them. A real HTTP status (4xx/5xx) is the API's verdict and is still cached.
+
 ## 2.3.0 — 2026-06-04
 
 ### Added
