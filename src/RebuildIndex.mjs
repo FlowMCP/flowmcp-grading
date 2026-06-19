@@ -992,8 +992,13 @@ class RebuildIndex {
 
     static async #listSchemaDirs( { namespaceDir } ) {
         const all = await RebuildIndex.#listSubDirs( { dir: namespaceDir } )
+        // Exclude meta dirs (`_gradings`, the per-schema emit dir `_schema`, and any
+        // future `_`-prefixed island dir). Schema names are `[a-z][a-z0-9-]*`, so none
+        // start with `_` — excluding them keeps the emit scaffolding from surfacing as
+        // a phantom pending schema that taints the rollup + the schema count.
         return all
             .filter( ( name ) => name !== GRADINGS_DIR )
+            .filter( ( name ) => name.startsWith( '_' ) === false )
     }
 
 
