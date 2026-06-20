@@ -11,7 +11,7 @@ import { PromptBuilder } from './PromptBuilder.mjs'
 // prompts/ tree ships with the package (no package.json#files exclusion).
 const MODULE_DIR = dirname( fileURLToPath( import.meta.url ) )
 const PACKAGE_PROMPTS_ROOT = resolve( MODULE_DIR, '..', 'prompts' )
-// Memo 141 — the technical Schema-Personas (the review lenses) ship with this
+// The technical Schema-Personas (the review lenses) ship with this
 // package under personas/. The CLI resolves the lens file from here so it does not
 // have to guess the installed package path (mirrors getPromptsRoot).
 const PACKAGE_PERSONAS_ROOT = resolve( MODULE_DIR, '..', 'personas' )
@@ -50,9 +50,9 @@ const PACKAGE_PERSONAS_ROOT = resolve( MODULE_DIR, '..', 'personas' )
 // Deterministic NAME-token -> substitution-key map (PRD-3.2). The emit context
 // supplies real values; any token that survives without one is an APL-010 torso.
 //
-// Memo 141 — the four persona NAME tokens used by the persona-required Schema-Area
-// templates (about-namespace, namespace-skills) and the Selection templates. Before
-// Memo 141 these tokens were absent here, so the persona-required areas could not be
+// The four persona NAME tokens used by the persona-required Schema-Area
+// templates (about-namespace, namespace-skills) and the Selection templates. Previously
+// these tokens were absent here, so the persona-required areas could not be
 // composed (they deferred). With them mapped, the CLI emit context fills the resolved
 // base persona + lens (name + repo-relative file); an unfilled token is still a hard
 // APL-010 torso (NO SILENT DEFAULT preserved).
@@ -118,7 +118,7 @@ class AreaPromptLoader {
     }
 
 
-    // Memo 141 — package-local personas/ root (the technical Schema-Persona lenses).
+    // Package-local personas/ root (the technical Schema-Persona lenses).
     // The CLI resolves the lens file (e.g. documentation-dx-reviewer.md) from here.
     static getPersonasRoot() {
         const personasRoot = PACKAGE_PERSONAS_ROOT
@@ -206,7 +206,7 @@ class AreaPromptLoader {
             }
         }
 
-        // Memo 141 — composition-time applicability gate. When the caller supplies a
+        // Composition-time applicability gate. When the caller supplies a
         // persona-area allow-list (the CLI emit path), a persona-required area NOT on
         // the list stays deferred even though a persona is available. This is how
         // namespace-skills is skipped for namespaces that carry no skills (its

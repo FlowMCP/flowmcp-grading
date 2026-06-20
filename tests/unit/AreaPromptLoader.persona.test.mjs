@@ -3,7 +3,7 @@ import { describe, test, expect } from '@jest/globals'
 import { AreaPromptLoader } from '../../src/AreaPromptLoader.mjs'
 
 
-// Memo 141 — the persona-required Schema-Area wiring: the four persona NAME tokens
+// The persona-required Schema-Area wiring: the four persona NAME tokens
 // ({{BASE_PERSONA_NAME/_FILE}}, {{LENS_NAME/_FILE}}), the package personas root, and
 // the composition-time personaAreas allow-list that gates which persona-required
 // areas actually compose (about-namespace corpus-wide, namespace-skills only when a
@@ -37,7 +37,7 @@ const fullSubstitutions = {
 }
 
 
-describe( 'AreaPromptLoader.getPersonasRoot (Memo 141)', () => {
+describe( 'AreaPromptLoader.getPersonasRoot', () => {
     test( 'resolves the package-local personas/ tree', () => {
         const { personasRoot } = AreaPromptLoader.getPersonasRoot()
 
@@ -47,7 +47,7 @@ describe( 'AreaPromptLoader.getPersonasRoot (Memo 141)', () => {
 } )
 
 
-describe( 'AreaPromptLoader.loadArea — persona NAME tokens (Memo 141)', () => {
+describe( 'AreaPromptLoader.loadArea — persona NAME tokens', () => {
     test( 'about-namespace fills all four persona tokens — no torso survives', async () => {
         const { promptsRoot } = AreaPromptLoader.getPromptsRoot()
         const { prompt } = await AreaPromptLoader.loadArea( {
@@ -75,7 +75,7 @@ describe( 'AreaPromptLoader.loadArea — persona NAME tokens (Memo 141)', () => 
 } )
 
 
-describe( 'AreaPromptLoader.loadAllAreas — personaAreas allow-list (Memo 141)', () => {
+describe( 'AreaPromptLoader.loadAllAreas — personaAreas allow-list', () => {
     test( 'about-namespace composes, namespace-skills defers when not allow-listed', async () => {
         const { promptsRoot } = AreaPromptLoader.getPromptsRoot()
         const { areas } = await AreaPromptLoader.loadAllAreas( {
