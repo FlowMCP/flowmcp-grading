@@ -2,6 +2,18 @@
 
 All notable changes to `flowmcp-grading` are documented here.
 
+## 2.5.0 — 2026-06-20 (Memo 141)
+
+### Added
+
+- **Persona-required Schema-Areas in emit composition** — `AreaPromptLoader` now
+  composes the `about-namespace` area with the `schema-maintainer--documentation-dx-reviewer`
+  persona (base `spec/personas/schema-maintainer.md`, lens
+  `grading/personas/documentation-dx-reviewer.md`). Four persona name-tokens are wired into
+  `NAME_TOKEN_TO_KEY`, and a `personaAreas` allow-list gates composition (about corpus-wide;
+  namespace-skills only when skills are present). This unblocks the About-Persona grading path
+  end-to-end (`about:graded`).
+
 ## 2.3.0 — 2026-06-04
 
 ### Added
