@@ -692,6 +692,11 @@ class DataPretest {
 
         const downloadable = results
             .filter( ( entry ) => DOWNLOADABLE_PRIMITIVES.includes( entry[ 'primitive' ] ) )
+            // Never persist a result that FAILED on an infrastructure error (sqlite
+            // bindings, TLS, network). Caching it would make a transient local/transport
+            // problem a sticky FAIL that survives the fix; leaving it out makes the next
+            // run re-fetch that test instead of reusing a false negative.
+            .filter( ( entry ) => ( entry[ 'status' ] === false && DataPretest.#isInfraError( { error: entry[ 'error' ] } ) ) === false )
 
         const counters = {}
         await downloadable.reduce( ( promise, entry ) => promise.then( async () => {
@@ -937,6 +942,29 @@ class DataPretest {
         if( error === undefined || error === null ) { return false }
         const text = String( error )
         return text.includes( '429' ) || text.includes( 'Too Many Requests' )
+    }
+
+
+    // #isInfraError — distinguish a local/transport failure (sqlite bindings, TLS,
+    // network) from a genuine API verdict. A real HTTP response (4xx/5xx) is the API
+    // answering and MUST be cached; an infrastructure error is transient and local, so
+    // caching it would turn a fixable environment problem into a sticky FAIL that
+    // survives the fix. Such results are excluded from #persist (cache-miss next run).
+    static #isInfraError( { error } ) {
+        if( error === undefined || error === null ) { return false }
+        const text = String( error )
+        // An explicit HTTP status is the API's own answer — never treat it as infra.
+        if( /HTTP\s*\d{3}/.test( text ) === true ) { return false }
+        const lowered = text.toLowerCase()
+        const infraSignals = [
+            'better_sqlite3', 'bindings', 'compiled against a different',
+            'econnrefused', 'enotfound', 'etimedout', 'eai_again', 'socket hang up',
+            'fetch failed', 'no response received', 'network error',
+            'certificate', 'self-signed', 'self signed', 'unable_to_verify',
+            'depth_zero_self_signed', 'eproto', 'err_tls'
+        ]
+
+        return infraSignals.some( ( signal ) => lowered.includes( signal ) )
     }
 
 
