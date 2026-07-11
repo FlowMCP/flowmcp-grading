@@ -1,7 +1,7 @@
 /**
  * FlowMCP — MIT License
  *
- * GradingEmit (Memo 152 / PRD-019 F21) — the grading emit-prompt composition
+ * GradingEmit — the grading emit-prompt composition
  * (Emit-Skill textbau). Moved VERBATIM from the CLI (flowmcp-cli GradingEmit)
  * because prompt composition is grading-domain. The CLI keeps a thin bridge
  * (gradingRun dispatch + gradingEmitPrompts orchestration) that calls into this
@@ -18,7 +18,7 @@ import { existsSync, readdirSync, statSync } from 'node:fs'
 
 
 class GradingEmit {
-    // NOTE (Memo 152 / PRD-019 F21): resolveMaxIterations / resolveMaxTurns stay in
+    // NOTE: resolveMaxIterations / resolveMaxTurns stay in
     // the CLI bridge (they parse CLI flags before the grading module is even required,
     // so gradingRun's flag-validation error paths must not depend on this class).
     // Everything below is the grading-domain Emit-Skill textbau.
@@ -69,9 +69,9 @@ class GradingEmit {
     }
 
 
-    // Compose one prompt per grading area via the AreaPromptLoader (Memo 097
-    // Kap. 9.0). The loader reuses PromptBuilder.build and resolves the package-
-    // local prompts/ tree itself, so the CLI does not guess paths.
+    // Compose one prompt per grading area via the AreaPromptLoader. The loader
+    // reuses PromptBuilder.build and resolves the package-local prompts/ tree
+    // itself, so the CLI does not guess paths.
     static async composeGradingAreas( { grading, flow, persona = null, personaAreas = null, substitutions = null } ) {
         const AreaPromptLoader = grading[ 'AreaPromptLoader' ]
         if( AreaPromptLoader === undefined || AreaPromptLoader === null ) {
@@ -81,7 +81,7 @@ class GradingEmit {
         // PRD-3.2: pass the substitution context so the composed prompts carry real
         // schema paths + tool/namespace names (no torso). A null context keeps the
         // legacy placeholder behaviour (back-compat for callers without schema data).
-        // Memo 141: pass the resolved Schema-Persona so the persona-required areas
+        // Pass the resolved Schema-Persona so the persona-required areas
         // (about-namespace, namespace-skills) are COMPOSED here instead of deferred.
         // A null persona keeps the legacy defer behaviour (Selection/Task-B flow).
         // personaAreas is the composition-time applicability allow-list (about-namespace
@@ -98,7 +98,7 @@ class GradingEmit {
     // namespace, so {{TOOL_NAME}} resolves to the joined declared tool list and
     // {{SCHEMA_NAME}} to the schema name (single schema) or the namespace.
     //
-    // Memo 141 — the substitution context additionally carries the persona-required
+    // The substitution context additionally carries the persona-required
     // Schema-Area inputs: the resolved base persona + lens (name + repo-relative file,
     // filling the four persona NAME tokens and the {{personaPath}}/{{lensPath}} file
     // map) plus the per-namespace {{aboutPath}}, {{namespacePath}}, {{skillPath}} and
@@ -121,9 +121,9 @@ class GradingEmit {
             ? GradingEmit.toRepoRelativePath( { cwd, 'path': firstPretest.summaryPath } )
             : `providers/${namespace}`
 
-        // Memo 141 — per-namespace persona + resource paths. The namespace source dir
+        // Per-namespace persona + resource paths. The namespace source dir
         // is the dirname of the first live schema's sourcePath; the About page lives at
-        // <nsDir>/resources/about/<ns>-about.md (Memo 137 convention). domainKnowledge
+        // <nsDir>/resources/about/<ns>-about.md (the standard about-page convention). domainKnowledge
         // for a namespace-skill review is its About page (the canonical namespace
         // description). The skill ({{SKILL_NAME}}/{{skillPath}}) is the first skill the
         // namespace declares, or empty when it has none (namespace-skills then stays
@@ -158,7 +158,7 @@ class GradingEmit {
     }
 
 
-    // Memo 141 — the resolved technical Schema-Persona for the persona-required
+    // The resolved technical Schema-Persona for the persona-required
     // Schema-Areas (about-namespace, namespace-skills): the spec base persona
     // `schema-maintainer` reviewed through the `documentation-dx-reviewer` lens
     // (the about/skills documentation lens). Slug convention `<base>--<lens>`.
@@ -171,7 +171,7 @@ class GradingEmit {
     }
 
 
-    // Memo 141 — resolve repo-relative paths to the base persona + lens files. The
+    // Resolve repo-relative paths to the base persona + lens files. The
     // lens ships with the grading package (AreaPromptLoader.getPersonasRoot); the base
     // persona is the spec single-source-of-truth in repos/flowmcp-spec/personas. Both
     // are resolved against candidate locations and the first existing one wins; the
@@ -207,7 +207,7 @@ class GradingEmit {
     }
 
 
-    // Memo 141 — find the first skill a namespace declares (<nsDir>/skills/*.mjs).
+    // Find the first skill a namespace declares (<nsDir>/skills/*.mjs).
     // Returns empty strings when the namespace has none; the caller then keeps
     // namespace-skills off the personaAreas allow-list (no {{SKILL_NAME}} torso).
     static resolveFirstSkill( { nsDir } ) {
@@ -229,10 +229,10 @@ class GradingEmit {
     }
 
 
-    // Memo 112 — assemble the ONE self-contained Emit-Skill as a numbered, single-
+    // Assemble the ONE self-contained Emit-Skill as a numbered, single-
     // authored runbook (Zone 1 harness / Zone 2 numbered tasks / Zone 3 return).
     //
-    // The three-zone model (Memo 112 Kap 3): the output contract is explained ONCE
+    // The three-zone model: the output contract is explained ONCE
     // in Zone 1 (no per-area duplication of the full schema), the middle is a
     // numbered Ablaufplan that names every schema file explicitly (no CSV tool blob,
     // no "think anew every time"), and Zone 3 carries the Task-ID + consume command.
@@ -241,7 +241,7 @@ class GradingEmit {
     // it is decomposed into its parts (intro sentence, questions list, area-specific
     // output constraints) and re-rendered numbered. Frontmatter, the empty
     // `## Pre-Instructions` header and the duplicated `## Question(s)`/`## Questions`
-    // headers are dropped by reconstruction (Memo 112 M1–M3). The big envelope JSON
+    // headers are dropped by reconstruction. The big envelope JSON
     // appears once in Zone 1, not per area (M6).
     static buildEmitSkill( { target, flow, namespace, taskId, emittedAreas, gatedAreas, payloadSkeleton, liveSchemas, pretests, cwd, scopeName = null, runId = null, worklist = null } ) {
         const ready = emittedAreas
@@ -258,14 +258,14 @@ class GradingEmit {
         // schema sub-agents, so they are not separate orchestrator steps — F10).
         const namespaceAreas = ready.filter( ( a ) => GradingEmit.emitAreaUnit( { 'area': a.area } ) === 'namespace' )
 
-        // Memo 112 — a schema-scoped emit is a self-contained per-schema sub-skill:
+        // A schema-scoped emit is a self-contained per-schema sub-skill:
         // the literal prompt one sub-agent gets (no "create tasks" step, returns ONE
         // JSON the orchestrator collects). The namespace emit below is the orchestrator.
         if( scopeName !== null && scopeName !== undefined ) {
             return GradingEmit.buildSchemaSubSkill( { namespace, scopeName, taskId, ready, schemaGroups, singleTestArea } )
         }
 
-        // Memo 112 (REV-05) — the namespace emit is a pure ORCHESTRATOR: it carries NO
+        // The namespace emit is a pure ORCHESTRATOR: it carries NO
         // grading content (questions/contract live ONLY in each per-schema sub-skill).
         // It just tells the main agent to dispatch one sub-agent per schema, each with
         // the schema's own `<namespace>/<schema> --emit-prompts` command as its prompt.
@@ -281,7 +281,7 @@ class GradingEmit {
         ].join( '\n' )
 
         const runFlag = runId !== null ? runId : taskId
-        // Memo 112 P6.3 — dispatch ONLY the worklist (ungraded / stale). A null worklist
+        // Dispatch ONLY the worklist (ungraded / stale). A null worklist
         // means "no filter" → dispatch every schema (unchanged behavior). Fresh schemas
         // (graded + schemaHash unchanged) are listed as skipped, not re-graded.
         const dispatchGroups = worklist === null
@@ -314,7 +314,7 @@ class GradingEmit {
             ? [ '', '', '## Step 2 — Namespace-wide areas (after every schema is done)', '', namespaceLines ].join( '\n' )
             : ''
 
-        // Memo 112 P6.4 — the outer loop: poll progress (transient per-run state) until
+        // The outer loop: poll progress (transient per-run state) until
         // every dispatched schema is scored, re-dispatch any that stalled, then finalize
         // ONCE (persistent namespace rollup + recommendation). maxTurns is the Notausgang.
         const step3 = [
@@ -354,7 +354,7 @@ class GradingEmit {
     }
 
 
-    // Memo 112 (REV-05) — the self-contained per-schema sub-skill: the literal prompt
+    // The self-contained per-schema sub-skill: the literal prompt
     // ONE sub-agent receives to grade ONE schema. It carries EVERYTHING (minimal
     // contract + questions + ordered per-tool steps + a PRE-FILLED return JSON + the
     // self-consume command), so nothing depends on a shared doc being in context. The
@@ -444,7 +444,7 @@ class GradingEmit {
     }
 
 
-    // Memo 112 (REV-05) — the PRE-FILLED per-schema return JSON. One results[] per
+    // The PRE-FILLED per-schema return JSON. One results[] per
     // ready area, with the question ids already laid out and `null` scores + empty
     // reasoning for the sub-agent to fill. Per-tool area → one result per tool (with a
     // `tool` key); per-schema area → exactly one result. consume-scores count-checks
@@ -467,7 +467,7 @@ class GradingEmit {
     }
 
 
-    // Memo 112 (REV-04) — group the per-tool steps by their declaring schema, so the
+    // Group the per-tool steps by their declaring schema, so the
     // runbook can be organised as ONE task per schema (schemas run sequentially; the
     // tools inside a schema are the ordered sub-steps). Order follows schemaSteps.
     static emitSchemaGroups( { toolSteps, schemaSteps } ) {
@@ -484,7 +484,7 @@ class GradingEmit {
     }
 
 
-    // Memo 112 (REV-04) — the questions, listed ONCE as a reference (a set of
+    // The questions, listed ONCE as a reference (a set of
     // criteria, keyed by their stable [Q-…] id). Every task points back here instead
     // of repeating the questions per tool/schema.
     static emitQuestionsReference( { ready } ) {
@@ -508,7 +508,7 @@ class GradingEmit {
     }
 
 
-    // Memo 112 (REV-05, F10=per-schema) — area iteration unit. `single-test` is per
+    // Area iteration unit. `single-test` is per
     // TOOL (one result per tool); `tools-aggregate-schema` is per SCHEMA (one result
     // per schema — that is how RebuildIndex reads it). Both belong inside the per-
     // schema sub-agent. The remaining neutral areas are namespace-level (stage-2).
@@ -519,7 +519,7 @@ class GradingEmit {
     }
 
 
-    // Memo 112 — build per-tool steps: every declared tool with the schema file that
+    // Build per-tool steps: every declared tool with the schema file that
     // declares it and that schema's fixture-size note. Repo-relative paths only.
     static emitToolSteps( { liveSchemas, pretests, cwd } ) {
         const schemas = Array.isArray( liveSchemas ) ? liveSchemas : []
@@ -545,7 +545,7 @@ class GradingEmit {
     }
 
 
-    // Memo 112 — decompose a composed area blob into its parts using PromptBuilder's
+    // Decompose a composed area blob into its parts using PromptBuilder's
     // constant headers. Strips leading YAML frontmatter (M1), drops the empty
     // `## Pre-Instructions` + duplicated `## Question(s)`/`## Questions` headers
     // (M2/M3), and lifts the per-area question list + question IDs. The full inline
@@ -580,7 +580,7 @@ class GradingEmit {
     }
 
 
-    // Memo 112 Kap 4/5 — build the explicit per-schema steps with a fixture-size
+    // Build the explicit per-schema steps with a fixture-size
     // gate (F3 = threshold). Schema paths are repo-relative (git-security). For each
     // schema the test fixture size decides inline-read vs. subagent-read so large
     // fixtures do not pollute the main context; the size is COMPUTED here, per the
@@ -607,7 +607,7 @@ class GradingEmit {
     }
 
 
-    // Memo 112 — fixture-size gate. Reads the fixture's size on disk and recommends
+    // Fixture-size gate. Reads the fixture's size on disk and recommends
     // inline reading for small fixtures and a subagent read for large ones (the
     // threshold avoids content-pollution at scale). Missing fixture = read tests
     // from the schema directly.
@@ -824,7 +824,7 @@ class GradingEmit {
         return { 'status': true, 'taskId': generated.taskId }
     }
 
-    // Memo 152 / PRD-019 (F21) — repo-relative path helper, copied from the CLI
+    // Repo-relative path helper, copied from the CLI
     // (GradingTarget.toRepoRelativePath). Pure: turns an absolute path into a repo-
     // relative or ~-anchored path; a non-absolute or foreign path is returned as-is.
     static toRepoRelativePath( { cwd, path } ) {

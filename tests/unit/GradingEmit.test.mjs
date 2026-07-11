@@ -7,7 +7,7 @@ import { TaskId } from '../../src/TaskId.mjs'
 import { VALID_AREAS } from '../../src/PromptBuilder.mjs'
 
 
-// Memo 152 / PRD-019 (F21) — the grading emit-prompt textbau moved from the CLI
+// The grading emit-prompt textbau moved from the CLI
 // into flowmcp-grading. These tests cover the pure, deterministic seams that the
 // CLI bridge relies on. The full compositional output is additionally guarded by
 // the byte-identical golden-fixture diff on the CLI side.
