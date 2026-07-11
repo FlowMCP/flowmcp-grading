@@ -77,6 +77,7 @@ import { AreaDependencyGraph } from './AreaDependencyGraph.mjs'
 import { TaskId } from './TaskId.mjs'
 import { AreaScorer } from './harness/AreaScorer.mjs'
 import { DeterministicAreaMapper } from './DeterministicAreaMapper.mjs'
+import { GradingEmit } from './GradingEmit.mjs'
 
 
 const REPO_VERSION = '1.0.0'
@@ -345,6 +346,7 @@ export {
     TaskId,
     AreaScorer,
     DeterministicAreaMapper,
+    GradingEmit,
     gradeSingleSchema,
     gradeSelection,
     validateGradingEntry,
