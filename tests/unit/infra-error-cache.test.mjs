@@ -19,14 +19,18 @@ const fetchMock = jest.fn( async () => {
     return fetchQueue.shift()
 } )
 
-jest.unstable_mockModule( 'flowmcp/v2', () => {
+const { SkillValidator, SelectionValidator } = await import( 'flowmcp/v4' )
+
+jest.unstable_mockModule( 'flowmcp', () => {
     return {
         FlowMCP: {
             fetch: fetchMock,
             executeResource: async () => ( { struct: { status: false, messages: [], data: null } } ),
             resolveSharedLists: async () => ( { sharedLists: {} } ),
             createHandlers: () => ( { handlerMap: {}, resourceHandlerMap: {} } )
-        }
+        },
+        SkillValidator,
+        SelectionValidator
     }
 } )
 

@@ -8,7 +8,7 @@
  *
  * The decoupled live test-runner core is migrated from the CLI task class
  * (FlowMcpCli). It calls only FlowMCP.fetch / FlowMCP.executeResource from
- * 'flowmcp/v2' and returns structured objects — no console output, no config
+ * the flowmcp v4 facade and returns structured objects — no console output, no config
  * reads. The .env / serverParams acquisition stays with the caller; this class
  * NEVER reads ~/.flowmcp/.env itself.
  *
@@ -61,8 +61,7 @@ import { join, resolve, dirname } from 'node:path'
 import { createRequire } from 'node:module'
 import { pathToFileURL, fileURLToPath } from 'node:url'
 
-import { FlowMCP } from 'flowmcp/v2'
-import { SkillValidator, SelectionValidator } from 'flowmcp/v4'
+import { FlowMCP, SkillValidator, SelectionValidator } from 'flowmcp'
 
 import { HashGenerator } from './HashGenerator.mjs'
 

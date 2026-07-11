@@ -4,10 +4,12 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 
-// --- flowmcp/v2 mock ---------------------------------------------------------
+// --- flowmcp facade mock -----------------------------------------------------
 // The mock is programmable per test via fetchQueue / resourceQueue. No network,
 // no .env: every call pulls a canned result. fetch is also a jest.fn so tests
-// can assert that stub primitives never reach the fetch layer.
+// can assert that stub primitives never reach the fetch layer. SkillValidator /
+// SelectionValidator pass through to the real v4 modules (via the ./v4 alias)
+// so the structural-primitive test exercises real validation.
 
 let fetchQueue = []
 let resourceQueue = []
@@ -26,14 +28,18 @@ const executeResourceMock = jest.fn( async () => {
     return resourceQueue.shift()
 } )
 
-jest.unstable_mockModule( 'flowmcp/v2', () => {
+const { SkillValidator, SelectionValidator } = await import( 'flowmcp/v4' )
+
+jest.unstable_mockModule( 'flowmcp', () => {
     return {
         FlowMCP: {
             fetch: fetchMock,
             executeResource: executeResourceMock,
             resolveSharedLists: async () => ( { sharedLists: {} } ),
             createHandlers: () => ( { handlerMap: {}, resourceHandlerMap: {} } )
-        }
+        },
+        SkillValidator,
+        SelectionValidator
     }
 } )
 
