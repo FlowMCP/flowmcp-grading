@@ -1195,6 +1195,86 @@ class DataPretest {
     }
 
 
+    // --- public runner API (PRD-019 F20 — one consolidated executor) ------------
+
+    // Public runner entry. Thin wrapper over the private #runTypedTests so the CLI
+    // grading bridge (the `grading deterministic --only` primitive view) drives ONE
+    // executor here instead of keeping its own copy. schemaSource is accepted for
+    // call-site parity but unused (the primitive-aware dispatcher never needed it);
+    // throttleMs defaults to 0 for the on-demand primitive view.
+    static async runTypedTests( {
+        main, schemaSource = null, handlerMap = {}, resourceHandlerMap = {},
+        serverParams = {}, sharedLists = {}, fullOutput = false
+    } ) {
+        return await DataPretest.#runTypedTests( {
+            main, handlerMap, resourceHandlerMap, serverParams, sharedLists, fullOutput
+        } )
+    }
+
+
+    // PRD-006: compute "declared" map per primitive from a schema main
+    static computeDeclared( { main } ) {
+        const safeMain = main || {}
+        const tools = safeMain[ 'tools' ] || safeMain[ 'routes' ]
+        const resources = safeMain[ 'resources' ]
+        const skills = safeMain[ 'skills' ]
+        const prompts = safeMain[ 'prompts' ]
+        const selection = safeMain[ 'selection' ]
+
+        const declared = {
+            'tool':              tools !== undefined && tools !== null,
+            'resource':          resources !== undefined && resources !== null,
+            'skill':             skills !== undefined && skills !== null,
+            'prompt':            prompts !== undefined && prompts !== null,
+            'selection-member':  selection !== undefined && selection !== null
+        }
+
+        return { declared }
+    }
+
+
+    // PRD-006: aggregate per-primitive summary { passed, total, declared, filtered }
+    static aggregateByPrimitive( { results, declared, filter } ) {
+        const primitives = [ 'tool', 'resource', 'skill', 'prompt', 'selection-member' ]
+        const safeResults = results || []
+        const safeDeclared = declared || {}
+        const filteredSet = filter ? new Set( filter ) : null
+
+        const summary = primitives
+            .reduce( ( acc, p ) => {
+                const own = safeResults
+                    .filter( ( r ) => {
+                        const matches = r[ 'primitive' ] === p
+
+                        return matches
+                    } )
+
+                const passed = own
+                    .filter( ( r ) => {
+                        const isPass = r[ 'status' ] === true
+
+                        return isPass
+                    } )
+                    .length
+
+                const total = own.length
+                const isFiltered = filteredSet ? !filteredSet.has( p ) : false
+                const isDeclared = safeDeclared[ p ] === true
+
+                acc[ p ] = {
+                    passed,
+                    total,
+                    'declared': isDeclared,
+                    'filtered': isFiltered
+                }
+
+                return acc
+            }, {} )
+
+        return { summary }
+    }
+
+
     // --- setup helpers (migrated from FlowMcpCli) --------------------------
 
     // Resolve handler maps from the schema handlers factory. Shared lists and
