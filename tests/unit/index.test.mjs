@@ -10,7 +10,7 @@ describe( 'Public API exports', () => {
     } )
 
     test( 'exports all class identifiers', () => {
-        const expected = [ 'Grading', 'Scoring', 'Veto', 'SingleSchemaPhases', 'SelectionPhases', 'ErrorCodes' ]
+        const expected = [ 'Grading', 'Scoring', 'SingleSchemaPhases', 'SelectionPhases', 'ErrorCodes' ]
         const keys = Object.keys( api )
         const missing = expected
             .filter( ( k ) => !keys.includes( k ) )
@@ -32,12 +32,12 @@ describe( 'Public API exports', () => {
         expect( typeof api.PromptBuilder.getValidAreas ).toBe( 'function' )
     } )
 
-    test( 'exports GradingImport and GradingExport (IN/OUT round-trip)', () => {
+    test( 'exports GradingExport (OUT round-trip); GradingImport is retired', () => {
         const keys = Object.keys( api )
-        expect( keys ).toContain( 'GradingImport' )
         expect( keys ).toContain( 'GradingExport' )
-        expect( typeof api.GradingImport.run ).toBe( 'function' )
         expect( typeof api.GradingExport.run ).toBe( 'function' )
+        // The island-import round-trip was retired when grading moved to live-read.
+        expect( keys ).not.toContain( 'GradingImport' )
     } )
 
 
@@ -49,6 +49,14 @@ describe( 'Public API exports', () => {
 
     test( 'SelectionLockfile is NOT exported (lifecycle dropped in v2)', () => {
         expect( Object.keys( api ) ).not.toContain( 'SelectionLockfile' )
+    } )
+
+    test( 'retired dead modules are NOT on the public surface', () => {
+        const keys = Object.keys( api )
+        const retired = [ 'Veto', 'StablePromotion', 'ModuleApi', 'SkillComposition', 'SharedLists', 'GradingImport' ]
+        const stillExported = retired
+            .filter( ( name ) => keys.includes( name ) )
+        expect( stillExported ).toEqual( [] )
     } )
 
     test( 'validateOverride salvage + OVERRIDE_WHITELIST stay reachable', () => {

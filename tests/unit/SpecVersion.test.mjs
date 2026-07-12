@@ -3,7 +3,6 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { ModuleApi } from '../../src/ModuleApi.mjs'
 import { GRADING_SPEC_VERSION, GRADING_SPEC_REF_PREFIX } from '../../src/data/specVersion.mjs'
 
 
@@ -15,11 +14,6 @@ describe( 'specVersion — single canonical grading-spec version (Befund E)', ()
     test( 'exports the canonical version + ref prefix', () => {
         expect( GRADING_SPEC_VERSION ).toBe( '3.0.0' )
         expect( GRADING_SPEC_REF_PREFIX ).toBe( `flowmcp-spec/grading/${GRADING_SPEC_VERSION}` )
-    } )
-
-    test( 'ModuleApi.getSpecVersion reads the single source', () => {
-        const { gradingSpecVersion } = ModuleApi.getSpecVersion()
-        expect( gradingSpecVersion ).toBe( GRADING_SPEC_VERSION )
     } )
 
     test( 'no source comment or template references a drifted grading-spec version', () => {

@@ -8,19 +8,14 @@
  *   HSH-* — HashGenerator (canonical JSON + sha256 8-char prefix)
  *   SNP-* — SourceSnapshot (frozen schema snapshots, NO-OVERWRITE)
  *   PRT-* — PartialGrading (gradingMode, mandatory sequence)
- *   STB-* — StablePromotion (stable/pending gate)
  *   LCK-* — SelectionLockfile (lockfile generator/reader)
  *   PRE-* — PreConditionCheck (universal stable-gate)
  *   SEL-* — Selection-Validator S1-S4
  *   BMP-* — BumpHelper (diff + bump-rule)
  *   SCN-* — FolderScanner (grading-data/ structure check)
  *   ABT-* — AboutConsistencyCheck (text-vs-schema)
- *   SL-*  — SharedLists (loader + hash + filename)
  *   NA-*  — NaReason (closed-set n/a-Reason validator)
  *   DPT-* — DataPretest (live test runner + abort rule + payload persistence)
- *   API-* — ModuleApi (public state-read + schema add/upgrade + scope-rule guard)
- *   SKC-* — SkillComposition (selection-skill cross-reference rules A/B)
- *   IMP-* — GradingImport (scan/load/gate, namespace derivation + foldername-fallback + rename-later)
  *   RLV-* — RequiredLevel (4-level ladder derivation + meets-comparison)
  *   ADG-* — AreaDependencyGraph (data-file load/validate + dependsOn/requiredLevel lookup)
  *   TID-* — TaskId (generate/parse/matchesAreaSet, schemaIdSlug--areaSetHash)
@@ -54,14 +49,6 @@
  * | VET-003         | ERROR    | reasoning required for ai-security-veto       |
  * | VET-004         | ERROR    | graderIdentity required for categoricalVeto   |
  * | VET-INFO-001    | INFO     | Entry marked as REJECTED via categoricalVeto  |
- * | IMP-001         | ERROR    | Import input/scan: missing path or no .mjs    |
- * | IMP-002         | ERROR    | Structural validate gate failed               |
- * | IMP-003         | ERROR    | Invalid schema slug from filename             |
- * | IMP-004         | ERROR    | No namespace derivable (pre-fallback marker)  |
- * | IMP-005         | ERROR    | Single-namespace assertion failed (disagree)  |
- * | IMP-006         | ERROR    | Foldername-fallback name not a valid namespace|
- * | IMP-007         | ERROR    | Folder<->namespace invariant violation        |
- * | IMP-008         | ERROR    | Rename-later target exists with diff content  |
  * | DPT-006         | INFO     | Parameterless tool — own class, Bar=1         |
  * | DPT-007         | INFO     | Key-gated — not evaluable without key          |
  * | DPT-008         | ERROR    | Duplicate test (byte-identical except _desc)  |
@@ -265,33 +252,6 @@ const ERROR_CODE_TABLE = Object.freeze( {
             message: 'Partial entry has empty gradings[]'
         } )
     } ),
-    STB: Object.freeze( {
-        'STB-001': Object.freeze( {
-            code: 'STB-001',
-            severity: 'ERROR',
-            message: 'Required field missing: {field}'
-        } ),
-        'STB-002': Object.freeze( {
-            code: 'STB-002',
-            severity: 'ERROR',
-            message: 'Type mismatch for field {field}: expected {expected}, got {actual}'
-        } ),
-        'STB-003': Object.freeze( {
-            code: 'STB-003',
-            severity: 'ERROR',
-            message: 'Invalid threshold: {value} (expected one of [A, B, C, D, F])'
-        } ),
-        'STB-WARN-001': Object.freeze( {
-            code: 'STB-WARN-001',
-            severity: 'WARNING',
-            message: 'Stable-Promotion blocked: last grading entry is partial'
-        } ),
-        'STB-WARN-002': Object.freeze( {
-            code: 'STB-WARN-002',
-            severity: 'WARNING',
-            message: 'Stable-Promotion blocked: aggregateGrade below threshold'
-        } )
-    } ),
     LCK: Object.freeze( {
         'LCK-001': Object.freeze( {
             code: 'LCK-001',
@@ -474,23 +434,6 @@ const ERROR_CODE_TABLE = Object.freeze( {
             message: 'Description keyword overlap below threshold: {detail}'
         } )
     } ),
-    SL: Object.freeze( {
-        'SL-001': Object.freeze( {
-            code: 'SL-001',
-            severity: 'ERROR',
-            message: 'Required field missing: {field}'
-        } ),
-        'SL-002': Object.freeze( {
-            code: 'SL-002',
-            severity: 'ERROR',
-            message: 'Type mismatch for field {field}: expected {expected}, got {actual}'
-        } ),
-        'SL-003': Object.freeze( {
-            code: 'SL-003',
-            severity: 'ERROR',
-            message: 'Invalid shared-list filename or path: {detail}'
-        } )
-    } ),
     NA: Object.freeze( {
         'NA-001': Object.freeze( {
             code: 'NA-001',
@@ -538,92 +481,6 @@ const ERROR_CODE_TABLE = Object.freeze( {
             code: 'DPT-008',
             severity: 'ERROR',
             message: 'Duplicate test (byte-identical except _description) — counted once: {detail}'
-        } )
-    } ),
-    API: Object.freeze( {
-        'API-001': Object.freeze( {
-            code: 'API-001',
-            severity: 'ERROR',
-            message: 'Required field missing: {field}'
-        } ),
-        'API-002': Object.freeze( {
-            code: 'API-002',
-            severity: 'ERROR',
-            message: 'Type mismatch for field {field}: expected {expected}, got {actual}'
-        } ),
-        'API-003': Object.freeze( {
-            code: 'API-003',
-            severity: 'ERROR',
-            message: 'Invalid version upgrade: {detail}'
-        } ),
-        'API-004': Object.freeze( {
-            code: 'API-004',
-            severity: 'ERROR',
-            message: 'Invalid scope: {value} (expected `schema` or `selection`)'
-        } ),
-        'API-005': Object.freeze( {
-            code: 'API-005',
-            severity: 'ERROR',
-            message: 'Cross-scope grading forbidden: {detail}'
-        } )
-    } ),
-    SKC: Object.freeze( {
-        'SKC-001': Object.freeze( {
-            code: 'SKC-001',
-            severity: 'ERROR',
-            message: 'Invalid input: skills must be an array'
-        } ),
-        'SKC-002': Object.freeze( {
-            code: 'SKC-002',
-            severity: 'ERROR',
-            message: 'Cross-reference rule A violation: an L1 skill must mention every L2 skill by name: {detail}'
-        } ),
-        'SKC-003': Object.freeze( {
-            code: 'SKC-003',
-            severity: 'ERROR',
-            message: 'Cross-reference rule B violation: each L3 skill must be mentioned in at least one L2 skill: {detail}'
-        } )
-    } ),
-    IMP: Object.freeze( {
-        'IMP-001': Object.freeze( {
-            code: 'IMP-001',
-            severity: 'ERROR',
-            message: 'Import input/scan error: {detail}'
-        } ),
-        'IMP-002': Object.freeze( {
-            code: 'IMP-002',
-            severity: 'ERROR',
-            message: 'Structural validate gate failed: {detail}'
-        } ),
-        'IMP-003': Object.freeze( {
-            code: 'IMP-003',
-            severity: 'ERROR',
-            message: 'Invalid schema slug from filename: {detail}'
-        } ),
-        'IMP-004': Object.freeze( {
-            code: 'IMP-004',
-            severity: 'ERROR',
-            message: 'One or more schemas declare no namespace: {detail}'
-        } ),
-        'IMP-005': Object.freeze( {
-            code: 'IMP-005',
-            severity: 'ERROR',
-            message: 'Single-namespace assertion failed — folder declares multiple namespaces: {detail}'
-        } ),
-        'IMP-006': Object.freeze( {
-            code: 'IMP-006',
-            severity: 'ERROR',
-            message: 'Foldername-fallback name is not a valid namespace (must match /^[a-z][a-z0-9-]*$/): {detail}'
-        } ),
-        'IMP-007': Object.freeze( {
-            code: 'IMP-007',
-            severity: 'ERROR',
-            message: 'Folder<->namespace invariant violation — folder name differs from declared namespace: {detail}'
-        } ),
-        'IMP-008': Object.freeze( {
-            code: 'IMP-008',
-            severity: 'ERROR',
-            message: 'Rename-later conflict — target namespace folder already exists with different content: {detail}'
         } )
     } ),
     RLV: Object.freeze( {
@@ -736,7 +593,7 @@ const ERROR_CODE_TABLE = Object.freeze( {
 
 
 const CODE_FORMAT_REGEX = /^[A-Z]{2,3}(-WARN|-INFO)?-(\d{3}|S\d)$/
-const VALID_PREFIXES = [ 'GRD', 'SCO', 'VET', 'HSH', 'SNP', 'PRT', 'STB', 'LCK', 'PRE', 'SEL', 'BMP', 'SCN', 'ABT', 'SL', 'NA', 'DPT', 'API', 'SKC', 'IMP', 'RLV', 'ADG', 'TID' ]
+const VALID_PREFIXES = [ 'GRD', 'SCO', 'VET', 'HSH', 'SNP', 'PRT', 'LCK', 'PRE', 'SEL', 'BMP', 'SCN', 'ABT', 'NA', 'DPT', 'RLV', 'ADG', 'TID' ]
 const VALID_SEVERITIES = [ 'ERROR', 'WARNING', 'INFO' ]
 
 

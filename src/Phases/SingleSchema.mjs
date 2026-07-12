@@ -124,8 +124,8 @@ class SingleSchemaPhases {
             return { entry: added.entry, status: 'blocked', area: 'single-test', errors: added.errors }
         }
 
-        // A recorded deterministic answer makes the node `graded` (promotion to
-        // `stable` is StablePromotion's decision, never here).
+        // A recorded deterministic answer makes the node `graded` (the terminal
+        // `stable` status is set by the partial/full sequence rollup, never here).
         const nodeStatus = score === 'pass' ? 'graded' : 'blocked'
         return { entry: added.entry, status: nodeStatus, area: 'single-test', errors: [] }
     }

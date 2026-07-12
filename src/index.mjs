@@ -9,19 +9,16 @@
  * | Export                  | Type     | Signature                                                                                  | Error Codes               |
  * |-------------------------|----------|--------------------------------------------------------------------------------------------|---------------------------|
  * | Grading                 | class    | static getVersion / createEntry / addGrading / computeAggregateGrade / applyRegradingTrigger / checkAging | GRD-*           |
- * | Scoring                 | class    | static getVersion / scoreDimension / validateScore / computeWeightedSum                    | SCO-*, GRD-*              |
- * | Veto                    | class    | static getTriggers / applyVeto / isVetoed / validateVeto                                   | VET-*                     |
+ * | Scoring                 | class    | static getVersion / validateScore / computeWeightedSum                                     | SCO-*, GRD-*              |
  * | SingleSchemaPhases      | class    | static getTier / runP1..runP7 / runAll                                                     | GRD-*                     |
  * | SelectionPhases         | class    | static getTier / runS1 / runS3 / runS4 / runAll (S1/S3/S4 chain)                           | GRD-*, SEL-*              |
  * | ErrorCodes              | class    | static getCode / formatMessage / listByPrefix / listBySeverity / validateCodeFormat        | GRD-*                     |
  * | HashGenerator           | class    | static canonicalize / computeHash / computeSchemaHash / computeSelectionHash / ...         | HSH-*                     |
  * | SourceSnapshot          | class    | static create / parseSnapshotFilename / verify / listForNamespace                          | SNP-*                     |
  * | PartialGrading          | class    | static getValidModes / buildPartialEntry / validateSequence / listGradedDimensions         | PRT-*                     |
- * | StablePromotion         | class    | static checkEligibility / promoteIfEligible                                                | STB-*                     |
  * | ProjectIndex            | class    | static init / read / write / validateIndex / indexPath                                     | IDX-*                     |
  * | RebuildIndex            | class    | static resolveLatest / rebuildNamespaceIndex / rebuildSelectionIndex / buildLockSnapshot / validateIndex / mapAggregateGradeToStatus | IDX-* |
  * | PromptBuilder           | class    | static build / getValidAreas / isPersonaRequired / buildGoalBlock                          | PB-*                      |
- * | GradingImport           | class    | static run ( { providerPath, gradingDataRoot, validateGate } ) — IN round-trip             | IMP-*, SEL-004, SNP-*     |
  * | GradingExport           | class    | static run ( { target, exportDir, includeSchemas } ) — OUT round-trip                      | EXP-*                     |
  * | ProviderProof           | class    | static write ( { namespaceIndex, providerDir } ) — derived grade.json projection           | PRF-*                     |
  * | RequiredLevel           | class    | static getLadder / derive / meets (4-level ladder, derived; no persisted field)            | RLV-*                     |
@@ -31,9 +28,7 @@
  * | FolderScanner           | class    | static scan / checkNamespaceFolder / checkSchemaSnapshots / checkSelectionFolder           | SCN-*                     |
  * | AboutConsistencyCheck   | class    | static checkNamespaceAbout / checkSelectionAbout / verifyNamespace                         | ABT-*                     |
  * | NaReason                | class    | static (closed-set n/a-reason validator)                                                   | NA-*                      |
- * | SharedLists             | class    | static (shared-list loader + hash + filename)                                              | SL-*                      |
  * | DataPretest             | class    | static getVersion / run                                                                    | DPT-*                     |
- * | ModuleApi               | class    | static readState / stats / addSchema / upgradeSchema / assertFullScopeRule / assertSelectionRespectsSchemaFull / getScopes | API-* |
  * | gradeSingleSchema       | function | ( { schemaPath, schemaId, grader, options } ) → { grading, errors }                        | GRD-001, GRD-002, GRD-003 |
  * | gradeSelection          | function | async ( { selectionId, schemaIds, grader, options } ) → { grading, errors }                | GRD-001, GRD-002, GRD-004 |
  * | validateGradingEntry    | function | ( { entry } ) → { valid, errors }                                                          | GRD-001, GRD-002          |
@@ -48,27 +43,21 @@
 
 import { Grading } from './Grading.mjs'
 import { Scoring } from './Scoring.mjs'
-import { Veto } from './Veto.mjs'
 import { SingleSchemaPhases } from './Phases/SingleSchema.mjs'
 import { SelectionPhases } from './Phases/Selection.mjs'
 import { ErrorCodes } from './ErrorCodes.mjs'
 import { HashGenerator } from './HashGenerator.mjs'
 import { SourceSnapshot } from './SourceSnapshot.mjs'
 import { PartialGrading } from './Phases/PartialGrading.mjs'
-import { StablePromotion } from './StablePromotion.mjs'
 import { ProjectIndex } from './ProjectIndex.mjs'
 import { PreConditionCheck } from './PreConditionCheck.mjs'
 import { FolderScanner } from './FolderScanner.mjs'
 import { AboutConsistencyCheck } from './AboutConsistencyCheck.mjs'
 import { NaReason } from './NaReason.mjs'
-import { SharedLists } from './SharedLists.mjs'
 import { DataPretest } from './DataPretest.mjs'
-import { ModuleApi } from './ModuleApi.mjs'
-import { SkillComposition } from './SkillComposition.mjs'
 import { RebuildIndex } from './RebuildIndex.mjs'
 import { PromptBuilder } from './PromptBuilder.mjs'
 import { AreaPromptLoader } from './AreaPromptLoader.mjs'
-import { GradingImport } from './GradingImport.mjs'
 import { GradingExport } from './GradingExport.mjs'
 import { ProviderProof } from './ProviderProof.mjs'
 import { SelectionLockfile, OVERRIDE_WHITELIST } from './SelectionLockfile.mjs'
@@ -318,27 +307,21 @@ const validateOverride = SelectionLockfile.validateOverride
 export {
     Grading,
     Scoring,
-    Veto,
     SingleSchemaPhases,
     SelectionPhases,
     ErrorCodes,
     HashGenerator,
     SourceSnapshot,
     PartialGrading,
-    StablePromotion,
     ProjectIndex,
     PreConditionCheck,
     FolderScanner,
     AboutConsistencyCheck,
     NaReason,
-    SharedLists,
     DataPretest,
-    ModuleApi,
-    SkillComposition,
     RebuildIndex,
     PromptBuilder,
     AreaPromptLoader,
-    GradingImport,
     GradingExport,
     ProviderProof,
     RequiredLevel,

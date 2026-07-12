@@ -4,7 +4,6 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { AreaScorer, NEUTRAL_PERSONA_IDS } from '../../src/harness/AreaScorer.mjs'
-import { StablePromotion } from '../../src/index.mjs'
 
 
 let tempRoot = null
@@ -271,29 +270,6 @@ describe( 'AreaScorer.resolveGradingsDir (gradings-dir mapping)', () => {
         const r = AreaScorer.resolveGradingsDir( { providersRoot: root, ns: 'openmeteo', area: 'made-up' } )
         expect( r.dir ).toBeNull()
         expect( r.errors.some( ( m ) => m.startsWith( 'ASC-011' ) ) ).toBe( true )
-    } )
-} )
-
-
-describe( 'threshold=B promotion (F7=A) on disk', () => {
-    test( 'autonomous B entry -> stable only with threshold=B, graded with default A', async () => {
-        const gradingsDir = join( tempRoot, 'promote', 'tools', 'getCurrentAirQuality', '_gradings' )
-        const mapped = AreaScorer.answersToGradings( {
-            answers: highAnswers(), questions: singleTestQuestions, recordedAt: '2026-06-01T00:00:00.000Z'
-        } )
-        const built = AreaScorer.buildEntry( {
-            schemaId: 'openMeteoAirQuality', area: 'single-test', llmModel: 'm', gradings: mapped.gradings
-        } )
-        await AreaScorer.writeEntry( {
-            entry: built.entry, gradingsDir, area: 'single-test', timestamp: '2026-06-01T01-00-00Z'
-        } )
-
-        const gradingFiles = [ built.entry ]
-        const elA = StablePromotion.checkEligibility( { gradingFiles, threshold: 'A' } )
-        const elB = StablePromotion.checkEligibility( { gradingFiles, threshold: 'B' } )
-        expect( StablePromotion.mapReasonToStatus( { reason: elA.reason } ).nodeStatus ).toBe( 'graded' )
-        expect( elB.eligible ).toBe( true )
-        expect( StablePromotion.mapReasonToStatus( { reason: elB.reason } ).nodeStatus ).toBe( 'stable' )
     } )
 } )
 

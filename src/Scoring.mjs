@@ -23,7 +23,7 @@ const SCORING_SYSTEM_VERSION = 'scoringSystem/1.0.0'
 
 // The 11 grading Areas per gradingSpec/3.0.0 §5.1 (replaces the legacy 17-dimension
 // enum). Closed list, extensions require a gradingSystem bump. Provider areas 1-6,
-// selection areas 7-11. `scoreDimension` accepts an Area slug as its `dimension`.
+// selection areas 7-11.
 const AREAS = [
     'single-test',
     'tools-aggregate-schema',
@@ -38,34 +38,15 @@ const AREAS = [
     'selection-aggregate'
 ]
 
-// Backward-compat alias — the dimension-keyed callers now pass an Area slug.
-const DIMENSIONS = AREAS
-
 
 const SCORE_ENUMS = [ 'pass', 'fail', 'stale', 'n/a' ]
 const SCORE_FLOAT_MIN = 1.0
 const SCORE_FLOAT_MAX = 5.0
-const DETERMINISM_VALUES = [ 'deterministic', 'non-deterministic' ]
 
 
 class Scoring {
     static getVersion() {
         return { version: SCORING_SYSTEM_VERSION }
-    }
-
-
-    static scoreDimension( { dimension, rawValue, determinism } ) {
-        const { status, messages } = Scoring.#validationScoreDimension( { dimension, rawValue, determinism } )
-        if( !status ) { return { score: null, reasoning: null, errors: messages } }
-
-        // Stub return — concrete heuristic per dimension is implemented in src/Phases/* (follow-up memo).
-        return {
-            score: null,
-            reasoning: 'stub: concrete heuristic in src/Phases/*.mjs (follow-up memo)',
-            stub: true,
-            todo: 'follow-up: per-dimension phase implementation',
-            errors: []
-        }
     }
 
 
@@ -147,42 +128,6 @@ class Scoring {
     }
 
 
-    static #validationScoreDimension( { dimension, rawValue, determinism } ) {
-        const messages = []
-        const struct = { status: false, messages }
-
-        const pairs = [
-            [ 'dimension', dimension, 'string', DIMENSIONS ],
-            [ 'rawValue', rawValue, 'any', null ],
-            [ 'determinism', determinism, 'string', DETERMINISM_VALUES ]
-        ]
-
-        pairs
-            .forEach( ( [ key, value, type, list ] ) => {
-                if( value === undefined || value === null ) {
-                    messages.push( `GRD-001: Required field missing: ${key}` )
-                    return
-                }
-                if( type !== 'any' && typeof value !== type ) {
-                    messages.push( `GRD-002: Type mismatch for field ${key}: expected ${type}, got ${typeof value}` )
-                    return
-                }
-                if( list !== null && !list.includes( value ) ) {
-                    if( key === 'dimension' ) {
-                        messages.push( `SCO-002: Unknown dimension: ${value} (not in dimension enum)` )
-                        return
-                    }
-                    messages.push( `GRD-002: Type mismatch for field ${key}: expected one of [${list.join( ', ' )}], got ${value}` )
-                }
-            } )
-
-        if( messages.length > 0 ) { return struct }
-
-        struct.status = true
-        return struct
-    }
-
-
     static #validationComputeWeightedSum( { gradings } ) {
         const messages = []
         const struct = { status: false, messages }
@@ -221,4 +166,4 @@ class Scoring {
 }
 
 
-export { Scoring, DIMENSIONS, AREAS }
+export { Scoring, AREAS }

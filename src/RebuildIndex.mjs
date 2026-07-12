@@ -381,8 +381,8 @@ class RebuildIndex {
         const mapped = AGGREGATE_TO_NODE_STATUS[ aggregateGrade ]
         if( mapped !== undefined ) { return { status: mapped, errors: [] } }
         // Any non-REJECTED graded aggregate is a `graded` node by default of the
-        // grade-derivation; promotion to `stable` is decided by StablePromotion,
-        // not here. Unknown values error (no silent default).
+        // grade-derivation; a node only reaches the terminal `stable` status via the
+        // partial/full sequence rollup, never here. Unknown values error (no silent default).
         const KNOWN_GRADES = [ 'A', 'B', 'C', 'D', 'F' ]
         if( KNOWN_GRADES.includes( aggregateGrade ) ) { return { status: 'graded', errors: [] } }
         return { status: null, errors: [ `IDX-007: Unknown aggregateGrade: ${aggregateGrade}` ] }

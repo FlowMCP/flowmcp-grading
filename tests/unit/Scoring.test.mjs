@@ -32,37 +32,6 @@ describe( 'Scoring.AREAS (11 areas, v2)', () => {
 } )
 
 
-describe( 'Scoring.scoreDimension', () => {
-    test( 'happy path returns object with stub flag', () => {
-        const result = Scoring.scoreDimension( {
-            dimension: 'single-test',
-            rawValue: { httpStatus: 200 },
-            determinism: 'deterministic'
-        } )
-        expect( result ).toBeDefined()
-        expect( result.stub ).toBe( true )
-        expect( result.errors ).toEqual( [] )
-    } )
-
-    test( 'missing dimension yields GRD-001', () => {
-        const result = Scoring.scoreDimension( {
-            rawValue: 1,
-            determinism: 'deterministic'
-        } )
-        expect( result.errors[ 0 ] ).toContain( 'GRD-001' )
-    } )
-
-    test( 'unknown area yields SCO-002', () => {
-        const result = Scoring.scoreDimension( {
-            dimension: 'notAnArea',
-            rawValue: 1,
-            determinism: 'deterministic'
-        } )
-        expect( result.errors[ 0 ] ).toContain( 'SCO-002' )
-    } )
-} )
-
-
 describe( 'Scoring.validateScore', () => {
     test( 'numeric 3.5 is valid', () => {
         const result = Scoring.validateScore( { score: 3.5 } )

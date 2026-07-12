@@ -3,7 +3,8 @@ import { mkdtemp, rm, writeFile, mkdir, readdir, readFile, stat } from 'node:fs/
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { GradingImport } from '../../src/GradingImport.mjs'
+import { SourceSnapshot } from '../../src/SourceSnapshot.mjs'
+import { RebuildIndex } from '../../src/RebuildIndex.mjs'
 import { GradingExport } from '../../src/GradingExport.mjs'
 
 
@@ -26,13 +27,26 @@ const schemaSource = ( { namespace, name } ) => {
 }
 
 
+// Build a minimal namespace island directly from the live primitives the retired
+// island-import path used to compose: one source snapshot per schema +
+// rebuildNamespaceIndex for the index.json. No dependency on any import writer.
 const seedNamespaceIsland = async () => {
-    const providerPath = join( tempRoot, 'src-etherscan' )
-    await mkdir( providerPath, { recursive: true } )
-    await writeFile( join( providerPath, 'getA.mjs' ), schemaSource( { namespace: 'etherscan', name: 'getA' } ), 'utf-8' )
-    const imp = await GradingImport.run( { providerPath, gradingDataRoot } )
-    expect( imp.status ).toBe( true )
-    return join( gradingDataRoot, 'providers', 'etherscan' )
+    const sourceFile = join( tempRoot, 'getA.mjs' )
+    await writeFile( sourceFile, schemaSource( { namespace: 'etherscan', name: 'getA' } ), 'utf-8' )
+
+    const snap = await SourceSnapshot.create( {
+        sourcePath: sourceFile,
+        gradingDataRoot,
+        namespace: 'etherscan',
+        schemaName: 'getA',
+        schemaHash: 'a1b2c3d4'
+    } )
+    expect( snap.created ).toBe( true )
+
+    const namespaceDir = join( gradingDataRoot, 'providers', 'etherscan' )
+    const idx = await RebuildIndex.rebuildNamespaceIndex( { namespaceDir } )
+    expect( idx.status ).toBe( true )
+    return namespaceDir
 }
 
 

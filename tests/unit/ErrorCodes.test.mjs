@@ -75,23 +75,19 @@ describe( 'ErrorCodes.listByPrefix', () => {
         expect( result.errors.length ).toBeGreaterThan( 0 )
     } )
 
-    test( 'returns the SKC family (SKC-001/002/003)', () => {
-        const result = ErrorCodes.listByPrefix( { prefix: 'SKC' } )
-        expect( result.codes.sort() ).toEqual( [ 'SKC-001', 'SKC-002', 'SKC-003' ] )
-    } )
-
-    test( 'returns the IMP family (GradingImport codes)', () => {
-        const result = ErrorCodes.listByPrefix( { prefix: 'IMP' } )
-        const allImp = result.codes.every( ( c ) => c.startsWith( 'IMP' ) )
-        expect( allImp ).toBe( true )
-        // IMP-006/007/008 are the new fallback / invariant / rename-conflict codes.
-        expect( result.codes ).toEqual( expect.arrayContaining( [ 'IMP-006', 'IMP-007', 'IMP-008' ] ) )
+    test( 'retired prefixes (SKC/IMP/STB/SL/API) are no longer registered', () => {
+        [ 'SKC', 'IMP', 'STB', 'SL', 'API' ]
+            .forEach( ( prefix ) => {
+                const result = ErrorCodes.listByPrefix( { prefix } )
+                expect( result.codes ).toEqual( [] )
+                expect( result.errors.length ).toBeGreaterThan( 0 )
+            } )
     } )
 } )
 
 
 describe( 'new emit-on-failure / fallback codes are registered and well-formed (AC-7)', () => {
-    const newCodes = [ 'GRD-038', 'GRD-039', 'IMP-006', 'IMP-007', 'IMP-008' ]
+    const newCodes = [ 'GRD-038', 'GRD-039' ]
 
     test( 'each new code resolves via getCode with ERROR severity', () => {
         newCodes
@@ -146,21 +142,6 @@ describe( 'ErrorCodes.validateCodeFormat', () => {
         const result = ErrorCodes.validateCodeFormat( { code: 'invalid' } )
         expect( result.valid ).toBe( false )
         expect( result.errors.length ).toBeGreaterThan( 0 )
-    } )
-
-    test( 'SKC-001 is a valid PREFIX-NUMBER code', () => {
-        const result = ErrorCodes.validateCodeFormat( { code: 'SKC-001' } )
-        expect( result.valid ).toBe( true )
-    } )
-
-    test( 'SKC codes resolve via getCode with ERROR severity', () => {
-        const codes = [ 'SKC-001', 'SKC-002', 'SKC-003' ]
-        codes
-            .forEach( ( code ) => {
-                const lookup = ErrorCodes.getCode( { code } )
-                expect( lookup.found ).toBe( true )
-                expect( lookup.entry.severity ).toBe( 'ERROR' )
-            } )
     } )
 } )
 

@@ -17,7 +17,10 @@
  *                         (DataPretest.DEFAULT_MIN_WORKING_TESTS = 2): a tool at the
  *                         `schema-validatable` rung (2 working) makes the schema
  *                         deterministic-green; 1 working (`reachable`) does NOT.
- *   stable              — full grading promoted to stable (StablePromotion output)
+ *   stable              — full grading at the terminal `stable` node-status. This is
+ *                         the top ladder rung the AreaDependencyGraph gates the
+ *                         about-namespace + selection areas at (Spec 21); it is
+ *                         derived from an entry whose gradingStatus is `stable`.
  *
  * Hard rules (binding):
  *   - static methods only, object parameters, object returns
