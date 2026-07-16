@@ -60,6 +60,7 @@ import { existsSync } from 'node:fs'
 import { join, resolve, dirname } from 'node:path'
 import { createRequire } from 'node:module'
 import { pathToFileURL, fileURLToPath } from 'node:url'
+import { homedir } from 'node:os'
 
 import { FlowMCP, SkillValidator, SelectionValidator } from 'flowmcp'
 
@@ -1304,11 +1305,12 @@ class DataPretest {
                 const { resolveBase } = DataPretest.#resolveLibraryBase()
                 const baseRequire = createRequire( join( resolveBase, 'index.js' ) )
                 const schemaRequire = filePath ? createRequire( resolve( filePath ) ) : baseRequire
+                const { allowedRequire } = await DataPretest.#allowedLibrariesRequire()
                 const unresolved = []
 
                 await requiredLibraries
                     .reduce( ( promise, lib ) => promise.then( async () => {
-                        const loaded = await DataPretest.#loadOneLibrary( { lib, baseRequire, schemaRequire } )
+                        const loaded = await DataPretest.#loadOneLibrary( { lib, allowedRequire, baseRequire, schemaRequire } )
                         if( loaded[ 'status' ] === true ) {
                             libraries[ lib ] = loaded[ 'module' ]
                         } else {
@@ -1345,8 +1347,16 @@ class DataPretest {
     }
 
 
-    static async #loadOneLibrary( { lib, baseRequire, schemaRequire } ) {
-        const requires = [ baseRequire, schemaRequire ]
+    static async #loadOneLibrary( { lib, allowedRequire, baseRequire, schemaRequire } ) {
+        // Memo 155 fix: honor the allowed-libraries store (Memo 150) FIRST, then the
+        // grading package base, then the schema dir — mirroring core LibraryLoader's
+        // [allowed-libraries -> CLI -> schema] chain. Without this, a schema whose
+        // requiredLibraries live only in ~/.flowmcp/allowed-libraries (better-sqlite3,
+        // @duckdb/node-api, geo-* toolkits) is unresolvable here, LIB-RESOLVE throws,
+        // and the pretest silently falls back to a raw HTTP fetch (a false 403 for
+        // local executeRequest tools).
+        const requires = [ allowedRequire, baseRequire, schemaRequire ]
+            .filter( ( req ) => req !== null && req !== undefined )
 
         const attempt = await requires
             .reduce( async ( accPromise, req ) => {
@@ -1376,6 +1386,31 @@ class DataPretest {
         const here = dirname( fileURLToPath( import.meta.url ) )
         const resolveBase = join( here, '..' )
         return { resolveBase }
+    }
+
+
+    // Memo 155: resolve the allowed-libraries store (Memo 150) so the data-pretest
+    // can load a schema's requiredLibraries from the SAME place `flowmcp call`
+    // does. Reads ~/.flowmcp/config.json -> allowedLibrariesPath (a `~`-relative
+    // or absolute dir that holds node_modules). Fail-soft: any problem returns
+    // null and the resolver just falls back to the grading + schema bases.
+    static async #allowedLibrariesRequire() {
+        try {
+            const configPath = join( homedir(), '.flowmcp', 'config.json' )
+            if( existsSync( configPath ) === false ) { return { allowedRequire: null } }
+            const raw = await readFile( configPath, 'utf8' )
+            const config = JSON.parse( raw )
+            const configured = config[ 'allowedLibrariesPath' ]
+            if( typeof configured !== 'string' || configured.length === 0 ) { return { allowedRequire: null } }
+            const expanded = configured.startsWith( '~' )
+                ? join( homedir(), configured.slice( 1 ) )
+                : configured
+            if( existsSync( join( expanded, 'node_modules' ) ) === false ) { return { allowedRequire: null } }
+            const allowedRequire = createRequire( join( expanded, 'index.js' ) )
+            return { allowedRequire }
+        } catch( error ) {
+            return { allowedRequire: null }
+        }
     }
 
 
