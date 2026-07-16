@@ -1348,7 +1348,7 @@ class DataPretest {
 
 
     static async #loadOneLibrary( { lib, allowedRequire, baseRequire, schemaRequire } ) {
-        // Memo 155 fix: honor the allowed-libraries store (Memo 150) FIRST, then the
+        // Honor the allowed-libraries store FIRST, then the
         // grading package base, then the schema dir — mirroring core LibraryLoader's
         // [allowed-libraries -> CLI -> schema] chain. Without this, a schema whose
         // requiredLibraries live only in ~/.flowmcp/allowed-libraries (better-sqlite3,
@@ -1389,7 +1389,7 @@ class DataPretest {
     }
 
 
-    // Memo 155: resolve the allowed-libraries store (Memo 150) so the data-pretest
+    // Resolve the allowed-libraries store so the data-pretest
     // can load a schema's requiredLibraries from the SAME place `flowmcp call`
     // does. Reads ~/.flowmcp/config.json -> allowedLibrariesPath (a `~`-relative
     // or absolute dir that holds node_modules). Fail-soft: any problem returns
