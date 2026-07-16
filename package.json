@@ -27,7 +27,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "flowmcp": "github:FlowMCP/flowmcp-core#d0302d7eb9074803373a02ca1626603d9daf495c",
+    "flowmcp": "github:FlowMCP/flowmcp-core#4e024322853094d5ae4a969f6757a54ff1e5f0ee",
     "js-yaml": "^3.14.2"
   },
   "devDependencies": {
